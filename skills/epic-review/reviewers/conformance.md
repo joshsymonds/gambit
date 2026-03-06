@@ -43,6 +43,15 @@ Check for:
 
 **Key principle:** ONE canonical implementation. Old code alongside new code without callers = dead code.
 
+## Categorizing Findings
+
+Every finding must be categorized:
+
+- **GAP** — Blocks the verdict. Missing requirements, dead code that must be removed, broken architecture.
+- **IMPROVEMENT** — Does not block the verdict, but WILL be implemented by the main agent before merge. Architecture refinements, cohesion improvements, adapter collapses, unnecessary indirection removal. Include actionable detail: what to change, where, and why.
+
+Do not downgrade findings to vague suggestions. If you think something should be better, categorize it as an IMPROVEMENT with specific guidance.
+
 ## How to Report
 
 ```markdown
@@ -61,8 +70,11 @@ Check for:
 
 ### Verdict: APPROVED / GAPS FOUND
 
-### Issues (if any)
-1. [Issue with evidence]
+### Gaps (if any)
+1. [Blocking issue with evidence]
+
+### Improvements (if any)
+1. [Non-blocking improvement with file:line, what to change, and why]
 ```
 
 Report only what you find with evidence. Do not speculate. If a dimension is clean, say so briefly and move on.

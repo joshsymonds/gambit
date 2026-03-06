@@ -45,14 +45,15 @@ Search the changed files for:
 - Secrets in code: `password`, `secret`, `api_key`, `private_key` (excluding test fixtures, examples, and lock files)
 - Dangerous function calls: `eval()`, `exec()`, `system()`, `subprocess.call`, `os.system`, shell spawning utilities
 
-## How to Assess Findings
+## Categorizing Findings
 
-For each finding, determine:
-- **Real vulnerability** — exploitable issue that needs fixing before merge
-- **False positive** — pattern match but not actually a risk (document why)
-- **Hardening opportunity** — not currently exploitable but should be improved
+Every finding must be categorized:
 
-Only flag real vulnerabilities as GAPS. Note hardening opportunities but don't block on them.
+- **GAP** — Blocks the verdict. Real, exploitable vulnerabilities that need fixing before merge.
+- **IMPROVEMENT** — Does not block the verdict, but WILL be implemented by the main agent before merge. Hardening opportunities, defense-in-depth additions, inconsistent error handling that could leak information under future changes. Include actionable detail: what to change, where, and why.
+- **False positive** — Pattern match but not actually a risk (document why).
+
+Do not downgrade hardening opportunities to vague suggestions. If you think something should be hardened, categorize it as an IMPROVEMENT with specific remediation guidance.
 
 ## How to Report
 
@@ -69,8 +70,11 @@ Only flag real vulnerabilities as GAPS. Note hardening opportunities but don't b
 
 ### Verdict: APPROVED / GAPS FOUND
 
-### Issues (if any)
+### Gaps (if any)
 1. [Vulnerability with evidence and remediation suggestion]
+
+### Improvements (if any)
+1. [Hardening improvement with file:line, what to change, and why]
 ```
 
 Report only what you find with evidence. No speculation. If the changeset is clean, say so and move on.

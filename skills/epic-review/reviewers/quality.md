@@ -56,6 +56,15 @@ Check for missing coverage:
 - **Consistency** — Follows existing project patterns?
 - **Duplication** — Similar blocks that should be extracted? (Don't flag intentional three-line repetition.)
 
+## Categorizing Findings
+
+Every finding must be categorized:
+
+- **GAP** — Blocks the verdict. Tautological tests, unjustified linter suppression, non-idiomatic patterns that break codebase consistency.
+- **IMPROVEMENT** — Does not block the verdict, but WILL be implemented by the main agent before merge. Duplication extraction, missing edge case tests, weak assertions that should be stronger, error handling inconsistencies, clarity improvements. Include actionable detail: what to change, where, and why.
+
+Do not downgrade findings to vague suggestions like "worth noting" or "consider extracting." If you think code should be better, categorize it as an IMPROVEMENT with specific guidance on what to change.
+
 ## How to Report
 
 ```markdown
@@ -79,8 +88,11 @@ Check for missing coverage:
 
 ### Verdict: APPROVED / GAPS FOUND
 
-### Issues (if any)
-1. [Issue with evidence]
+### Gaps (if any)
+1. [Blocking issue with evidence]
+
+### Improvements (if any)
+1. [Non-blocking improvement with file:line, what to change, and why]
 ```
 
 Report only what you find with evidence. No speculation. If clean, say so briefly.

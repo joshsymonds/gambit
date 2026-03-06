@@ -52,6 +52,15 @@ Not every pattern is a bug. Assess proportionally:
 
 Only flag as GAPS issues that would cause real problems at the project's expected scale.
 
+## Categorizing Findings
+
+Every finding must be categorized:
+
+- **GAP** — Blocks the verdict. Real performance problems that would cause failures at the project's expected scale.
+- **IMPROVEMENT** — Does not block the verdict, but WILL be implemented by the main agent before merge. Safety limits (LIMIT clauses, pagination bounds), missing timeouts, caching opportunities, batching improvements. Include actionable detail: what to change, where, and why.
+
+Do not downgrade findings to vague suggestions like "could add a LIMIT." If you think a safety valve or optimization should exist, categorize it as an IMPROVEMENT with specific guidance.
+
 ## How to Report
 
 ```markdown
@@ -67,8 +76,11 @@ Only flag as GAPS issues that would cause real problems at the project's expecte
 
 ### Verdict: APPROVED / GAPS FOUND
 
-### Issues (if any)
-1. [Issue with evidence and suggested fix]
+### Gaps (if any)
+1. [Blocking issue with evidence and suggested fix]
+
+### Improvements (if any)
+1. [Non-blocking improvement with file:line, what to change, and why]
 ```
 
 Report only what you find with evidence. Proportional assessment. If clean, say so and move on.

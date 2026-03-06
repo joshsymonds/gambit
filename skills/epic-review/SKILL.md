@@ -26,7 +26,8 @@ LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approva
 | **2. Prepare Brief** | Epic requirements + file list + base branch | Brief incomplete |
 | **3. Dispatch Reviewers** | 4 agents in parallel | Any agent fails to run |
 | **4. Synthesize** | Merge findings, resolve conflicts | — |
-| **5. Gate** | APPROVED or GAPS FOUND | Gaps → fix tasks, STOP |
+| **5. Implement Improvements** | Implement ALL reviewer improvements | Tests fail after changes |
+| **6. Gate** | APPROVED or GAPS FOUND | Gaps → fix tasks, STOP |
 
 ## When to Use
 
@@ -97,27 +98,59 @@ Collect all four reviewer reports. Present a unified summary:
 ## Epic Review: [Epic Name]
 
 ### Conformance Review
-[Reviewer's verdict + key findings]
+**Verdict:** [APPROVED/GAPS FOUND]
+[Key findings with evidence]
 
 ### Security Review
-[Reviewer's verdict + key findings]
+**Verdict:** [APPROVED/GAPS FOUND]
+[Key findings with evidence]
 
 ### Quality Review
-[Reviewer's verdict + key findings]
+**Verdict:** [APPROVED/GAPS FOUND]
+[Key findings with evidence]
 
 ### Performance Review
-[Reviewer's verdict + key findings]
+**Verdict:** [APPROVED/GAPS FOUND]
+[Key findings with evidence]
+
+### Gaps (if any)
+[Consolidated blocking issues from all reviewers]
+
+### Improvements to Implement
+[Consolidated list from all reviewers — deduplicated if multiple reviewers flagged the same thing]
 
 ### Overall Verdict: APPROVED / GAPS FOUND
 ```
 
 **Conflict resolution:** If reviewers disagree (e.g., one flags something another considers fine), err toward the finding. Investigate the specific concern before dismissing it.
 
-### Step 5: Gate Decision
+**Deduplication:** If multiple reviewers flag the same improvement (e.g., both quality and performance suggest adding a LIMIT clause), consolidate into one item. Credit both reviewers but implement once.
 
-**If APPROVED (all four reviewers approve):**
+### Step 5: Implement Improvements
 
-Announce: "Epic review passed. Proceeding to finishing-branch."
+Collect ALL items categorized as **Improvements** from all four reviewer reports. These are non-blocking findings that reviewers determined should be fixed before merge.
+
+**You MUST implement every improvement.** Do not list them and move on. Do not defer them to a follow-up. Do not describe them as "non-blocking suggestions" and skip them. Reviewer improvements are work items, not commentary.
+
+For each improvement:
+1. Read the relevant code at the file:line the reviewer cited
+2. Implement the change the reviewer described
+3. Move to the next improvement
+
+After implementing all improvements, run the project's test suite to verify nothing broke.
+
+**The only valid reason to skip an improvement** is if the reviewer fundamentally misunderstood the code — their suggestion is incoherent or would break correctness. If skipping, you MUST document:
+- What the reviewer suggested
+- What they misunderstood (with evidence from the code)
+- Why implementing it would be incorrect
+
+"Low priority," "not blocking," or "can be done later" are NOT valid reasons to skip.
+
+### Step 6: Gate Decision
+
+**If APPROVED (all four reviewers approve and all improvements are implemented):**
+
+Announce: "Epic review passed. All reviewer improvements implemented. Proceeding to finishing-branch."
 
 Invoke `gambit:finishing-branch` directly via Skill tool.
 
@@ -135,7 +168,7 @@ Invoke `gambit:finishing-branch` directly via Skill tool.
 
 Create fix tasks with `TaskCreate` for each gap. Set dependencies. Then STOP — return to `gambit:executing-plans` to implement fixes.
 
-**Do NOT proceed to finishing-branch with gaps. Do NOT override reviewer findings.**
+**Do NOT proceed to finishing-branch with gaps. Do NOT override reviewer findings. Do NOT proceed with unimplemented improvements.**
 
 ---
 
@@ -156,7 +189,7 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 # Synthesize into unified verdict
 ```
 
-### Bad: Sequential or Skipped
+### Bad: Sequential, Skipped, or Ignored
 
 ```
 # WRONG: Only dispatching two reviewers
@@ -170,6 +203,13 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 
 # WRONG: Not reading reviewer files, writing instructions inline
 "I'll just tell the agent to check for security issues..."
+
+# WRONG: Listing improvements without implementing them
+"Non-blocking suggestions: consider extracting a helper..."
+"None of these block the commit. Ready to commit."
+
+# WRONG: Deferring improvements to follow-up work
+"These are good ideas for a future PR."
 ```
 
 ## Critical Rules
@@ -180,6 +220,7 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 4. **Reviewer findings are authoritative** — don't override without investigation
 5. **Any gap blocks** — one reviewer finding gaps = GAPS FOUND overall
 6. **Brief is neutral** — don't include opinions or justifications in what you send reviewers
+7. **All improvements implemented** — reviewer improvements are work items, not suggestions to acknowledge and skip
 
 **Common rationalizations:**
 
@@ -190,6 +231,9 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 | "Performance review is overkill" | Dispatch it anyway — it's parallel, costs nothing |
 | "The reviewer is being too strict" | Investigate the finding before dismissing |
 | "I can review faster myself" | Speed isn't the goal — unbiased review is |
+| "These are non-blocking suggestions" | Improvements are work items — implement them |
+| "Good ideas for a future PR" | No. Implement now, before this merge |
+| "None of these block the commit" | Improvements don't block the verdict, but they block the merge |
 
 ## Verification Checklist
 
@@ -198,6 +242,8 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 - [ ] All four reviewers dispatched in single message
 - [ ] All four reviewer reports collected
 - [ ] Findings synthesized into unified summary
+- [ ] ALL improvements from all reviewers implemented (or skipped with misunderstanding evidence)
+- [ ] Tests pass after implementing improvements
 - [ ] If APPROVED: invoked finishing-branch via Skill tool
 - [ ] If GAPS: created fix tasks, STOPPED
 
