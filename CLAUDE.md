@@ -99,6 +99,14 @@ echo '{"response": "Done!"}' | ./hooks/stop/gentle-reminders.sh
 
 **Dependencies:** `bash` 4.0+, `jq`
 
+## Releasing
+
+Version lives in **two files** that must stay in sync:
+- `.claude-plugin/plugin.json` — `version` field
+- `.claude-plugin/marketplace.json` — `plugins[0].version` field
+
+Use the Justfile: `just release X.Y.Z` — updates both files and commits.
+
 ## Development Notes
 
 - This is documentation-first: skills are markdown, hooks are bash
