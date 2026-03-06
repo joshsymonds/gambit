@@ -82,7 +82,7 @@ digraph skill_flow {
 ```
 executing-plans (one task → checkpoint → STOP → repeat)
     ↓ all tasks done
-epic-review (6-dimension quality/architecture/security review)
+epic-review (4-reviewer parallel code review)
     ↓ approved
 finishing-branch (verify → merge/PR/keep/discard)
 ```

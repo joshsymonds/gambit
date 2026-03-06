@@ -65,21 +65,27 @@ Do NOT include your opinions, implementation notes, or rationale. The reviewers 
 
 ### Step 3: Dispatch Four Reviewers
 
-Dispatch all four reviewer agents **in a single message** using their dedicated agent types. Each runs on Sonnet for focused, unbiased review.
+Read the four reviewer instruction files from `reviewers/` within this skill's directory:
+- `reviewers/conformance.md`
+- `reviewers/security.md`
+- `reviewers/quality.md`
+- `reviewers/performance.md`
+
+For each reviewer, dispatch a `general-purpose` agent. The prompt for each agent must contain:
+1. The full contents of that reviewer's instruction file
+2. The review brief (epic requirements + changed files list) appended after the instructions
 
 ```
-Agent subagent_type="conformance-reviewer" prompt=[brief]
-Agent subagent_type="security-reviewer" prompt=[brief]
-Agent subagent_type="quality-reviewer" prompt=[brief]
-Agent subagent_type="performance-reviewer" prompt=[brief]
+Agent subagent_type="general-purpose" description="Conformance review" prompt="[conformance.md contents]\n\n---\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" description="Security review" prompt="[security.md contents]\n\n---\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" description="Quality review" prompt="[quality.md contents]\n\n---\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" description="Performance review" prompt="[performance.md contents]\n\n---\n\n## Review Brief\n\n[brief]"
 ```
 
-The prompt for each agent should contain only the review brief (epic requirements + changed files list). The agent definitions already contain the review instructions and criteria — do not duplicate them in the prompt.
-
-**Critical:** Dispatch in ONE message so they run in parallel. Do not wait for one before dispatching the next.
+**Critical:** Dispatch all four in ONE message so they run in parallel. Do not wait for one before dispatching the next.
 
 Each reviewer will:
-- Read the changed files independently (they have Read, Bash, Grep, Glob tools)
+- Read the changed files independently
 - Evaluate their dimensions with evidence
 - Return findings as APPROVED or GAPS FOUND
 
@@ -138,11 +144,13 @@ Create fix tasks with `TaskCreate` for each gap. Set dependencies. Then STOP —
 ### Good: Parallel Dispatch
 
 ```
-# ONE message, four Agent calls:
-Agent: "Conformance review of OAuth epic..." (runs in background)
-Agent: "Security review of OAuth epic..."    (runs in background)
-Agent: "Quality review of OAuth epic..."     (runs in background)
-Agent: "Performance review of OAuth epic..." (runs in background)
+# Read all four reviewer instruction files
+# Build prompt = [reviewer instructions] + [review brief]
+# ONE message, four general-purpose Agent calls:
+Agent general-purpose: "[conformance.md] + [brief]"  (parallel)
+Agent general-purpose: "[security.md] + [brief]"     (parallel)
+Agent general-purpose: "[quality.md] + [brief]"      (parallel)
+Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 
 # All four return findings independently
 # Synthesize into unified verdict
@@ -159,6 +167,9 @@ Agent: "Performance review of OAuth epic..." (runs in background)
 
 # WRONG: Overriding a reviewer
 "The quality reviewer flagged nolint pragmas but those are fine"
+
+# WRONG: Not reading reviewer files, writing instructions inline
+"I'll just tell the agent to check for security issues..."
 ```
 
 ## Critical Rules
@@ -199,11 +210,11 @@ Agent: "Performance review of OAuth epic..." (runs in background)
 **Calls:**
 - `gambit:finishing-branch` (if approved)
 
-**Dispatches agents (all Sonnet, parallel):**
-- `conformance-reviewer` — completeness, architecture, dead code
-- `security-reviewer` — OWASP audit, secrets, auth, data exposure
-- `quality-reviewer` — language idioms, linter circumvention, test quality
-- `performance-reviewer` — scaling, N+1, resource management
+**Dispatches general-purpose agents (parallel) using reviewer instructions from:**
+- `reviewers/conformance.md` — completeness, architecture, dead code
+- `reviewers/security.md` — OWASP audit, secrets, auth, data exposure
+- `reviewers/quality.md` — language idioms, linter circumvention, test quality
+- `reviewers/performance.md` — scaling, N+1, resource management
 
 **Call chain:**
 ```
