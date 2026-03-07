@@ -16,9 +16,9 @@
     "patterns": ["extract.*method", "move.*to.*class"]
   },
 
-  "code-review": {
-    "keywords": ["code review", "review my code", "look over my code", "review this pr"],
-    "patterns": ["review.*code", "pr review"]
+  "review": {
+    "keywords": ["code review", "review my code", "look over my code", "review this pr", "review implementation", "review completed", "review epic"],
+    "patterns": ["review.*code", "pr review", "all tasks.*done", "ready.*for review", "implementation.*complete"]
   },
 
   "brainstorming": {
@@ -54,11 +54,6 @@
   "task-refinement": {
     "keywords": ["refine tasks", "review plan quality", "strengthen tasks", "task quality"],
     "patterns": ["review.*task.*quality", "refine.*plan", "ready.*to implement"]
-  },
-
-  "epic-review": {
-    "keywords": ["review epic", "validate implementation", "check quality", "review completed", "epic review"],
-    "patterns": ["all tasks.*done", "ready.*for review", "implementation.*complete"]
   },
 
   "finishing-branch": {

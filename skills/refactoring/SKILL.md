@@ -31,7 +31,9 @@ Violating the cycle is violating the skill. "I'll test at the end" means you're 
 | 4 | Run tests immediately | Any test fails |
 | 5 | Commit with descriptive message | - |
 | 6 | Repeat 3-5 until complete | Tests fail → undo |
-| 7 | Final verification & close Task | - |
+| 7 | Final verification | - |
+| 8 | Mandatory review | Review fails |
+| 9 | Close Task | - |
 
 **Core cycle:** Change → Test → Commit (repeat)
 
@@ -210,7 +212,19 @@ git log --oneline | head -10
 git diff [start-sha]..HEAD
 ```
 
-**Close Task:**
+### Step 8: Mandatory Review
+
+After final verification passes, invoke `gambit:review`:
+
+```
+Skill skill="gambit:review"
+```
+
+Do not skip review for "simple" refactorings. Do not tell the user to run it manually — invoke it and follow its process immediately. Review validates the refactoring didn't introduce regressions, security issues, or quality problems.
+
+### Step 9: Close Task
+
+After review passes:
 
 ```
 TaskUpdate
@@ -221,6 +235,7 @@ TaskUpdate
     - All tests pass (verified)
     - No behavior changes
     - N small transformations, each tested
+    - Review: APPROVED
   status: "completed"
 ```
 
@@ -294,6 +309,7 @@ Before marking refactoring complete:
 - [ ] Code is cleaner/simpler than before
 - [ ] Each commit in history is small and safe
 - [ ] Final verification: all tests pass, no warnings
+- [ ] `gambit:review` invoked and passed
 - [ ] Task documents what was done and why
 - [ ] Task marked complete
 
@@ -327,6 +343,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 **Calls:**
 - `gambit:test-driven-development` (if tests need writing first)
 - `gambit:verification` (final check)
+- `gambit:review` (mandatory, after final verification passes)
 
 **Workflow:**
 ```
@@ -340,5 +357,7 @@ Steps 3-6: Change → Test → Commit (repeat)
     ↓
 Step 7: Final verification
     ↓
-Code improved, tests still green
+Step 8: Mandatory review
+    ↓
+Step 9: Close Task
 ```

@@ -1,70 +1,109 @@
 ---
-name: epic-review
-description: Reviews completed epic implementation for quality, architecture, security, and completeness before finishing-branch. Dispatches four specialized reviewer agents (conformance, security, quality, performance) in parallel for unbiased review. Use after all tasks in an epic are completed and before merging, creating a PR, or discarding work.
+name: review
+description: Reviews completed implementation for quality, architecture, security, and completeness. Dispatches four specialized reviewer agents (conformance, security, quality, performance) in parallel for unbiased review. Use after all tasks in an epic are completed, after debugging, after refactoring, or before merging.
 user_invokable: true
 ---
 
-# Epic Review
+# Review
 
 ## Overview
 
-Dispatch four specialized reviewer agents to independently audit a completed epic, then synthesize their findings into a gate decision. Reviewers run in fresh context — they haven't seen the implementation process and have no sunk cost bias.
+Dispatch four specialized reviewer agents to independently audit completed work, then synthesize their findings into a gate decision. Reviewers run in fresh context — they haven't seen the implementation process and have no sunk cost bias.
+
+Works in two modes:
+- **Epic review:** When an epic Task exists, conformance checks against epic requirements and success criteria
+- **Task review:** When reviewing standalone work (debugging, refactoring), conformance checks against the workflow Task's goal and success criteria
 
 **Core principle:** The implementing context is the worst reviewer of its own work. Delegate review to fresh agents.
 
-**Announce at start:** "I'm using gambit:epic-review to validate this implementation before finishing."
+**Announce at start:** "I'm using gambit:review to validate this implementation before finishing."
 
 ## Rigidity Level
 
-LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approval if any reviewer finds gaps. No skipping reviewers for "simple" epics.
+LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approval if any reviewer finds gaps. No skipping reviewers for "simple" changes.
 
 ## Quick Reference
 
 | Step | Action | STOP If |
 |------|--------|---------|
-| **1. Load Context** | Epic + tasks + changed files list | Can't load epic |
-| **2. Prepare Brief** | Epic requirements + file list + base branch | Brief incomplete |
-| **3. Dispatch Reviewers** | 4 agents in parallel | Any agent fails to run |
-| **4. Synthesize** | Merge findings, resolve conflicts | — |
-| **5. Implement Improvements** | Implement ALL reviewer improvements | Tests fail after changes |
-| **6. Gate** | APPROVED or GAPS FOUND | Gaps → fix tasks, STOP |
+| **1. Detect Context** | Epic Task or workflow Task | Can't find any Task |
+| **2. Load Context** | Task + changed files list | Can't load task |
+| **3. Prepare Brief** | Requirements/goal + file list + base branch | Brief incomplete |
+| **4. Dispatch Reviewers** | 4 agents in parallel | Any agent fails to run |
+| **5. Synthesize** | Merge findings, resolve conflicts | — |
+| **6. Implement Improvements** | Implement ALL reviewer improvements | Tests fail after changes |
+| **7. Gate** | APPROVED or GAPS FOUND | Gaps → fix tasks, STOP |
 
 ## When to Use
 
-- All epic subtasks show "completed"
+- All epic subtasks show "completed" (called automatically by `gambit:executing-plans` Step 5)
+- After `gambit:debugging` completes a fix (mandatory)
+- After `gambit:refactoring` completes changes (mandatory)
 - Before `gambit:finishing-branch`
-- Called automatically by `gambit:executing-plans` Step 5
+- Any time you want independent review of completed work
 
 **Don't use when:**
 - Tasks still in progress → use `gambit:executing-plans`
-- Single task review → use `gambit:verification`
 - Mid-implementation quality check → too early
 
 ## The Process
 
-### Step 1: Load Context
+### Step 1: Detect Context
 
+Determine what you're reviewing against:
+
+**Epic context** (default when epic exists):
+```
+TaskList → find epic Task (subject starts with "Epic:")
+TaskGet → epic (requirements, success criteria, anti-patterns)
+TaskList → all subtasks (verify all completed)
+```
+
+**Task context** (debugging, refactoring, or standalone work):
+```
+TaskList → find the workflow Task (most recent in-progress or just-completed Task)
+TaskGet → task (goal, implementation steps, success criteria)
+```
+
+The review brief adapts based on which context is detected. If both exist (e.g., debugging during an epic), prefer the epic context.
+
+### Step 2: Load Context
+
+**For epic context:**
 ```
 TaskGet → epic (requirements, success criteria, anti-patterns)
 TaskList → all subtasks (verify all completed)
 ```
 
+**For task context:**
+```
+TaskGet → workflow task (goal, success criteria)
+```
+
+**Both contexts:**
 ```bash
 git diff main...HEAD --name-only    # Changed files
 git diff main...HEAD --stat         # Change summary
 ```
 
-### Step 2: Prepare Review Brief
+### Step 3: Prepare Review Brief
 
 Build a brief that each reviewer agent will receive. Include:
 
+**For epic context:**
 1. **Epic requirements** — full text from TaskGet (requirements, success criteria, anti-patterns)
 2. **Changed files** — the `--name-only` output
 3. **Base branch** — what the diff is against
 
+**For task context:**
+1. **Task goal and success criteria** — full text from TaskGet
+2. **Changed files** — the `--name-only` output
+3. **Base branch** — what the diff is against
+4. **Context type indicator** — "This is a task-level review (debugging/refactoring), not an epic review. Evaluate against the task's stated goal and success criteria."
+
 Do NOT include your opinions, implementation notes, or rationale. The reviewers should form their own conclusions from the code.
 
-### Step 3: Dispatch Four Reviewers
+### Step 4: Dispatch Four Reviewers
 
 Read the four reviewer instruction files from `reviewers/` within this skill's directory:
 - `reviewers/conformance.md`
@@ -74,7 +113,7 @@ Read the four reviewer instruction files from `reviewers/` within this skill's d
 
 For each reviewer, dispatch a `general-purpose` agent. The prompt for each agent must contain:
 1. The full contents of that reviewer's instruction file
-2. The review brief (epic requirements + changed files list) appended after the instructions
+2. The review brief (requirements/goal + changed files list) appended after the instructions
 
 ```
 Agent subagent_type="general-purpose" description="Conformance review" prompt="[conformance.md contents]\n\n---\n\n## Review Brief\n\n[brief]"
@@ -90,12 +129,12 @@ Each reviewer will:
 - Evaluate their dimensions with evidence
 - Return findings as APPROVED or GAPS FOUND
 
-### Step 4: Synthesize Findings
+### Step 5: Synthesize Findings
 
 Collect all four reviewer reports. Present a unified summary:
 
 ```markdown
-## Epic Review: [Epic Name]
+## Review: [Epic/Task Name]
 
 ### Conformance Review
 **Verdict:** [APPROVED/GAPS FOUND]
@@ -126,7 +165,7 @@ Collect all four reviewer reports. Present a unified summary:
 
 **Deduplication:** If multiple reviewers flag the same improvement (e.g., both quality and performance suggest adding a LIMIT clause), consolidate into one item. Credit both reviewers but implement once.
 
-### Step 5: Implement Improvements
+### Step 6: Implement Improvements
 
 Collect ALL items categorized as **Improvements** from all four reviewer reports. These are non-blocking findings that reviewers determined should be fixed before merge.
 
@@ -146,11 +185,11 @@ After implementing all improvements, run the project's test suite to verify noth
 
 "Low priority," "not blocking," or "can be done later" are NOT valid reasons to skip.
 
-### Step 6: Gate Decision
+### Step 7: Gate Decision
 
 **If APPROVED (all four reviewers approve and all improvements are implemented):**
 
-Announce: "Epic review passed. All reviewer improvements implemented. Proceeding to finishing-branch."
+Announce: "Review passed. All reviewer improvements implemented. Proceeding to finishing-branch."
 
 Invoke `gambit:finishing-branch` directly via Skill tool.
 
@@ -166,7 +205,7 @@ Invoke `gambit:finishing-branch` directly via Skill tool.
 - [Concrete task description for each gap]
 ```
 
-Create fix tasks with `TaskCreate` for each gap. Set dependencies. Then STOP — return to `gambit:executing-plans` to implement fixes.
+Create fix tasks with `TaskCreate` for each gap. Set dependencies. Then STOP — return to `gambit:executing-plans` to implement fixes (for epic context) or address fixes directly (for task context).
 
 **Do NOT proceed to finishing-branch with gaps. Do NOT override reviewer findings. Do NOT proceed with unimplemented improvements.**
 
@@ -187,6 +226,19 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 
 # All four return findings independently
 # Synthesize into unified verdict
+```
+
+### Good: Task-Level Review After Debugging
+
+```
+# Context detection: no epic, found debugging Task #5
+# TaskGet #5 → goal: "Fix race condition in connection pool"
+# Brief includes task goal + success criteria + changed files
+# All four reviewers dispatched with task-level brief
+# Conformance checks fix addresses stated goal
+# Security checks no new vulnerabilities introduced
+# Quality checks code quality of the fix
+# Performance checks fix doesn't regress performance
 ```
 
 ### Bad: Sequential, Skipped, or Ignored
@@ -210,17 +262,21 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 
 # WRONG: Deferring improvements to follow-up work
 "These are good ideas for a future PR."
+
+# WRONG: Skipping review for "small" debugging fixes
+"This was just a one-line fix, no need for four reviewers"
 ```
 
 ## Critical Rules
 
-1. **All four reviewers dispatched** — no skipping for "simple" epics
+1. **All four reviewers dispatched** — no skipping for "simple" changes
 2. **Parallel dispatch** — one message, four agents
 3. **No self-review** — main context prepares brief and synthesizes, does NOT review code
 4. **Reviewer findings are authoritative** — don't override without investigation
 5. **Any gap blocks** — one reviewer finding gaps = GAPS FOUND overall
 6. **Brief is neutral** — don't include opinions or justifications in what you send reviewers
 7. **All improvements implemented** — reviewer improvements are work items, not suggestions to acknowledge and skip
+8. **Context detection is automatic** — epic if epic exists, task otherwise
 
 **Common rationalizations:**
 
@@ -234,11 +290,13 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 | "These are non-blocking suggestions" | Improvements are work items — implement them |
 | "Good ideas for a future PR" | No. Implement now, before this merge |
 | "None of these block the commit" | Improvements don't block the verdict, but they block the merge |
+| "It's just a small debugging fix" | Small fixes can introduce regressions. Review anyway |
 
 ## Verification Checklist
 
-- [ ] Epic loaded, all tasks confirmed completed
-- [ ] Review brief prepared (requirements + changed files, no opinions)
+- [ ] Context detected (epic or task)
+- [ ] Task/epic loaded, requirements/goal identified
+- [ ] Review brief prepared (requirements/goal + changed files, no opinions)
 - [ ] All four reviewers dispatched in single message
 - [ ] All four reviewer reports collected
 - [ ] Findings synthesized into unified summary
@@ -250,8 +308,10 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 ## Integration
 
 **Called by:**
-- `gambit:executing-plans` (Step 5, replaces direct finishing-branch call)
-- User via `/gambit:epic-review`
+- `gambit:executing-plans` (Step 5, when all tasks complete)
+- `gambit:debugging` (mandatory, after fix is verified)
+- `gambit:refactoring` (mandatory, after final verification passes)
+- User via `/gambit:review`
 
 **Calls:**
 - `gambit:finishing-branch` (if approved)
@@ -262,9 +322,16 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 - `reviewers/quality.md` — language idioms, linter circumvention, test quality
 - `reviewers/performance.md` — scaling, N+1, resource management
 
-**Call chain:**
+**Call chain (epic context):**
 ```
-executing-plans (all tasks done) → epic-review → finishing-branch
-                                       ↓
-                                 (if gaps: STOP → fix → re-review)
+executing-plans (all tasks done) → review → finishing-branch
+                                      ↓
+                                (if gaps: STOP → fix → re-review)
+```
+
+**Call chain (task context):**
+```
+debugging/refactoring (fix verified) → review → finishing-branch
+                                          ↓
+                                    (if gaps: STOP → fix → re-review)
 ```

@@ -28,7 +28,7 @@ LOW FREEDOM - Follow the 6-phase process exactly. No fixes without root cause ev
 | 3 | Investigate root cause | Still guessing (no evidence) |
 | 4 | Write failing test (RED) | Test passes (doesn't catch bug) |
 | 5 | Fix and verify (GREEN) | Any test fails |
-| 6 | Classify, close, and document | Status not FIXED |
+| 6 | Classify, review, close, and document | Status not FIXED or review fails |
 
 **Fix Status Classification:**
 
@@ -39,7 +39,7 @@ LOW FREEDOM - Follow the 6-phase process exactly. No fixes without root cause ev
 | NOT_ADDRESSED | Fix missed the bug | Return to Phase 3 |
 | CANNOT_DETERMINE | Need more info | Gather reproduction data |
 
-**Critical sequence:** Task → Reproduce → Evidence → Root Cause → Failing Test → Fix → Verify → Classify → Close
+**Critical sequence:** Task → Reproduce → Evidence → Root Cause → Failing Test → Fix → Verify → Classify → Review → Close
 
 ## When to Use
 
@@ -212,7 +212,19 @@ Pattern indicating architectural problem: each fix reveals a new problem in a di
 | **NOT_ADDRESSED** | Fix doesn't address the bug | Return to Phase 3, do not close |
 | **CANNOT_DETERMINE** | Insufficient reproduction data | Gather more data |
 
-#### 6b: Update and Close Task
+#### 6b: Mandatory Review
+
+After classifying as FIXED, invoke `gambit:review` before closing:
+
+```
+Skill skill="gambit:review"
+```
+
+Do not skip review for "small" fixes. Do not tell the user to run it manually — invoke it and follow its process immediately. Review validates the fix doesn't introduce regressions, security issues, or quality problems.
+
+#### 6c: Update and Close Task
+
+After review passes:
 
 ```
 TaskUpdate
@@ -223,10 +235,11 @@ TaskUpdate
     **Fix:** [what was changed, file:line]
     **Regression test:** [test name] PASSES
     **Full suite:** [N] tests pass
+    **Review:** APPROVED
   status: "completed"
 ```
 
-**Only mark completed if status = FIXED.** Otherwise keep open or create follow-up.
+**Only mark completed if status = FIXED and review passes.** Otherwise keep open or create follow-up.
 
 ---
 
@@ -266,6 +279,7 @@ All mean: **STOP. Return to Phase 2-3.**
 - [ ] Fix addresses root cause, not symptom (GREEN)
 - [ ] Full test suite passes
 - [ ] Fix status classified with evidence
+- [ ] `gambit:review` invoked and passed (if FIXED)
 - [ ] Task updated and closed (or kept open if not FIXED)
 
 **Can't check all boxes?** Return to the process.
@@ -286,6 +300,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 **This skill calls:**
 - `gambit:test-driven-development` (RED-GREEN cycle methodology)
 - `gambit:verification` (evidence before completion claims)
+- `gambit:review` (mandatory, after fix verified as FIXED)
 - Explore agent (`subagent_type: "Explore"`) for codebase investigation
 - general-purpose agent (`subagent_type: "general-purpose"`) for broader investigation and test running
 - WebSearch for error message research
@@ -297,5 +312,5 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 
 **Workflow:**
 ```
-Bug discovered → Task → Reproduce → Investigate → Failing test → Fix → Verify → Close
+Bug discovered → Task → Reproduce → Investigate → Failing test → Fix → Verify → Review → Close
 ```
