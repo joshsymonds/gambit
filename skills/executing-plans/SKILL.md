@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: Executes Tasks one at a time with mandatory human checkpoints between each. Loads epic context, runs ONE task, presents checkpoint summary, then STOPS. Use when an epic Task exists with subtasks ready for implementation, when resuming work after a previous checkpoint, or when iteratively building a feature.
+description: Use when an epic Task exists and subtasks are ready to implement, when resuming work after a previous checkpoint, when iteratively building a feature, or when implementation has revealed unexpected work that needs a new task. User phrases like "continue the plan", "next task", "resume where we left off", "pick up the epic".
 user_invokable: true
 ---
 
@@ -114,7 +114,7 @@ Mark complete with `TaskUpdate` only after ALL steps verified with fresh evidenc
 If implementation reveals unexpected work:
 
 1. Create new task with `TaskCreate` — full detail, no placeholders
-2. Set dependency with `TaskUpdate addBlockedBy`
+2. Set dependency with `TaskUpdate addBlockedBy` (only on other subtasks — never on the epic, which would deadlock since the epic completes last)
 3. Ensure it's bite-sized (2-5 min), has explicit paths, testable criteria
 4. Document in checkpoint summary that new task was added
 

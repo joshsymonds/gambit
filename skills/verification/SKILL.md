@@ -1,6 +1,6 @@
 ---
 name: verification
-description: Use before claiming work complete, fixed, or passing - requires running verification commands and confirming output; evidence before assertions always
+description: Use before any completion claim, success statement, or marking a task done. Triggers when about to say "Great!", "Perfect!", "Done", "All set", "Ready to commit", before creating a PR, before moving to the next task, or when code has changed since the last test run.
 ---
 
 # Verification Before Completion
@@ -43,6 +43,29 @@ If you haven't run the verification command in THIS message, you cannot claim it
 - Previous runs don't count (you changed code since then)
 - Agent reports don't count (verify independently)
 - Mental confidence doesn't count (run it)
+
+## Red Flags — STOP
+
+If you catch yourself doing ANY of the following, you are about to claim completion without evidence. STOP and run verification before the next word you say or tool you call.
+
+**Language signals:**
+- Using hedging words: "should", "probably", "seems to", "I think", "ought to"
+- Satisfaction expressions BEFORE evidence: "Great!", "Perfect!", "Done!", "All set!", "That does it!", "Ready to commit."
+- Any sentence that implies success without naming the verification command you ran
+
+**State signals:**
+- About to commit / push / open a PR / mark a task completed — and you haven't run the command in THIS message
+- Trusting a subagent's success report without reading the VCS diff
+- Relying on a partial check (ran one file's tests, about to claim "tests pass")
+- Previous verification is stale — you changed code since the last run
+
+**Emotional / fatigue signals** (these are the ones that bypass rational guards):
+- "I'm tired" / end-of-day exhaustion — fatigue pushes you toward claiming done so you can stop
+- "Just this once" / "just one exception" — no such thing
+- "I'm confident it works" — confidence without evidence is the exact failure mode this skill exists to prevent
+- Eagerness to wrap up the conversation or move to the next task
+
+**All of these mean: STOP. Run the verification command fresh. Read the output. THEN claim the result.**
 
 ## When to Use
 

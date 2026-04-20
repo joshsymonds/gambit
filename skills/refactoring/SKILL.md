@@ -1,6 +1,6 @@
 ---
 name: refactoring
-description: Use when improving code structure without changing behavior - test-preserving transformations in small steps, running tests between each change
+description: Use when restructuring code without changing its behavior — extracting duplicated functions, renaming for clarity, reorganizing modules, splitting a file, simplifying a tangled signature. User phrases like "clean this up", "extract this", "rename X", "reorganize". Do NOT use for bug fixes, feature additions, or code that lacks existing test coverage.
 ---
 
 # Safe Refactoring

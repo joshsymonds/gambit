@@ -1,6 +1,6 @@
 ---
 name: parallel-agents
-description: Dispatches multiple agents concurrently to investigate independent failures. Use when facing 3+ independent problems that can be fixed without shared state — verifies independence first, dispatches all in single message, checks conflicts after.
+description: Use when facing 3+ independent test failures, bugs in unrelated subsystems, or investigation questions where each problem is isolable and does not share root cause, files, or shared state with the others. User phrases like "these failures look unrelated", "fan this out", "investigate in parallel".
 ---
 
 # Parallel Agent Dispatch

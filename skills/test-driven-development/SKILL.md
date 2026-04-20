@@ -1,6 +1,6 @@
 ---
 name: test-driven-development
-description: Enforces RED-GREEN-REFACTOR cycle requiring tests to fail before writing production code. Use when implementing features, fixing bugs, adding functions, or writing any code that needs tests.
+description: Use when writing any new function, implementing a feature, fixing a reported bug, or adding behavior that should have test coverage. Especially when tempted to code first and test later, under time pressure, after sunk cost on existing untested code, or when thinking "this is too simple to test".
 ---
 
 # Test-Driven Development
@@ -192,6 +192,21 @@ def test_rejects_missing_at_symbol():
 ```
 
 **Verify RED → GREEN → Verify GREEN → REFACTOR → COMMIT → REPEAT.**
+
+## When Stuck
+
+Most TDD friction is a design signal, not a testing problem. Use this table to translate the symptom into the actual issue:
+
+| Symptom | What it usually means | Action |
+|---------|-----------------------|--------|
+| Don't know how to write the test | The API you want doesn't exist yet | Write the wished-for API as the test first — assertion before implementation. Design from the caller's side. |
+| Test feels too complicated | The design is too complicated | Simplify the interface before writing the test. Complex tests track complex code. |
+| Must mock everything | Code is too tightly coupled | Apply dependency injection. Mocking-everywhere means the unit isn't really a unit. |
+| Test setup is huge | Design is doing too much per object | Extract helpers. If extraction doesn't shrink setup, simplify the design itself. |
+| Test passes immediately | Test doesn't exercise the new behavior | Rewrite the test. It's checking something already true. |
+| Can't decide what to test first | Start with the happiest single path — one assertion. Edge cases are separate RED cycles. | — |
+
+If none of these apply and you're still stuck, the problem is usually that the behavior isn't clearly defined yet — go back to the plan or epic and sharpen the requirement before writing code.
 
 ## Testing Anti-Patterns
 

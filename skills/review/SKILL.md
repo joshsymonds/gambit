@@ -1,6 +1,6 @@
 ---
 name: review
-description: Reviews completed implementation for quality, architecture, security, and completeness. Dispatches four specialized reviewer agents (conformance, security, quality, performance) in parallel for unbiased review. Use after all tasks in an epic are completed, after debugging, after refactoring, or before merging.
+description: Use after all tasks in an epic complete, after debugging finishes a fix, after refactoring verifies, or before merging to main. Triggers when independent validation is needed that code meets requirements, has no security gaps, passes quality standards, and has no performance regressions. User phrases like "review this", "is this ready to merge", "validate the implementation".
 user_invokable: true
 ---
 
@@ -234,9 +234,9 @@ The gate evaluates **confirmed** findings only. Refuted findings are dropped; un
 
 **If APPROVED (no confirmed gaps remain and all confirmed improvements are implemented):**
 
-Announce: "Review passed. [N] sub-agent findings checked — [X] confirmed, [Y] unverifiable, [Z] refuted. All confirmed improvements implemented. Proceeding to finishing-branch."
+Announce: "Review passed. [N] sub-agent findings checked — [X] confirmed, [Y] unverifiable, [Z] refuted. All confirmed improvements implemented. Tests green (ran in Step 7 after improvements, or already green since review began and no code changed). Proceeding to finishing-branch."
 
-Invoke `gambit:finishing-branch` directly via Skill tool.
+Invoke `gambit:finishing-branch` directly via Skill tool. **Because tests are known-green at this handoff, finishing-branch will skip its own test run (its Step 2).** State this explicitly in your handoff announcement so finishing-branch knows tests were just verified.
 
 **If GAPS FOUND (any confirmed gap remains):**
 

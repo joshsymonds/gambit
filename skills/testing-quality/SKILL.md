@@ -1,6 +1,6 @@
 ---
 name: testing-quality
-description: Audits test suites for real effectiveness with SRE-level scrutiny - identifies tautological tests, coverage gaming, weak assertions, missing corner cases. Use when coverage is high but bugs slip through, before major refactoring, or when suspecting test quality issues.
+description: Use when bugs keep slipping through despite high test coverage, when suspecting tests are giving false confidence, before a major refactor that will depend on the existing test suite, or when coverage metrics don't match incident rates. User phrases like "do these tests actually catch bugs?", "is this suite any good?", "why didn't the tests catch this?".
 user_invokable: true
 ---
 

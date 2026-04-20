@@ -1,6 +1,6 @@
 ---
 name: finishing-branch
-description: Completes development work on a feature branch by verifying tasks and tests, then presenting integration options. Use when implementation is complete and all tasks pass, when ready to merge, create PR, or discard a branch, or after review approves the implementation.
+description: Use when all epic tasks show completed, when ready to integrate after review approval, when choosing between merge / PR / keep / discard for a branch, when tests need final verification before integration, or when a merge produced conflicts that require re-testing. User phrases like "ready to merge", "open a PR", "done with this branch", "ship it".
 user_invokable: true
 ---
 
@@ -23,13 +23,13 @@ LOW FREEDOM — Follow the process exactly. Never skip test verification. Never 
 | Step | Action | STOP If |
 |------|--------|---------|
 | **1. Verify Tasks** | `TaskList` — all must be "completed" | Any task incomplete |
-| **2. Verify Tests** | Run full test suite | Any test fails |
+| **2. Verify Tests** | Run full test suite (skip if review just ran it) | Any test fails |
 | **3. Base Branch** | Detect via git merge-base | Can't determine base |
 | **4. Present Options** | `AskUserQuestion` with 4 choices | No response |
 | **5. Execute Choice** | Merge / PR / Keep / Discard | Git command fails |
 | **6. Cleanup** | Remove worktree if applicable | Only for merge/discard |
 
-**Iron Law:** Tests must pass BEFORE presenting options. No exceptions.
+**Iron Law:** Tests must be known-green BEFORE presenting options — either freshly run here (standalone invocation) or verified by `gambit:review` at its handoff (chained invocation). Never present options without recent green evidence.
 
 ## When to Use
 
@@ -66,9 +66,11 @@ Complete all tasks before finishing.
 
 ### Step 2: Verify Tests Pass
 
-**Run the project's full test suite.** Detect the test command from project files (go.mod → `go test ./...`, package.json → `npm test`, Cargo.toml → `cargo test`, pyproject.toml → `pytest`, Makefile → `make test`).
+**Skip this step if invoked by `gambit:review`.** Review's handoff guarantees tests are green (either freshly run in its Step 7 after implementing improvements, or already green since review began and no code changed). Re-running here is pure redundancy. Trust review's handoff announcement and go to Step 3.
 
-- All tests pass → Step 3
+**Run the full suite only when invoked standalone** (user ran `/gambit:finishing-branch` directly without a prior review, or invoked from any path other than review's approval gate). Detect the test command from project files (go.mod → `go test ./...`, package.json → `npm test`, Cargo.toml → `cargo test`, pyproject.toml → `pytest`, Makefile → `make test`).
+
+- All tests pass (or skipped because review just ran them) → Step 3
 - Any test fails → **STOP.** Show failures. Cannot proceed until tests pass.
 
 ---
@@ -258,7 +260,7 @@ git worktree remove .worktrees/experimental
 
 ## Critical Rules
 
-1. **Tests before options** — run full suite, show output, never skip
+1. **Tests before options** — run full suite and show output when invoked standalone; skip only when review handed off with a green-tests guarantee
 2. **AskUserQuestion for options** — never print options as text
 3. **Typed "discard" for Option 4** — exact text, no shortcuts
 4. **No worktree cleanup for PR or Keep** — user needs it for feedback/later work
@@ -271,7 +273,7 @@ git worktree remove .worktrees/experimental
 
 | Excuse | Reality |
 |--------|---------|
-| "Tests passed earlier" | RUN THEM NOW — code might have changed |
+| "Tests passed earlier" | RUN THEM NOW unless review just handed off with a green-tests guarantee — code might have changed |
 | "User obviously wants to merge" | PRESENT ALL 4 OPTIONS — let them choose |
 | "User said discard" | GET TYPED CONFIRMATION — "discard" exactly |
 | "PR done, cleanup worktree" | KEEP IT — PR will need updates |
@@ -280,7 +282,7 @@ git worktree remove .worktrees/experimental
 ## Verification Checklist
 
 - [ ] All tasks show "completed" (`TaskList`)
-- [ ] Tests verified passing (ran them, showed output)
+- [ ] Tests verified passing (ran them here OR review handed off with green-tests guarantee)
 - [ ] Base branch determined
 - [ ] Presented 4 options via `AskUserQuestion`
 - [ ] Waited for user choice

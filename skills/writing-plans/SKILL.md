@@ -1,6 +1,6 @@
 ---
 name: writing-plans
-description: Creates implementation plans as native Tasks with dependencies, exact file paths, and verification commands. Use when requirements are clear for multi-step tasks, when breaking work into trackable pieces, or when multiple sessions will execute the work.
+description: Use when requirements are approved or an epic from brainstorming is ready to break down, when work must span multiple dependent subtasks, or when multiple sessions will execute the work. User phrases like "break this into tasks", "create an implementation plan", "what are the steps?", "dependency chain". Do NOT use when requirements are still vague (use brainstorming), only one task is needed, or for debugging/refactoring.
 user_invokable: true
 ---
 
@@ -167,6 +167,24 @@ TaskUpdate
   taskId: "task-2-id"
   addBlockedBy: ["task-1-id"]
 ```
+
+**Do NOT set any subtask as blocked by the epic.** The epic is a documentation container for immutable requirements, not a workflow prerequisite. The Task API's `blockedBy` means "cannot start until the blocker completes" — since the epic only completes after all subtasks do, marking a subtask as blocked by the epic creates a deadlock. Subtasks are only blocked by other subtasks.
+
+### 3.5. Self-Review Before Presenting
+
+Before showing the plan to the user, run an inline self-review across the epic AND every subtask. Upstream testing has shown this catches the same class of defects a subagent review pass would — in 30 seconds instead of 25 minutes.
+
+Scan for:
+- **Placeholders:** Any `TBD`, `TODO`, `FIXME`, `XXX`, `[details above]`, "see requirements", `<angle-bracket-placeholder>`, or sentence that trails off without committing to specific behavior
+- **Vague steps:** "handle errors", "validate input", "similar to Task N", "if needed" — every step must be checkable or rewritten. References like "similar to Task 2" are placeholders unless Task 2's specifics are repeated or explicitly inherited.
+- **Type / signature consistency:** Function names, parameter types, return types, and property names must match across tasks. If Task 2 calls `validateUser(email)` but Task 1 defines `validateUser(user: User)`, one of them is wrong — fix it now, not in execution.
+- **Scope drift:** Does any subtask introduce files or behaviors the epic's requirements don't justify? Tighten the task or add the requirement to the epic explicitly.
+- **Dependency sanity:** No subtask is blocked by the epic (deadlock). Dependencies form a DAG — no cycles. Every subtask's `blockedBy` references real task IDs that will complete first.
+- **Completeness:** Does the full task set actually satisfy every epic success criterion? If a criterion has no task that proves it, either add one or remove the criterion.
+
+Fix what you find with `TaskUpdate` before proceeding. Do NOT present a plan that has items on this list.
+
+---
 
 ### 4. Present Complete Plan
 

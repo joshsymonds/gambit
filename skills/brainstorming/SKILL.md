@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Refines rough ideas into validated designs stored as epic Tasks with immutable requirements through Socratic questioning. Use when planning new features, exploring approaches before coding, or turning vague ideas into actionable tasks.
+description: Use when user has a new feature idea, rough concept, or unexplored approach. Include when planning before code, exploring architectural options, or requirements are vague. User phrases like "I want to build X", "should we do this", "let's think through Y", "explore approaches". Do NOT use for executing existing plans, fixing bugs, refactoring, or when requirements and an epic already exist.
 user_invokable: true
 ---
 
@@ -167,6 +167,8 @@ TaskCreate
 
 One task, not a full tree. Subsequent tasks are created by executing-plans as you learn.
 
+**Do NOT set the first task as blocked by the epic.** The epic is a documentation container for immutable requirements, not a workflow prerequisite. The Task API's `blockedBy` means "cannot start until the blocker completes" — since the epic only completes after all subtasks do, marking a subtask as blocked by the epic creates a deadlock. Subtasks are only blocked by other subtasks.
+
 ```
 TaskCreate
   subject: "Add [specific deliverable]"
@@ -207,6 +209,19 @@ Before handoff, verify the first task passes these checks:
 - Security implications? Boundary conditions?
 
 Update the task with any missing details before proceeding.
+
+#### Epic + first-task self-review
+
+Before announcing the plan to the user, run an inline self-review across the epic AND the first task. This takes 30 seconds and catches the same class of defects a subagent review pass would — immutable requirements that are actually vague, scope that silently expanded, contradictions between the epic's approach and the first task's implementation steps.
+
+Scan for:
+- **Placeholders:** Any `TBD`, `TODO`, `FIXME`, `XXX`, `[details above]`, "see requirements", `<angle-bracket-placeholder>`, or sentence that trails off without committing to a specific behavior
+- **Vague requirements:** "properly handle errors", "good performance", "secure authentication", "similar to X" — requirements that can't be tested objectively must be rewritten with concrete, checkable conditions (or moved to a subtask's implementation notes)
+- **Scope drift:** Does the first task introduce files, behaviors, or dependencies the epic's requirements don't justify? Either tighten the task or add the requirement to the epic explicitly.
+- **Ambiguity:** Any sentence where two readers could reach different implementations. Pick one and say it.
+- **Internal consistency:** The first task's files, function names, and success criteria should match the epic's stated approach. Mismatches mean one of them is wrong.
+
+Fix what you find by updating the epic or first task with `TaskUpdate`, then proceed. Do NOT present a plan that has items on this list.
 
 ---
 

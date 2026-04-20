@@ -1,6 +1,6 @@
 ---
 name: task-refinement
-description: Reviews and strengthens Tasks for completeness before execution. Use when refining plans, reviewing task quality, ensuring junior engineer can execute without questions, or catching edge cases and vague criteria.
+description: Use when a task plan has just been created and needs review before execution, when brainstorming or writing-plans just handed off, when unsure whether a junior could execute without questions, or when you see placeholder text, vague success criteria, or missing edge cases. User phrases like "review these tasks", "are these ready?", "before we start", "catch any gaps". Do NOT use when implementation is already in progress or for creating plans from scratch.
 user_invokable: true
 ---
 

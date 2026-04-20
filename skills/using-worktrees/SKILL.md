@@ -1,6 +1,6 @@
 ---
 name: using-worktrees
-description: Creates isolated git worktrees for feature work. Use when starting branches, working on multiple features, or needing workspace isolation with environment setup and baseline verification.
+description: Use when starting an isolated feature branch, when working on multiple features simultaneously, when experimenting without affecting the main workspace, or when a clean workspace is needed before beginning implementation. User phrases like "start a new branch", "set up a worktree", "isolated workspace", "work on feature X separately".
 ---
 
 # Using Git Worktrees

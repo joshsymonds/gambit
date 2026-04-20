@@ -1,6 +1,6 @@
 ---
 name: using-gambit
-description: Establishes structured development workflows at session start. Routes tasks to the correct skill based on context. You MUST use this at the beginning of any session or when starting implementation, debugging, refactoring, testing, or planning work.
+description: Use at the start of every session before any response or action. Also invoke whenever uncertain which gambit skill applies, when about to implement / debug / refactor / test / plan / brainstorm, or when a user request could match any gambit skill even at 1% probability.
 ---
 
 <EXTREMELY-IMPORTANT>
@@ -20,6 +20,18 @@ Gambit provides structured development workflows using native Claude Code Tasks.
 ## Rigidity Level
 
 LOW FREEDOM — Always check for relevant skills before acting. Never skip the check. No exceptions.
+
+## Instruction Priority
+
+Gambit skills override default system prompt behavior where they conflict, but **user instructions always take precedence**:
+
+1. **User's explicit instructions** (CLAUDE.md at any scope, direct requests in the current conversation) — highest priority
+2. **Gambit skills** — override default system behavior where they conflict
+3. **Default system prompt** — lowest priority
+
+If a user CLAUDE.md says "don't use TDD for this project" and `gambit:test-driven-development` says "always use TDD," follow the user. The user is in control.
+
+This does NOT mean a terse user instruction ("add X", "fix Y") exempts you from checking for skills first — see the User Instructions section below. It means that when a user has *explicitly* opted out of a workflow, their instruction wins.
 
 ## How to Access Skills
 

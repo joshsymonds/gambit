@@ -1,6 +1,6 @@
 ---
 name: debugging
-description: Use when encountering bugs, test failures, or unexpected behavior - systematic root cause analysis before fixes, tools first, regression test required
+description: Use when a test is failing, when a bug is reported, when behavior is unexpected or intermittent, when a build or integration step fails, or when a flaky test keeps resurfacing. Especially when "the fix seems obvious", when multiple previous fixes haven't stuck, or when under time pressure to ship.
 ---
 
 # Systematic Debugging
@@ -86,7 +86,38 @@ Then: `TaskUpdate taskId: "[id]" status: "in_progress"`
 2. **Reproduce consistently** — if intermittent, add instrumentation; if can't reproduce, **STOP**
 3. **Check recent changes** — `git log --oneline -10` and `git diff HEAD~5..HEAD -- path/to/affected/code`
 
-**For multi-component systems:** Add diagnostic logging at each boundary (handler → service → database), run once, analyze where the data breaks.
+**For multi-component systems:** When the failing path crosses 3+ components (CI → build → signing; handler → service → cache → database; workflow → env → container → app), you can't reason out WHICH component is broken from the error alone — instrument every boundary, run once, then investigate the specific layer the evidence points at.
+
+For each boundary in the failing path:
+- Log what data ENTERS the component (inputs, env vars, headers, auth state)
+- Log what data EXITS the component (return value, next call's inputs)
+- Log the environment/config state the component reads (env vars present? config loaded? credentials valid?)
+- Keep logs distinguishable per layer so you can tell at a glance which one diverged from expectation
+
+Concrete template (macOS code-signing pipeline as an example — adapt the commands to your stack):
+
+```bash
+# Layer 1 — CI workflow: which secrets did GitHub Actions actually inject?
+echo "=== Workflow env ==="
+echo "IDENTITY: ${IDENTITY:+SET}${IDENTITY:-UNSET}"
+echo "KEYCHAIN_PASSWORD: ${KEYCHAIN_PASSWORD:+SET}${KEYCHAIN_PASSWORD:-UNSET}"
+
+# Layer 2 — Build script: did env vars propagate from the workflow?
+echo "=== Build script env ==="
+env | grep -E '^(IDENTITY|KEYCHAIN)' || echo "signing env vars not present"
+
+# Layer 3 — Signing step: is the keychain in the expected state?
+echo "=== Keychain state ==="
+security list-keychains -d user
+security find-identity -v -p codesigning
+
+# Layer 4 — Actual sign: the failing command, with maximum verbosity
+codesign --sign "$IDENTITY" --verbose=4 "$APP_PATH"
+```
+
+Run it once. Read the layered output top-to-bottom. The first layer where reality diverges from expectation is where the bug lives — investigate THAT layer, not the one that reported the error. Code-signing errors surface at Layer 4 but 90% of the time the actual bug is at Layer 1 (secret not set) or Layer 2 (env var not propagated).
+
+Remove the instrumentation once the root cause is identified — don't leave scaffolding committed.
 
 ---
 
@@ -130,7 +161,34 @@ Task
     Report the root cause with file:line evidence.
 ```
 
-#### 3b: Trace Data Flow Backward
+#### 3b: Find Working Patterns
+
+**Before tracing backwards, look for something similar that already works.** Most codebases contain near-neighbors of the broken code path — another handler using the same library, another caller of the same function, another feature that hit the same framework constraint. Comparing working-vs-broken is faster than pure data-flow tracing and catches "this feature is configured differently" bugs that backward tracing misses entirely.
+
+```
+Task
+  subagent_type: "Explore"
+  description: "Find working neighbors for comparison"
+  prompt: |
+    Broken: [file:line, brief description of the broken behavior]
+    Error: [exact error or symptom]
+
+    Find 2-3 places in this codebase that:
+    - Use the same library/framework call pattern
+    - Or implement similar behavior that currently works
+    - Or handle the same kind of input/data successfully
+
+    For each, report: file:line, how it's called, what's different from the broken path.
+```
+
+When comparing:
+- **List every difference, not just the ones that "seem relevant"** — config values, order of calls, whether a result is awaited, which overload is used, what's passed vs. defaulted. "That can't matter" is how real bugs hide.
+- **Read the reference implementation completely**, not just the signature. Partial understanding of a pattern guarantees the broken version will stay broken.
+- **If no working neighbor exists**, that's evidence too — the feature may be using a pattern nothing else in the codebase uses, which raises the probability of misuse. Investigate the library's docs/tests instead.
+
+Skip this substep ONLY if the error message already names the exact root cause (e.g., "missing required env var FOO") with no ambiguity about WHY it's missing.
+
+#### 3c: Trace Data Flow Backward
 
 **CRITICAL: Find where the bad value ORIGINATES, not just where it causes symptoms.**
 
@@ -144,13 +202,13 @@ Start at error location (symptom)
 
 **The distinction matters:** Adding a null check at the crash site is a symptom fix. Finding WHY the value is null and preventing it at the source is a root cause fix.
 
-#### 3c: Form Hypothesis with Evidence
+#### 3d: Form Hypothesis with Evidence
 
 **State clearly:** "I think X is the root cause because Y [evidence]"
 
 Evidence required: stack trace showing call path, log output showing state, code showing missing validation, or test output showing failure mode.
 
-**No evidence? STOP.** Return to 3a-3b.
+**No evidence? STOP.** Return to 3a-3c.
 
 ---
 
