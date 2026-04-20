@@ -30,9 +30,10 @@ LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approva
 | **2. Load Context** | Task + changed files list | Can't load task |
 | **3. Prepare Brief** | Requirements/goal + file list + base branch | Brief incomplete |
 | **4. Dispatch Reviewers** | 4 agents in parallel | Any agent fails to run |
-| **5. Synthesize** | Merge findings, resolve conflicts | — |
-| **6. Implement Improvements** | Implement ALL reviewer improvements | Tests fail after changes |
-| **7. Gate** | APPROVED or GAPS FOUND | Gaps → fix tasks, STOP |
+| **5. Verify Findings** | Skeptically re-check every finding's `Verify by:` | — |
+| **6. Synthesize** | Merge confirmed findings, resolve conflicts | — |
+| **7. Implement Improvements** | Implement ALL confirmed reviewer improvements | Tests fail after changes |
+| **8. Gate** | APPROVED or GAPS FOUND with verification counts | Gaps → fix tasks, STOP |
 
 ## When to Use
 
@@ -128,38 +129,75 @@ Each reviewer will:
 - Read the changed files independently
 - Evaluate their dimensions with evidence
 - Fetch documentation or references from the web when local knowledge is insufficient or the code is sensitive/complex
+- Attach a `**Verify by:**` line to every Gap and Improvement (required — see each reviewer file's "Verification Requirement" section)
 - Return findings as APPROVED or GAPS FOUND
 
 **Critical:** Reviewers are strictly advisory. They must NOT run tests, execute commands, or edit files. All tests are already passing by the time review runs — their job is code analysis only. They DO have access to `WebFetch` and `WebSearch` and should use them to validate edge cases, check API documentation, verify security patterns, or confirm language-specific behavior when they aren't confident from code reading alone.
 
-### Step 5: Synthesize Findings
+### Step 5: Verify Findings (Skeptical, Non-Trusting Re-Check)
 
-Collect all four reviewer reports. Present a unified summary:
+Sub-agent reports arrive with a `**Verify by:**` line attached to every Gap and Improvement. **Treat these as proposals, not authority.** Reviewers can be wrong in two ways: they can emit confident-but-wrong findings (hallucinations), or they can emit findings with lazy/tautological `Verify by:` steps that pass a shallow check while the underlying claim is false. You are the quality gate. Re-check each finding yourself with the same tools the reviewers had.
+
+#### Skepticism checklist (run on every finding before executing its Verify by)
+
+1. **Does this `Verify by:` actually test the claim in the finding body?** A lazy verify-by might say "Read the file" while the body claims a race condition that can't be verified by reading one line. If the verify-by and body don't match, design your own verification — don't run a shallow check and rubber-stamp.
+2. **Could the `Verify by:` pass while the finding is still wrong?** Tautological verify-bys ("confirm line 42 exists") always pass but prove nothing about the claim. If yes, the verify-by is insufficient — add the checks it's missing.
+3. **Does the `Verify by:` cover all reasonable angles?** A finding about a missing `LIMIT` clause needs a grep for `LIMIT` AND a check for alternative bounds (subquery, upstream filter). A finding about a race condition needs the invariant traced through every caller.
+
+#### Running the verification
+
+After the skepticism pass:
+
+1. Run the reviewer's proposed `Verify by:` steps.
+2. Run any additional checks you identified in the skepticism pass.
+3. Re-read the cited file + line directly. The most common reviewer failure mode is emitting a claim about a file they didn't read carefully — e.g. asserting a SQL query lacks `LIMIT 1` when the file plainly includes `LIMIT 1`. Re-read even when the reviewer sounded confident.
+
+#### Classify each finding
+
+- **Confirmed** — the full chain of reasoning in the finding holds after your independent checks. Keep in the synthesis.
+- **Unverifiable** — you tried your verification AND any additional checks from the skepticism pass, and you genuinely cannot confirm (tool failed, cited file doesn't exist, evidence ambiguous, requires access you don't have). Keep in the synthesis with a one-sentence "unverifiable because: ..." note so the user can investigate or dismiss.
+- **Refuted** — you re-read the evidence and the finding is factually wrong (e.g., claims a field is missing but it's right there; claims a function is called in a hot loop but it isn't; a tautological `Verify by:` that passes without testing the claim). Drop. Record only as a count in the synthesis for calibration.
+
+**False positives damage reviewer credibility. Silent drops hide real bugs. Refute only when you have positive evidence the finding is wrong; surface as unverifiable (with reason) when you simply couldn't confirm; confirm only when the full claim chain holds under your skeptical re-check.**
+
+### Step 6: Synthesize Findings
+
+Collect all four reviewer reports with your verification classifications. Present a unified summary:
 
 ```markdown
 ## Review: [Epic/Task Name]
 
+### Verification Summary
+- Sub-agent findings received: [N]
+- Confirmed (kept): [N]
+- Unverifiable (surfaced with reason): [N]
+- Refuted (dropped): [N]
+
 ### Conformance Review
 **Verdict:** [APPROVED/GAPS FOUND]
-[Key findings with evidence]
+[Confirmed findings with evidence]
 
 ### Security Review
 **Verdict:** [APPROVED/GAPS FOUND]
-[Key findings with evidence]
+[Confirmed findings with evidence]
 
 ### Quality Review
 **Verdict:** [APPROVED/GAPS FOUND]
-[Key findings with evidence]
+[Confirmed findings with evidence]
 
 ### Performance Review
 **Verdict:** [APPROVED/GAPS FOUND]
-[Key findings with evidence]
+[Confirmed findings with evidence]
 
-### Gaps (if any)
-[Consolidated blocking issues from all reviewers]
+### Gaps (confirmed, if any)
+[Consolidated blocking issues that survived verification]
 
-### Improvements to Implement
+### Improvements to Implement (confirmed)
 [Consolidated list from all reviewers — deduplicated if multiple reviewers flagged the same thing]
+
+### Unverifiable Findings (surfaced, not blocking)
+1. [Finding body]
+   **Unverifiable because:** [One sentence — tool failed, requires production access, etc.]
 
 ### Overall Verdict: APPROVED / GAPS FOUND
 ```
@@ -168,9 +206,11 @@ Collect all four reviewer reports. Present a unified summary:
 
 **Deduplication:** If multiple reviewers flag the same improvement (e.g., both quality and performance suggest adding a LIMIT clause), consolidate into one item. Credit both reviewers but implement once.
 
-### Step 6: Implement Improvements
+**Unverifiable vs. dropped:** Unverifiable findings stay in the report with a caveat — the user still sees them. Refuted findings are dropped and only counted. This prevents silent loss of real bugs while blocking confident-but-wrong hallucinations.
 
-Collect ALL items categorized as **Improvements** from all four reviewer reports. These are non-blocking findings that reviewers determined should be fixed before merge.
+### Step 7: Implement Improvements
+
+Collect ALL items categorized as **Improvements** (confirmed status) from all four reviewer reports. These are non-blocking findings that reviewers determined should be fixed before merge, and that you independently confirmed in Step 5. Unverifiable improvements are surfaced to the user but not auto-implemented — the user decides.
 
 **You MUST implement every improvement.** Do not list them and move on. Do not defer them to a follow-up. Do not describe them as "non-blocking suggestions" and skip them. Reviewer improvements are work items, not commentary.
 
@@ -188,29 +228,37 @@ After implementing all improvements, run the project's test suite to verify noth
 
 "Low priority," "not blocking," or "can be done later" are NOT valid reasons to skip.
 
-### Step 7: Gate Decision
+### Step 8: Gate Decision
 
-**If APPROVED (all four reviewers approve and all improvements are implemented):**
+The gate evaluates **confirmed** findings only. Refuted findings are dropped; unverifiable findings are reported to the user but don't block.
 
-Announce: "Review passed. All reviewer improvements implemented. Proceeding to finishing-branch."
+**If APPROVED (no confirmed gaps remain and all confirmed improvements are implemented):**
+
+Announce: "Review passed. [N] sub-agent findings checked — [X] confirmed, [Y] unverifiable, [Z] refuted. All confirmed improvements implemented. Proceeding to finishing-branch."
 
 Invoke `gambit:finishing-branch` directly via Skill tool.
 
-**If GAPS FOUND (any reviewer finds gaps):**
+**If GAPS FOUND (any confirmed gap remains):**
 
 ```markdown
 ## Gaps Found — Cannot Proceed
 
-### Issues by Reviewer
-[Consolidated list with evidence and locations]
+### Verification Summary
+[X] confirmed / [Y] unverifiable / [Z] refuted
+
+### Issues by Reviewer (confirmed only)
+[Consolidated list with evidence, locations, and the Verify by each reviewer provided]
 
 ### Recommended Fix Tasks
-- [Concrete task description for each gap]
+- [Concrete task description for each confirmed gap]
+
+### Unverifiable Findings (for your awareness, not blocking)
+- [Finding body] — Unverifiable because: [reason]
 ```
 
-Create fix tasks with `TaskCreate` for each gap. Set dependencies. Then STOP — return to `gambit:executing-plans` to implement fixes (for epic context) or address fixes directly (for task context).
+Create fix tasks with `TaskCreate` for each confirmed gap. Set dependencies. Then STOP — return to `gambit:executing-plans` to implement fixes (for epic context) or address fixes directly (for task context).
 
-**Do NOT proceed to finishing-branch with gaps. Do NOT override reviewer findings. Do NOT proceed with unimplemented improvements.**
+**Do NOT proceed to finishing-branch with confirmed gaps. Do NOT override confirmed reviewer findings. Do NOT proceed with unimplemented confirmed improvements. Do NOT create fix tasks for refuted findings — they were disproved for a reason.**
 
 ---
 
@@ -275,11 +323,13 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 1. **All four reviewers dispatched** — no skipping for "simple" changes
 2. **Parallel dispatch** — one message, four agents
 3. **No self-review** — main context prepares brief and synthesizes, does NOT review code
-4. **Reviewer findings are authoritative** — don't override without investigation
-5. **Any gap blocks** — one reviewer finding gaps = GAPS FOUND overall
+4. **Reviewer findings are proposals, not authority** — run the skepticism checklist on every finding's `Verify by:`, then re-check independently
+5. **Any confirmed gap blocks** — one confirmed gap = GAPS FOUND overall
 6. **Brief is neutral** — don't include opinions or justifications in what you send reviewers
-7. **All improvements implemented** — reviewer improvements are work items, not suggestions to acknowledge and skip
-8. **Context detection is automatic** — epic if epic exists, task otherwise
+7. **All confirmed improvements implemented** — confirmed reviewer improvements are work items, not suggestions to acknowledge and skip
+8. **Unverifiable findings surface, not drop** — keep them in the report with a reason so the user can investigate
+9. **Refuted findings drop** — don't create fix tasks for findings your verification disproved
+10. **Context detection is automatic** — epic if epic exists, task otherwise
 
 **Common rationalizations:**
 
@@ -294,6 +344,8 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 | "Good ideas for a future PR" | No. Implement now, before this merge |
 | "None of these block the commit" | Improvements don't block the verdict, but they block the merge |
 | "It's just a small debugging fix" | Small fixes can introduce regressions. Review anyway |
+| "The reviewer said they verified it, so it's fine" | Reviewers self-reporting verification is how false positives ship. Re-check with the skepticism checklist |
+| "The Verify by: looks reasonable, skip the skepticism pass" | Lazy Verify-bys pass shallow checks. Audit them before running them |
 
 ## Verification Checklist
 
@@ -301,12 +353,16 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 - [ ] Task/epic loaded, requirements/goal identified
 - [ ] Review brief prepared (requirements/goal + changed files, no opinions)
 - [ ] All four reviewers dispatched in single message
-- [ ] All four reviewer reports collected
-- [ ] Findings synthesized into unified summary
-- [ ] ALL improvements from all reviewers implemented (or skipped with misunderstanding evidence)
+- [ ] All four reviewer reports collected with `Verify by:` on every finding
+- [ ] Skepticism checklist run on each finding's `Verify by:`
+- [ ] Each finding independently re-checked and classified (confirmed / unverifiable / refuted)
+- [ ] Findings synthesized with verification counts (N confirmed / N unverifiable / N refuted)
+- [ ] ALL **confirmed** improvements implemented (or skipped with misunderstanding evidence)
+- [ ] Unverifiable findings surfaced to the user, not dropped
+- [ ] Refuted findings dropped, not converted into fix tasks
 - [ ] Tests pass after implementing improvements
 - [ ] If APPROVED: invoked finishing-branch via Skill tool
-- [ ] If GAPS: created fix tasks, STOPPED
+- [ ] If GAPS: created fix tasks for confirmed gaps only, STOPPED
 
 ## Integration
 

@@ -66,6 +66,22 @@ Every finding must be categorized:
 
 Do not downgrade findings to vague suggestions like "could add a LIMIT." If you think a safety valve or optimization should exist, categorize it as an IMPROVEMENT with specific guidance.
 
+## Verification Requirement (Critical)
+
+Every Gap and Improvement you report MUST include a `**Verify by:**` line describing the concrete steps a second reviewer could follow to independently confirm your claim. The synthesizer runs these steps on every finding before deciding whether to keep or drop it; findings without a specific, actionable `Verify by:` are judged **refuted** and dropped.
+
+**Good `Verify by:` examples:**
+
+- `**Verify by:** Read src/api/users.ts:handleBatch — trace the call to ` + "`fetchUser(userId)`" + ` inside the map over ` + "`userIds`" + `; grep for a batch variant (e.g., ` + "`fetchUsers`" + `) and confirm it exists unused, making this an N+1 where a single batched call would work.`
+- `**Verify by:** Grep the new http client construction for ` + "`Timeout:`" + `; confirm no timeout is set and compare against the existing clients in src/clients/ which all set a 10s timeout.`
+
+**Bad (lazy) `Verify by:` examples — these will be refuted:**
+
+- `**Verify by:** Check for N+1.` (Where? Over what data?)
+- `**Verify by:** Look at the loop.` (Which loop? What should a reviewer see?)
+
+If you yourself could not complete the verification — you can't benchmark locally, the production query plan isn't accessible, the dataset sizes aren't knowable from the code alone — still emit the finding with a concrete `Verify by:`. The synthesizer may have different reach or may tag the finding **unverifiable** with a reason so the user still sees it. Silent drop is not an option; articulate the verification path and pass it up.
+
 ## How to Report
 
 ```markdown
@@ -83,9 +99,11 @@ Do not downgrade findings to vague suggestions like "could add a LIMIT." If you 
 
 ### Gaps (if any)
 1. [Blocking issue with evidence and suggested fix]
+   **Verify by:** [Concrete steps the synthesizer can follow to confirm]
 
 ### Improvements (if any)
 1. [Non-blocking improvement with file:line, what to change, and why]
+   **Verify by:** [Concrete steps the synthesizer can follow to confirm]
 ```
 
 Report only what you find with evidence. Proportional assessment. If clean, say so and move on.

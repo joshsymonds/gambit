@@ -60,6 +60,22 @@ Every finding must be categorized:
 
 Do not downgrade hardening opportunities to vague suggestions. If you think something should be hardened, categorize it as an IMPROVEMENT with specific remediation guidance.
 
+## Verification Requirement (Critical)
+
+Every Gap and Improvement you report MUST include a `**Verify by:**` line describing the concrete steps a second reviewer could follow to independently confirm your claim. The synthesizer runs these steps on every finding before deciding whether to keep or drop it; findings without a specific, actionable `Verify by:` are judged **refuted** and dropped.
+
+**Good `Verify by:` examples:**
+
+- `**Verify by:** Read package.json and confirm ` + "`express-rate-limit`" + ` is not listed; then grep src/middleware/ for any rate-limit setup on the new /login route.`
+- `**Verify by:** Run semgrep with ruleset p/sql-injection against the three changed handler files; flag any matches near string concatenation into query strings.`
+
+**Bad (lazy) `Verify by:` examples — these will be refuted:**
+
+- `**Verify by:** Check for SQL injection.` (Where? What pattern?)
+- `**Verify by:** Confirm the auth middleware is present.` (Which middleware? Which route?)
+
+If you yourself could not complete the verification — CVE database access failed, the dependency graph is too deep to walk manually, you lack production access — still emit the finding with a concrete `Verify by:`. The synthesizer may have different reach or may tag the finding **unverifiable** with a reason so the user still sees it. Silent drop is not an option; articulate the verification path and pass it up.
+
 ## How to Report
 
 ```markdown
@@ -77,9 +93,11 @@ Do not downgrade hardening opportunities to vague suggestions. If you think some
 
 ### Gaps (if any)
 1. [Vulnerability with evidence and remediation suggestion]
+   **Verify by:** [Concrete steps the synthesizer can follow to confirm]
 
 ### Improvements (if any)
 1. [Hardening improvement with file:line, what to change, and why]
+   **Verify by:** [Concrete steps the synthesizer can follow to confirm]
 ```
 
 Report only what you find with evidence. No speculation. If the changeset is clean, say so and move on.

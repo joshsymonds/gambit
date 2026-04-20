@@ -70,6 +70,22 @@ Every finding must be categorized:
 
 Do not downgrade findings to vague suggestions like "worth noting" or "consider extracting." If you think code should be better, categorize it as an IMPROVEMENT with specific guidance on what to change.
 
+## Verification Requirement (Critical)
+
+Every Gap and Improvement you report MUST include a `**Verify by:**` line describing the concrete steps a second reviewer could follow to independently confirm your claim. The synthesizer runs these steps on every finding before deciding whether to keep or drop it; findings without a specific, actionable `Verify by:` are judged **refuted** and dropped.
+
+**Good `Verify by:` examples:**
+
+- `**Verify by:** Read test/parse.test.ts:test_parseConfig and confirm it only asserts the happy-path return; grep for ` + "`parseConfig`" + ` tests and confirm none covers the malformed-input branch at src/parse.ts:117.`
+- `**Verify by:** Grep the changed files for ` + "`// eslint-disable`" + ` or ` + "`@ts-ignore`" + `; for each hit, check the comment within 2 lines above — flag any with no justification.`
+
+**Bad (lazy) `Verify by:` examples — these will be refuted:**
+
+- `**Verify by:** Look at the tests.` (Which tests? What should they assert?)
+- `**Verify by:** Confirm the idiom is wrong.` (Which pattern? What's the idiomatic alternative?)
+
+If you yourself could not complete the verification — a linter you'd need to run isn't installed locally, the language idiom requires reading dozens of existing files you haven't loaded — still emit the finding with a concrete `Verify by:`. The synthesizer may have different reach or may tag the finding **unverifiable** with a reason so the user still sees it. Silent drop is not an option; articulate the verification path and pass it up.
+
 ## How to Report
 
 ```markdown
@@ -95,9 +111,11 @@ Do not downgrade findings to vague suggestions like "worth noting" or "consider 
 
 ### Gaps (if any)
 1. [Blocking issue with evidence]
+   **Verify by:** [Concrete steps the synthesizer can follow to confirm]
 
 ### Improvements (if any)
 1. [Non-blocking improvement with file:line, what to change, and why]
+   **Verify by:** [Concrete steps the synthesizer can follow to confirm]
 ```
 
 Report only what you find with evidence. No speculation. If clean, say so briefly.
