@@ -28,7 +28,7 @@ Do not skip checkpoints or verification. Epic requirements never change. Tasks a
 | **1. Load Epic** | `TaskGet` on epic | Requirements are IMMUTABLE |
 | **2. Execute ONE Task** | Mark in_progress → follow steps → mark completed | TDD cycle, verify each step |
 | **3. Create Next Task** | `TaskCreate` based on learnings | Reflect reality, not original assumptions |
-| **4. Checkpoint** | Present summary | STOP — no exceptions |
+| **4. Commit & Checkpoint** | Commit to current branch, present summary | STOP — no exceptions |
 
 **Iron Law:** One task → Checkpoint → STOP → User reviews → Next task. No batching. No "just one more."
 
@@ -152,7 +152,26 @@ After completing a task, create the NEXT task based on what you learned. This is
 
 ---
 
-### 4. STOP Checkpoint (Mandatory)
+### 4. Commit and STOP Checkpoint (Mandatory)
+
+Two parts: commit any work that isn't already on the branch, then present the checkpoint and STOP.
+
+#### 4a: Commit Task's Work to Current Branch (Default)
+
+Before presenting the checkpoint, commit the task's changes to whatever branch is currently checked out — `main`, a feature branch, a worktree branch, whichever is active. The checkpoint is the agreed "one task done" unit; a commit at this boundary makes each task a durable, reviewable history entry so the user's next action (review, clear context, hand off, walk away) finds the work preserved.
+
+1. Run `git status` to see what's uncommitted
+2. If there are changes:
+   - Stage the task's files by name — avoid `git add -A`, which can sweep in accidentally-created files
+   - Write a concise commit message: one-line subject describing what the task accomplished; optional short body for non-obvious WHY
+   - Create a NEW commit (don't amend). Don't skip hooks. Don't push.
+3. If `git status` is clean (intra-task commits during the TDD cycle already captured everything, or the task was marked SKIPPED with no code changes), note it under "Commit" in the checkpoint summary
+
+**Do NOT push.** Committing is local — the user decides when to push.
+
+**Skip the commit ONLY if** the user has explicitly said "don't commit yet" earlier in the current session. Absent that directive, commit.
+
+#### 4b: Present Checkpoint Summary
 
 **Present this summary, then STOP:**
 
@@ -162,6 +181,10 @@ After completing a task, create the NEXT task based on what you learned. This is
 ### What Was Done
 - [Summary of implementation]
 - [Key decisions made]
+
+### Commit
+- [Short SHA and subject line, e.g. `a1b2c3d feat: add OAuth callback handler`]
+- [Or: "Nothing new to commit — intra-task commits during TDD already captured all changes"]
 
 ### Learnings
 - [Discoveries during implementation]
@@ -259,6 +282,7 @@ This task wouldn't have been correct if planned upfront — it reflects what you
 4. **Create next task from learnings** — not from upfront assumptions
 5. **Evidence before completion** — run tests, show output, then mark done
 6. **Never water down requirements** — if blocked, ask user, don't simplify
+7. **Commit before checkpoint** — default is commit to current branch; skip only if the user said "don't commit yet" this session. Never push.
 
 **Common rationalizations (all mean STOP, follow the process):**
 
@@ -281,7 +305,8 @@ Before completing each task:
 After completing each task:
 - [ ] Reviewed learnings against epic (`TaskGet`)
 - [ ] Created next task based on learnings (or documented why not)
-- [ ] Presented checkpoint summary
+- [ ] Committed the task's work to the current branch (or noted `git status` was clean)
+- [ ] Presented checkpoint summary with commit SHA + subject line
 - [ ] STOPPED execution
 - [ ] Waiting for user to run `/gambit:executing-plans` again
 
