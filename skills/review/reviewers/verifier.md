@@ -94,4 +94,4 @@ Emit one entry per candidate finding. No prose preamble, no trailing commentary.
 - `gap` verdicts require a reason that names a specific tool + specific error, or a specific missing credential, or a specific inaccessible system. Generic "could not verify" is not a valid reason.
 - A finding that cannot be sustained on available evidence is **refuted**, not gap. Gap is only for literal walls you ran into while trying.
 - `tool_calls_made` must be ≥ 3 for every verdict. If it would be less, make more tool calls before emitting the verdict.
-- Your output is audited. False confirmations cost 10× false refutations. When in doubt, refute.
+- Your output is audited. False confirmations cost 3× false refutations. When in doubt, refute.

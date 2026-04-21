@@ -60,6 +60,18 @@ Every finding must be categorized:
 
 Do not downgrade hardening opportunities to vague suggestions. If you think something should be hardened, categorize it as an IMPROVEMENT with specific remediation guidance.
 
+**Improvements are held to the same verifier evidence bar as Gaps.** Ground every claim in a specific code location: name the file, line, and observable pattern. Evaluative conclusions ("this is insufficiently hardened," "this endpoint is an attack surface") are fine — required, even — but they must follow from a stated observation, not substitute for one. The pattern to use: observation first, then judgment (`src/routes/auth.ts:22 mounts /login with no rate-limit middleware while the adjacent /signup at :31 wraps with rateLimit(...) — this is an IMPROVEMENT: match the existing pattern`). The pattern to avoid: leading with a feeling that has no code anchor ("could be hardened against brute force"). Findings the verifier cannot confirm with a file read do not reach the user.
+
+## Scope — findings must anchor to changed code
+
+Every Gap and Improvement you report MUST be about code the branch actually changes (added, removed, or modified relative to the base). Unchanged code elsewhere in the repo is out of scope. If you cannot cite a specific file:line range that this branch changed for your finding, the finding is scope creep — drop it.
+
+**Cross-line findings** — if a change at a changed line has downstream effects on unchanged code, anchor the finding at the *cause* (the changed line) and describe the consequence in the body. Do NOT anchor at the unchanged downstream code.
+
+**Missing-X findings** (tests, wiring, config, docs) — anchor at the changed line whose existence creates the demand for the missing thing. Missing test for a new function → anchor at the new function, body says what the test should cover. If no changed line creates the demand, the missing thing is out of scope.
+
+**"While I was reading I noticed X"** findings are explicitly disallowed. The reviewer's job is to evaluate the changes, not to audit the entire codebase.
+
 ## Verification Requirement (Critical)
 
 Every Gap and Improvement you report MUST include a `**Verify by:**` line describing the concrete steps a second reviewer could follow to independently confirm your claim. A dedicated verifier sub-agent runs these steps on every finding and classifies each one as confirmed, refuted, or gap; findings without a specific, actionable `Verify by:` are judged **refuted** and dropped.

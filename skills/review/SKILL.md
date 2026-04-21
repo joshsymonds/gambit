@@ -145,6 +145,8 @@ Collect the four reviewer reports into one candidate list. Each finding carries 
 
 Semantic dedup ("these two findings sound alike, collapse them") silently drops true positives — different reviewers flagging the same line with *different* verify_by steps have different investigation paths, and losing one loses coverage. Only collapse when all three fields match byte-for-byte. The verifier handles near-duplicates downstream.
 
+**Before dispatching to the verifier, build a side-table keyed by `id`** recording each finding's `category` (gap or improvement), `verify_by` (original reviewer text), and `reviewer` (which of the four emitted it). The verifier never sees this side-table — it's the main context's private state. You need it back in Step 7 to route confirmed verdicts to the Gaps vs. Improvements sections, in Step 8 to identify which confirmed items are implementable improvements, and in Step 9 to render `Verify by` text in the GAPS FOUND template. Losing this mapping breaks all three steps.
+
 The deduped list goes to the verifier in Step 6.
 
 ### Step 6: Dispatch Verifier Sub-Agent
@@ -155,7 +157,7 @@ Read `reviewers/verifier.md` within this skill's directory. Dispatch ONE `genera
 Agent subagent_type="general-purpose" description="Verify candidates" prompt="[verifier.md contents]\n\n---\n\n## Candidate Findings\n\n[deduped list with ids]"
 ```
 
-**Do NOT include reviewer severity, category (Gap vs. Improvement), or reasoning chain in the candidate list.** The verifier receives only: `id`, `path`, `line_range`, `body`, `verify_by`. Fresh context prevents the verifier anchoring on the reviewer's confidence.
+**Do NOT include reviewer severity, category (Gap vs. Improvement), or reasoning chain in the candidate list.** The verifier receives only: `id`, `path`, `line_range`, `body`, `verify_by`. Fresh context prevents the verifier anchoring on the reviewer's confidence. The stripped `category`, original `verify_by`, and `reviewer` are retained by main context in the Step 5 side-table — they're restored via `id` lookup after the verifier returns.
 
 **Do NOT verify findings in the main context.** Main context's job is dispatch + assembly. The verifier is the single source of truth for classification.
 
@@ -163,11 +165,11 @@ Skip the verifier dispatch only if the candidate list is empty — in which case
 
 ### Step 7: Assemble Findings From Verifier Output
 
-The verifier returns one classification per candidate, each with `verdict`, `quoted_evidence`, `evidence_location`, `confidence`, and (for gaps) `gap_reason`.
+The verifier returns one classification per candidate, each with `verdict`, `quoted_evidence`, `evidence_location`, `tool_calls_made`, `confidence`, and (for gaps) `gap_reason`.
 
-Route by verdict:
+Route by verdict, using the Step 5 side-table to recover each finding's original `category`:
 
-- **confirmed** → keep in the final report as a finding. Preserve the reviewer's original body text and the verifier's `quoted_evidence` / `evidence_location`.
+- **confirmed** → keep in the final report as a finding. Preserve the reviewer's original body text and the verifier's `quoted_evidence` / `evidence_location`. Place the finding in the "Gaps" section if the side-table's `category` is `gap`, or the "Improvements to Implement" section if `improvement`.
 - **gap** → surface in a "🔍 Couldn't verify" section of the final report. NOT a confirmed finding — a coverage boundary. Include the verifier's `gap_reason` verbatim.
 - **refuted** → drop entirely. Do not include in the report. Count only for calibration.
 
@@ -240,7 +242,7 @@ Invoke `gambit:finishing-branch` directly via Skill tool. **Because tests are kn
 [X] confirmed / [Y] refuted / [Z] gaps
 
 ### Issues by Reviewer (confirmed only)
-[Consolidated list with evidence, locations, and the Verify by each reviewer provided]
+[Consolidated list with the verifier's `quoted_evidence` and `evidence_location`, plus the reviewer's original `Verify by` text recovered from the Step 5 side-table, attributed to the `reviewer` recorded there]
 
 ### Recommended Fix Tasks
 - [Concrete task description for each confirmed gap]
@@ -343,6 +345,7 @@ Agent general-purpose: "[verifier.md] + [full reviewer reports with severity tag
 10. **Refuted findings drop** — don't create fix tasks for verdicts the verifier returned refuted
 11. **Dedupe byte-identical, never semantic** — collapsing similar-looking findings silently drops true positives
 12. **Context detection is automatic** — epic if epic exists, task otherwise
+13. **Retain the id side-table** — stripping category/verify_by from verifier input (rule 7) means main context MUST keep an `id → {category, verify_by, reviewer}` side-table before dispatch; losing it breaks Steps 7–9 routing
 
 **Common rationalizations:**
 
@@ -369,6 +372,7 @@ Agent general-purpose: "[verifier.md] + [full reviewer reports with severity tag
 - [ ] All four reviewers dispatched in single message
 - [ ] All four reviewer reports collected with `Verify by:` on every finding
 - [ ] Candidate list deduped on byte-identical `(path, line, verify_by)` tuples
+- [ ] Side-table keyed by `id` built before verifier dispatch (category + verify_by + reviewer)
 - [ ] Verifier sub-agent dispatched with candidate list (no severity, no reasoning chain)
 - [ ] Verifier returned one verdict per candidate (confirmed / refuted / gap) with quoted evidence
 - [ ] Findings assembled with verification counts (N confirmed / N refuted / N gaps)
