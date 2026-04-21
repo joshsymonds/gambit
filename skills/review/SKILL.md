@@ -8,7 +8,9 @@ user_invokable: true
 
 ## Overview
 
-Dispatch four specialized reviewer agents to independently audit completed work, then synthesize their findings into a gate decision. Reviewers run in fresh context — they haven't seen the implementation process and have no sunk cost bias.
+Dispatch four specialized reviewer agents to independently audit completed work, then dispatch a dedicated verifier sub-agent to kill-or-keep each finding, then synthesize surviving findings into a gate decision. Reviewers and verifier run in fresh context — they haven't seen the implementation process and have no sunk cost bias.
+
+The verification work is delegated to a **dedicated verifier sub-agent**, not done in the main context. Main context's job is dispatch + assembly; the verifier's job is ruthless kill-or-keep classification. This split follows Anthropic's `CitationAgent` pattern and avoids the synthesizer becoming context-starved from juggling four simultaneous roles (dispatch, verify, dedup, implement).
 
 Works in two modes:
 - **Epic review:** When an epic Task exists, conformance checks against epic requirements and success criteria
@@ -30,10 +32,11 @@ LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approva
 | **2. Load Context** | Task + changed files list | Can't load task |
 | **3. Prepare Brief** | Requirements/goal + file list + base branch | Brief incomplete |
 | **4. Dispatch Reviewers** | 4 agents in parallel | Any agent fails to run |
-| **5. Verify Findings** | Skeptically re-check every finding's `Verify by:` | — |
-| **6. Synthesize** | Merge confirmed findings, resolve conflicts | — |
-| **7. Implement Improvements** | Implement ALL confirmed reviewer improvements | Tests fail after changes |
-| **8. Gate** | APPROVED or GAPS FOUND with verification counts | Gaps → fix tasks, STOP |
+| **5. Dedupe Candidates** | Merge reviewer outputs; dedupe on byte-identical `(file, line, verify_by)` tuples | — |
+| **6. Dispatch Verifier** | 1 verifier sub-agent with the deduped candidate list | Verifier fails to run |
+| **7. Assemble Findings** | Route verifier verdicts: confirmed → kept, gap → surfaced, refuted → dropped | — |
+| **8. Implement Improvements** | Implement ALL confirmed reviewer improvements | Tests fail after changes |
+| **9. Gate** | APPROVED or GAPS FOUND with verification counts | Confirmed gaps → fix tasks, STOP |
 
 ## When to Use
 
@@ -134,83 +137,73 @@ Each reviewer will:
 
 **Critical:** Reviewers are strictly advisory. They must NOT run tests, execute commands, or edit files. All tests are already passing by the time review runs — their job is code analysis only. They DO have access to `WebFetch` and `WebSearch` and should use them to validate edge cases, check API documentation, verify security patterns, or confirm language-specific behavior when they aren't confident from code reading alone.
 
-### Step 5: Verify Findings (Skeptical, Non-Trusting Re-Check)
+### Step 5: Dedupe Candidate Findings
 
-Sub-agent reports arrive with a `**Verify by:**` line attached to every Gap and Improvement. **Treat these as proposals, not authority.** Reviewers can be wrong in two ways: they can emit confident-but-wrong findings (hallucinations), or they can emit findings with lazy/tautological `Verify by:` steps that pass a shallow check while the underlying claim is false. You are the quality gate. Re-check each finding yourself with the same tools the reviewers had.
+Collect the four reviewer reports into one candidate list. Each finding carries a `**Verify by:**` line; assign each finding an opaque `id` (any stable string — reviewer name + sequence works).
 
-#### Skepticism checklist (run on every finding before executing its Verify by)
+**Dedupe on byte-identical `(path, line_range, Verify by:)` tuples only. Do NOT dedupe on semantic similarity.**
 
-1. **Does this `Verify by:` actually test the claim in the finding body?** A lazy verify-by might say "Read the file" while the body claims a race condition that can't be verified by reading one line. If the verify-by and body don't match, design your own verification — don't run a shallow check and rubber-stamp.
-2. **Could the `Verify by:` pass while the finding is still wrong?** Tautological verify-bys ("confirm line 42 exists") always pass but prove nothing about the claim. If yes, the verify-by is insufficient — add the checks it's missing.
-3. **Does the `Verify by:` cover all reasonable angles?** A finding about a missing `LIMIT` clause needs a grep for `LIMIT` AND a check for alternative bounds (subquery, upstream filter). A finding about a race condition needs the invariant traced through every caller.
+Semantic dedup ("these two findings sound alike, collapse them") silently drops true positives — different reviewers flagging the same line with *different* verify_by steps have different investigation paths, and losing one loses coverage. Only collapse when all three fields match byte-for-byte. The verifier handles near-duplicates downstream.
 
-#### Running the verification
+The deduped list goes to the verifier in Step 6.
 
-After the skepticism pass:
+### Step 6: Dispatch Verifier Sub-Agent
 
-1. Run the reviewer's proposed `Verify by:` steps.
-2. Run any additional checks you identified in the skepticism pass.
-3. Re-read the cited file + line directly. The most common reviewer failure mode is emitting a claim about a file they didn't read carefully — e.g. asserting a SQL query lacks `LIMIT 1` when the file plainly includes `LIMIT 1`. Re-read even when the reviewer sounded confident.
+Read `reviewers/verifier.md` within this skill's directory. Dispatch ONE `general-purpose` agent with the prompt structure:
 
-#### Classify each finding
+```
+Agent subagent_type="general-purpose" description="Verify candidates" prompt="[verifier.md contents]\n\n---\n\n## Candidate Findings\n\n[deduped list with ids]"
+```
 
-- **Confirmed** — the full chain of reasoning in the finding holds after your independent checks. Keep in the synthesis.
-- **Unverifiable** — you tried your verification AND any additional checks from the skepticism pass, and you genuinely cannot confirm (tool failed, cited file doesn't exist, evidence ambiguous, requires access you don't have). Keep in the synthesis with a one-sentence "unverifiable because: ..." note so the user can investigate or dismiss.
-- **Refuted** — you re-read the evidence and the finding is factually wrong (e.g., claims a field is missing but it's right there; claims a function is called in a hot loop but it isn't; a tautological `Verify by:` that passes without testing the claim). Drop. Record only as a count in the synthesis for calibration.
+**Do NOT include reviewer severity, category (Gap vs. Improvement), or reasoning chain in the candidate list.** The verifier receives only: `id`, `path`, `line_range`, `body`, `verify_by`. Fresh context prevents the verifier anchoring on the reviewer's confidence.
 
-**False positives damage reviewer credibility. Silent drops hide real bugs. Refute only when you have positive evidence the finding is wrong; surface as unverifiable (with reason) when you simply couldn't confirm; confirm only when the full claim chain holds under your skeptical re-check.**
+**Do NOT verify findings in the main context.** Main context's job is dispatch + assembly. The verifier is the single source of truth for classification.
 
-### Step 6: Synthesize Findings
+Skip the verifier dispatch only if the candidate list is empty — in which case all reviewers returned APPROVED, and the overall verdict is APPROVED with zero findings.
 
-Collect all four reviewer reports with your verification classifications. Present a unified summary:
+### Step 7: Assemble Findings From Verifier Output
+
+The verifier returns one classification per candidate, each with `verdict`, `quoted_evidence`, `evidence_location`, `confidence`, and (for gaps) `gap_reason`.
+
+Route by verdict:
+
+- **confirmed** → keep in the final report as a finding. Preserve the reviewer's original body text and the verifier's `quoted_evidence` / `evidence_location`.
+- **gap** → surface in a "🔍 Couldn't verify" section of the final report. NOT a confirmed finding — a coverage boundary. Include the verifier's `gap_reason` verbatim.
+- **refuted** → drop entirely. Do not include in the report. Count only for calibration.
+
+Present the unified summary:
 
 ```markdown
 ## Review: [Epic/Task Name]
 
 ### Verification Summary
-- Sub-agent findings received: [N]
-- Confirmed (kept): [N]
-- Unverifiable (surfaced with reason): [N]
-- Refuted (dropped): [N]
+- Candidates sent to verifier: [N]
+- Confirmed (kept): [X]
+- Refuted (dropped): [Y]
+- Gaps (surfaced, not blocking): [Z]
 
-### Conformance Review
-**Verdict:** [APPROVED/GAPS FOUND]
-[Confirmed findings with evidence]
+### Conformance / Security / Quality / Performance Review
+[Per-reviewer sections with only CONFIRMED findings, each carrying evidence]
 
-### Security Review
-**Verdict:** [APPROVED/GAPS FOUND]
-[Confirmed findings with evidence]
-
-### Quality Review
-**Verdict:** [APPROVED/GAPS FOUND]
-[Confirmed findings with evidence]
-
-### Performance Review
-**Verdict:** [APPROVED/GAPS FOUND]
-[Confirmed findings with evidence]
-
-### Gaps (confirmed, if any)
-[Consolidated blocking issues that survived verification]
+### Gaps (confirmed blocking issues, if any)
+[Consolidated blocking findings]
 
 ### Improvements to Implement (confirmed)
-[Consolidated list from all reviewers — deduplicated if multiple reviewers flagged the same thing]
+[Consolidated non-blocking improvements — one entry per unique issue, credit all reviewers who flagged it]
 
-### Unverifiable Findings (surfaced, not blocking)
-1. [Finding body]
-   **Unverifiable because:** [One sentence — tool failed, requires production access, etc.]
+### 🔍 Couldn't verify (for your awareness, not blocking)
+- [Area the reviewer wanted to check] — [verifier's specific gap_reason: tool + error, missing credential, inaccessible system]
 
 ### Overall Verdict: APPROVED / GAPS FOUND
 ```
 
-**Conflict resolution:** If reviewers disagree (e.g., one flags something another considers fine), err toward the finding. Investigate the specific concern before dismissing it.
+**Conflict resolution is gone** — the verifier already picked. Do not override verifier verdicts. If a refuted finding looks correct to you, that's a calibration signal about reviewer or verifier prompts, not a reason to un-drop.
 
-**Deduplication:** If multiple reviewers flag the same improvement (e.g., both quality and performance suggest adding a LIMIT clause), consolidate into one item. Credit both reviewers but implement once.
+**Gap vs. dropped:** Gaps are literal walls the verifier ran into — tool failures, missing credentials, inaccessible systems. Not "evidence was ambiguous" (that's refuted). If the gap section is populated with prose like "couldn't confirm" or "plausible but hard to verify," those entries are badly-classified and should be refuted instead — treat them as calibration signal and drop.
 
-**Unverifiable vs. dropped:** Unverifiable findings stay in the report with a caveat — the user still sees them. Refuted findings are dropped and only counted. This prevents silent loss of real bugs while blocking confident-but-wrong hallucinations.
+### Step 8: Implement Improvements
 
-### Step 7: Implement Improvements
-
-Collect ALL items categorized as **Improvements** (confirmed status) from all four reviewer reports. These are non-blocking findings that reviewers determined should be fixed before merge, and that you independently confirmed in Step 5. Unverifiable improvements are surfaced to the user but not auto-implemented — the user decides.
+Collect ALL items categorized as **Improvements** that the verifier returned `confirmed` for. These are non-blocking findings that reviewers determined should be fixed before merge, and that the verifier independently proved hold. Gap-classified findings are surfaced to the user but not auto-implemented — the user decides whether to investigate.
 
 **You MUST implement every improvement.** Do not list them and move on. Do not defer them to a follow-up. Do not describe them as "non-blocking suggestions" and skip them. Reviewer improvements are work items, not commentary.
 
@@ -228,13 +221,13 @@ After implementing all improvements, run the project's test suite to verify noth
 
 "Low priority," "not blocking," or "can be done later" are NOT valid reasons to skip.
 
-### Step 8: Gate Decision
+### Step 9: Gate Decision
 
-The gate evaluates **confirmed** findings only. Refuted findings are dropped; unverifiable findings are reported to the user but don't block.
+The gate evaluates **confirmed** findings only. Refuted findings are dropped; gap-classified findings are surfaced to the user but don't block.
 
 **If APPROVED (no confirmed gaps remain and all confirmed improvements are implemented):**
 
-Announce: "Review passed. [N] sub-agent findings checked — [X] confirmed, [Y] unverifiable, [Z] refuted. All confirmed improvements implemented. Tests green (ran in Step 7 after improvements, or already green since review began and no code changed). Proceeding to finishing-branch."
+Announce: "Review passed. [N] candidates verified — [X] confirmed, [Y] refuted, [Z] gaps. All confirmed improvements implemented. Tests green (ran in Step 8 after improvements, or already green since review began and no code changed). Proceeding to finishing-branch."
 
 Invoke `gambit:finishing-branch` directly via Skill tool. **Because tests are known-green at this handoff, finishing-branch will skip its own test run (its Step 2).** State this explicitly in your handoff announcement so finishing-branch knows tests were just verified.
 
@@ -244,7 +237,7 @@ Invoke `gambit:finishing-branch` directly via Skill tool. **Because tests are kn
 ## Gaps Found — Cannot Proceed
 
 ### Verification Summary
-[X] confirmed / [Y] unverifiable / [Z] refuted
+[X] confirmed / [Y] refuted / [Z] gaps
 
 ### Issues by Reviewer (confirmed only)
 [Consolidated list with evidence, locations, and the Verify by each reviewer provided]
@@ -252,31 +245,33 @@ Invoke `gambit:finishing-branch` directly via Skill tool. **Because tests are kn
 ### Recommended Fix Tasks
 - [Concrete task description for each confirmed gap]
 
-### Unverifiable Findings (for your awareness, not blocking)
-- [Finding body] — Unverifiable because: [reason]
+### 🔍 Couldn't verify (for your awareness, not blocking)
+- [Area] — [verifier's specific gap_reason]
 ```
 
 Create fix tasks with `TaskCreate` for each confirmed gap. Set dependencies. Then STOP — return to `gambit:executing-plans` to implement fixes (for epic context) or address fixes directly (for task context).
 
-**Do NOT proceed to finishing-branch with confirmed gaps. Do NOT override confirmed reviewer findings. Do NOT proceed with unimplemented confirmed improvements. Do NOT create fix tasks for refuted findings — they were disproved for a reason.**
+**Do NOT proceed to finishing-branch with confirmed gaps. Do NOT override verifier verdicts. Do NOT proceed with unimplemented confirmed improvements. Do NOT create fix tasks for refuted findings — they were disproved for a reason. Do NOT create fix tasks for gap-classified findings — a gap means the verifier hit a literal wall, not that a bug exists.**
 
 ---
 
 ## Examples
 
-### Good: Parallel Dispatch
+### Good: Two-Stage Dispatch (reviewers → verifier)
 
 ```
-# Read all four reviewer instruction files
-# Build prompt = [reviewer instructions] + [review brief]
-# ONE message, four general-purpose Agent calls:
+# Stage 1: Read the four reviewer files. ONE message, four Agent calls, parallel:
 Agent general-purpose: "[conformance.md] + [brief]"  (parallel)
 Agent general-purpose: "[security.md] + [brief]"     (parallel)
 Agent general-purpose: "[quality.md] + [brief]"      (parallel)
 Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 
-# All four return findings independently
-# Synthesize into unified verdict
+# All four return findings independently. Dedupe on byte-identical tuples.
+
+# Stage 2: Read verifier.md. ONE more Agent call, sequential:
+Agent general-purpose: "[verifier.md] + [deduped candidate list]"
+
+# Verifier returns confirmed/refuted/gap per candidate. Assemble final verdict.
 ```
 
 ### Good: Task-Level Review After Debugging
@@ -298,13 +293,29 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 # WRONG: Only dispatching two reviewers
 "Security isn't relevant for this config change"
 
-# WRONG: Reviewing in main context instead of dispatching
+# WRONG: Reviewing or verifying in main context instead of dispatching
 "Let me just quickly check the architecture myself..."
+"I'll verify these findings inline instead of spawning another agent..."
 
-# WRONG: Overriding a reviewer
-"The quality reviewer flagged nolint pragmas but those are fine"
+# WRONG: Skipping the verifier
+"The findings look good, let's just implement them"
 
-# WRONG: Not reading reviewer files, writing instructions inline
+# WRONG: Overriding a verifier verdict
+"The verifier refuted this but I think it's real"
+
+# WRONG: Feeding the verifier reviewer severity/reasoning
+Agent general-purpose: "[verifier.md] + [full reviewer reports with severity tags]"
+# Correct: strip to id/path/line/body/verify_by only
+
+# WRONG: Semantic dedup before the verifier
+"Findings 2 and 5 look similar, collapse them"
+# Correct: byte-identical (path, line, verify_by) tuples only
+
+# WRONG: Creating fix tasks for gap-classified findings
+"The gap says we couldn't check LaunchDarkly — add a fix task to check it"
+# Correct: gap is a tool-access boundary, not a bug
+
+# WRONG: Not reading reviewer/verifier files, writing instructions inline
 "I'll just tell the agent to check for security issues..."
 
 # WRONG: Listing improvements without implementing them
@@ -322,14 +333,16 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 
 1. **All four reviewers dispatched** — no skipping for "simple" changes
 2. **Parallel dispatch** — one message, four agents
-3. **No self-review** — main context prepares brief and synthesizes, does NOT review code
-4. **Reviewer findings are proposals, not authority** — run the skepticism checklist on every finding's `Verify by:`, then re-check independently
+3. **No self-review** — main context prepares brief and assembles, does NOT review or verify code
+4. **Verifier is the single source of truth for classification** — do NOT override confirmed/refuted/gap verdicts; do NOT verify in the main context
 5. **Any confirmed gap blocks** — one confirmed gap = GAPS FOUND overall
 6. **Brief is neutral** — don't include opinions or justifications in what you send reviewers
-7. **All confirmed improvements implemented** — confirmed reviewer improvements are work items, not suggestions to acknowledge and skip
-8. **Unverifiable findings surface, not drop** — keep them in the report with a reason so the user can investigate
-9. **Refuted findings drop** — don't create fix tasks for findings your verification disproved
-10. **Context detection is automatic** — epic if epic exists, task otherwise
+7. **Verifier sees no severity / no reasoning** — only `id`, `path`, `line_range`, `body`, `verify_by`; fresh context prevents anchoring
+8. **All confirmed improvements implemented** — confirmed improvements are work items, not suggestions to acknowledge and skip
+9. **Gap findings surface, not drop** — keep them in the report with the verifier's specific gap_reason so the user can investigate
+10. **Refuted findings drop** — don't create fix tasks for verdicts the verifier returned refuted
+11. **Dedupe byte-identical, never semantic** — collapsing similar-looking findings silently drops true positives
+12. **Context detection is automatic** — epic if epic exists, task otherwise
 
 **Common rationalizations:**
 
@@ -338,14 +351,15 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 | "I already reviewed during implementation" | You're biased — that's why agents exist |
 | "Security isn't relevant here" | Every project has an attack surface |
 | "Performance review is overkill" | Dispatch it anyway — it's parallel, costs nothing |
-| "The reviewer is being too strict" | Investigate the finding before dismissing |
+| "The reviewer is being too strict" | The verifier handles this — trust the verdict |
 | "I can review faster myself" | Speed isn't the goal — unbiased review is |
 | "These are non-blocking suggestions" | Improvements are work items — implement them |
 | "Good ideas for a future PR" | No. Implement now, before this merge |
 | "None of these block the commit" | Improvements don't block the verdict, but they block the merge |
 | "It's just a small debugging fix" | Small fixes can introduce regressions. Review anyway |
-| "The reviewer said they verified it, so it's fine" | Reviewers self-reporting verification is how false positives ship. Re-check with the skepticism checklist |
-| "The Verify by: looks reasonable, skip the skepticism pass" | Lazy Verify-bys pass shallow checks. Audit them before running them |
+| "The verifier refuted this but I think it's real" | Refuted is refuted. If you disagree, that's a prompt-calibration signal, not a gate-override |
+| "This gap looks like a real bug to me" | A gap means the verifier hit a literal wall, not that a bug exists. If you suspect a bug, re-run review after fixing the tool-access issue the verifier cited |
+| "I'll just skip the verifier for this small change" | The verifier is where the quality comes from. Main context cannot verify without anchoring |
 
 ## Verification Checklist
 
@@ -354,15 +368,16 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 - [ ] Review brief prepared (requirements/goal + changed files, no opinions)
 - [ ] All four reviewers dispatched in single message
 - [ ] All four reviewer reports collected with `Verify by:` on every finding
-- [ ] Skepticism checklist run on each finding's `Verify by:`
-- [ ] Each finding independently re-checked and classified (confirmed / unverifiable / refuted)
-- [ ] Findings synthesized with verification counts (N confirmed / N unverifiable / N refuted)
+- [ ] Candidate list deduped on byte-identical `(path, line, verify_by)` tuples
+- [ ] Verifier sub-agent dispatched with candidate list (no severity, no reasoning chain)
+- [ ] Verifier returned one verdict per candidate (confirmed / refuted / gap) with quoted evidence
+- [ ] Findings assembled with verification counts (N confirmed / N refuted / N gaps)
 - [ ] ALL **confirmed** improvements implemented (or skipped with misunderstanding evidence)
-- [ ] Unverifiable findings surfaced to the user, not dropped
+- [ ] Gap findings surfaced under "🔍 Couldn't verify" with specific gap_reason
 - [ ] Refuted findings dropped, not converted into fix tasks
 - [ ] Tests pass after implementing improvements
 - [ ] If APPROVED: invoked finishing-branch via Skill tool
-- [ ] If GAPS: created fix tasks for confirmed gaps only, STOPPED
+- [ ] If GAPS: created fix tasks for confirmed gaps only (NOT gap-classified), STOPPED
 
 ## Integration
 
@@ -380,6 +395,9 @@ Agent general-purpose: "[performance.md] + [brief]"  (parallel)
 - `reviewers/security.md` — OWASP audit, secrets, auth, data exposure
 - `reviewers/quality.md` — language idioms, linter circumvention, test quality
 - `reviewers/performance.md` — scaling, N+1, resource management
+
+**Dispatches one verification agent (sequential, after reviewers, read-only) using:**
+- `reviewers/verifier.md` — kill-or-keep each candidate finding with evidence, three-verdict enum (confirmed/refuted/gap)
 
 **Call chain (epic context):**
 ```

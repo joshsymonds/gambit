@@ -68,7 +68,7 @@ Do not downgrade findings to vague suggestions like "could add a LIMIT." If you 
 
 ## Verification Requirement (Critical)
 
-Every Gap and Improvement you report MUST include a `**Verify by:**` line describing the concrete steps a second reviewer could follow to independently confirm your claim. The synthesizer runs these steps on every finding before deciding whether to keep or drop it; findings without a specific, actionable `Verify by:` are judged **refuted** and dropped.
+Every Gap and Improvement you report MUST include a `**Verify by:**` line describing the concrete steps a second reviewer could follow to independently confirm your claim. A dedicated verifier sub-agent runs these steps on every finding and classifies each one as confirmed, refuted, or gap; findings without a specific, actionable `Verify by:` are judged **refuted** and dropped.
 
 **Good `Verify by:` examples:**
 
@@ -80,7 +80,7 @@ Every Gap and Improvement you report MUST include a `**Verify by:**` line descri
 - `**Verify by:** Check for N+1.` (Where? Over what data?)
 - `**Verify by:** Look at the loop.` (Which loop? What should a reviewer see?)
 
-If you yourself could not complete the verification — you can't benchmark locally, the production query plan isn't accessible, the dataset sizes aren't knowable from the code alone — still emit the finding with a concrete `Verify by:`. The synthesizer may have different reach or may tag the finding **unverifiable** with a reason so the user still sees it. Silent drop is not an option; articulate the verification path and pass it up.
+If you yourself could not complete the verification — you can't benchmark locally, the production query plan isn't accessible, the dataset sizes aren't knowable from the code alone — still emit the finding with a concrete `Verify by:`. The downstream verifier sub-agent has fresh context and full tool reach; it will classify your finding as **confirmed**, **refuted**, or **gap**. **gap** is reserved for literal walls (tool returned 403, credential missing, system inaccessible). Findings the verifier "couldn't confirm" or finds "plausible but hard to prove" become **refuted** — they do not reach the user. Silent drop is not an option at the reviewer layer; articulate the verification path precisely and pass it up.
 
 ## How to Report
 
@@ -99,11 +99,11 @@ If you yourself could not complete the verification — you can't benchmark loca
 
 ### Gaps (if any)
 1. [Blocking issue with evidence and suggested fix]
-   **Verify by:** [Concrete steps the synthesizer can follow to confirm]
+   **Verify by:** [Concrete steps the verifier can follow to confirm]
 
 ### Improvements (if any)
 1. [Non-blocking improvement with file:line, what to change, and why]
-   **Verify by:** [Concrete steps the synthesizer can follow to confirm]
+   **Verify by:** [Concrete steps the verifier can follow to confirm]
 ```
 
 Report only what you find with evidence. Proportional assessment. If clean, say so and move on.
