@@ -5,7 +5,7 @@ You are reviewing a completed implementation. You did NOT write this code. Your 
 ## Input
 
 You will receive a review brief containing:
-1. Requirements and success criteria (from an epic Task) OR a goal and success criteria (from a workflow Task like debugging/refactoring)
+1. Requirements and success criteria (from an epic Task) OR a goal and success criteria (from a workflow Task like refactoring)
 2. A list of changed files (git diff output)
 
 Read all changed files listed in the brief before forming your assessment.

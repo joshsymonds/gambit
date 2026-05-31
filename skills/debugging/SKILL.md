@@ -3,301 +3,107 @@ name: debugging
 description: Use when a test is failing, when a bug is reported, when behavior is unexpected or intermittent, when a build or integration step fails, or when a flaky test keeps resurfacing. Especially when "the fix seems obvious", when multiple previous fixes haven't stuck, or when under time pressure to ship.
 ---
 
-# Systematic Debugging
+# Debugging — Root Cause Investigation
 
 ## Overview
 
-Random fixes waste time and create new bugs. Quick patches mask underlying issues. Symptom fixes are failure.
+Debugging in gambit is **investigation, not fixing.** You reproduce the bug, gather evidence, trace to the true root cause, and write a test that *proves* you understand it. Then you hand that understanding to `gambit:brainstorming`, which designs the fix as an epic and runs it through the normal build pipeline.
 
-**Core principle:** Tools first, fixes second. Find root cause with evidence before proposing any fix.
+Random fixes waste time and create new bugs. A fix for a symptom you don't understand is a guess wearing a confidence costume.
 
-**Iron Law:** NO fixes without root cause evidence first. NO closing without a regression test. Think you know the fix? Prove it with evidence BEFORE writing code. No exceptions.
+**Core principle:** Find the root cause with evidence before any fix is designed.
 
-**Announce at start:** "I'm using gambit:debugging to investigate this systematically."
+**Iron Law:** No fix designed without root-cause evidence AND a failing test that reproduces the bug. Think the fix is obvious? Prove it with evidence first. No exceptions.
+
+**Announce at start:** "I'm using gambit:debugging to find the root cause."
 
 ## Rigidity Level
 
-LOW FREEDOM - Follow the 6-phase process exactly. No fixes without root cause evidence. No closing without regression test and FIXED status classification.
+MEDIUM FREEDOM — Follow the investigation sequence; adapt the techniques to the bug in front of you. Non-negotiable: evidence before hypothesis, a failing test before handoff, fix the source not the symptom.
 
 ## Quick Reference
 
-| Phase | Action | STOP If |
-|-------|--------|---------|
-| 1 | Create bug Task | - |
-| 2 | Reproduce & gather evidence | Can't reproduce consistently |
-| 3 | Investigate root cause | Still guessing (no evidence) |
-| 4 | Write failing test (RED) | Test passes (doesn't catch bug) |
-| 5 | Fix and verify (GREEN) | Any test fails |
-| 6 | Classify, review, close, and document | Status not FIXED or review fails |
+| Step | Action | STOP If |
+|------|--------|---------|
+| 1 | Reproduce & gather evidence | Can't reproduce consistently |
+| 2 | Investigate root cause | Still guessing (no evidence) |
+| 3 | Write failing test that captures the bug | Test passes (doesn't catch it) |
+| 4 | Hand root cause to brainstorming | 3+ hypotheses already failed → question architecture |
 
-**Fix Status Classification:**
-
-| Status | Definition | Action |
-|--------|------------|--------|
-| FIXED | Root cause addressed, tests pass | Close Task |
-| PARTIALLY_FIXED | Some aspects remain | Document, keep open |
-| NOT_ADDRESSED | Fix missed the bug | Return to Phase 3 |
-| CANNOT_DETERMINE | Need more info | Gather reproduction data |
-
-**Critical sequence:** Task → Reproduce → Evidence → Root Cause → Failing Test → Fix → Verify → Classify → Review → Close
+**Terminal:** root cause + failing test → `gambit:brainstorming` designs and executes the fix. This skill does NOT fix, classify, or close — it understands, then hands off.
 
 ## When to Use
 
-- Test failures, bugs, unexpected behavior, regressions, build failures, performance problems
+- Test failures, bugs, unexpected behavior, regressions, build failures, performance problems, flaky tests
 - **Especially** under time pressure, after multiple failed fixes, or when "the fix seems obvious"
 
-**Don't use for:** new features (`gambit:executing-plans`), refactoring (`gambit:refactoring`)
+**Don't use for:** new features (`gambit:brainstorming`), refactoring (`gambit:refactoring`)
 
 ## The Process
 
-### Phase 1: Create Bug Task
+### 1. Reproduce & Gather Evidence
 
-**REQUIRED: Track from the start.**
+**BEFORE forming any theory:**
 
-```
-TaskCreate
-  subject: "Bug: [Clear description of symptom]"
-  description: |
-    ## Bug Description
-    [What's wrong - be specific]
-
-    ## Reproduction Steps
-    1. [Step one]
-    2. [Expected vs actual behavior]
-
-    ## Status
-    - [ ] Reproduced consistently
-    - [ ] Root cause identified
-    - [ ] Failing test written
-    - [ ] Fix implemented
-    - [ ] All tests pass
-  activeForm: "Investigating bug"
-```
-
-Then: `TaskUpdate taskId: "[id]" status: "in_progress"`
-
----
-
-### Phase 2: Reproduce & Gather Evidence
-
-**BEFORE attempting ANY fix:**
-
-1. **Read error messages carefully** — stack traces, line numbers, error codes often contain the answer
-2. **Reproduce consistently** — if intermittent, add instrumentation; if can't reproduce, **STOP**
+1. **Read the error carefully** — stack traces, line numbers, error codes often contain the answer
+2. **Reproduce consistently** — if intermittent, add instrumentation; if you can't reproduce it, **STOP** and gather more data
 3. **Check recent changes** — `git log --oneline -10` and `git diff HEAD~5..HEAD -- path/to/affected/code`
 
-**For multi-component systems:** When the failing path crosses 3+ components (CI → build → signing; handler → service → cache → database; workflow → env → container → app), you can't reason out WHICH component is broken from the error alone — instrument every boundary, run once, then investigate the specific layer the evidence points at.
+**Multi-component path?** When the failing path crosses 3+ boundaries (CI → build → signing; handler → service → cache → DB), you can't reason out *which* component is broken from the error alone — instrument every boundary, run once, then investigate the layer the evidence points at. See [references/root-cause-tracing.md](references/root-cause-tracing.md#instrumenting-boundaries-in-multi-component-systems).
 
-For each boundary in the failing path:
-- Log what data ENTERS the component (inputs, env vars, headers, auth state)
-- Log what data EXITS the component (return value, next call's inputs)
-- Log the environment/config state the component reads (env vars present? config loaded? credentials valid?)
-- Keep logs distinguishable per layer so you can tell at a glance which one diverged from expectation
+### 2. Investigate Root Cause
 
-Concrete template (macOS code-signing pipeline as an example — adapt the commands to your stack):
+**Evidence before hypothesis. Use tools, not guessing.**
 
-```bash
-# Layer 1 — CI workflow: which secrets did GitHub Actions actually inject?
-echo "=== Workflow env ==="
-echo "IDENTITY: ${IDENTITY:+SET}${IDENTITY:-UNSET}"
-echo "KEYCHAIN_PASSWORD: ${KEYCHAIN_PASSWORD:+SET}${KEYCHAIN_PASSWORD:-UNSET}"
+- **Search for context** — `WebSearch` for error messages; dispatch an `Explore` agent for codebase investigation (how is this called? what data flows here? what changed?)
+- **Find a working neighbor and compare** — most codebases contain a near-neighbor of the broken path (another caller of the same function, another feature using the same library). Comparing working-vs-broken is faster than pure tracing and catches "configured differently" bugs. List **every** difference, not just the ones that seem relevant — "that can't matter" is how real bugs hide. Read the working reference *completely*.
+- **Trace data flow backward** — find where the bad value *originates*, not where it crashes. A null check at the crash site is a symptom fix; finding *why* the value is null and preventing it at the source is a root-cause fix. Full technique: [references/root-cause-tracing.md](references/root-cause-tracing.md).
+- **Form a hypothesis with evidence** — "I think X is the root cause because Y." Evidence = stack trace showing the call path, log output showing state, code showing missing validation, or test output showing the failure mode. **No evidence? STOP.** Keep investigating.
 
-# Layer 2 — Build script: did env vars propagate from the workflow?
-echo "=== Build script env ==="
-env | grep -E '^(IDENTITY|KEYCHAIN)' || echo "signing env vars not present"
+**Match the bug shape to a technique:**
 
-# Layer 3 — Signing step: is the keychain in the expected state?
-echo "=== Keychain state ==="
-security list-keychains -d user
-security find-identity -v -p codesigning
+| Bug shape | Technique |
+|-----------|-----------|
+| Flaky / timing-dependent test | [references/condition-based-waiting.md](references/condition-based-waiting.md) |
+| "Which test pollutes shared state?" | [references/find-polluter.sh](references/find-polluter.sh) |
+| Deep-stack bug, unclear origin | [references/root-cause-tracing.md](references/root-cause-tracing.md) |
 
-# Layer 4 — Actual sign: the failing command, with maximum verbosity
-codesign --sign "$IDENTITY" --verbose=4 "$APP_PATH"
-```
+### 3. Write the Failing Test (proof of understanding)
 
-Run it once. Read the layered output top-to-bottom. The first layer where reality diverges from expectation is where the bug lives — investigate THAT layer, not the one that reported the error. Code-signing errors surface at Layer 4 but 90% of the time the actual bug is at Layer 1 (secret not set) or Layer 2 (env var not propagated).
+Write the smallest test that reproduces the bug. **Run it — it MUST fail.**
 
-Remove the instrumentation once the root cause is identified — don't leave scaffolding committed.
-
----
-
-### Phase 3: Investigate Root Cause
-
-**REQUIRED: Evidence before hypothesis. Use tools, not guessing.**
-
-#### 3a: Search for Context
-
-**For error messages:** Use WebSearch directly.
-
-**For codebase investigation:** Dispatch an Explore agent:
-
-```
-Task
-  subagent_type: "Explore"
-  description: "Investigate bug in [area]"
-  prompt: |
-    Error: [exact error message]
-    Location: [file:line]
-
-    Find:
-    - How is this function called? What are the callers?
-    - What data flows to this point?
-    - Are there similar patterns elsewhere that work?
-    - What changed recently in this area?
-```
-
-**For broader investigation** (multiple files, complex flow): Dispatch a general-purpose agent:
-
-```
-Task
-  subagent_type: "general-purpose"
-  description: "Trace bug root cause"
-  prompt: |
-    Bug: [description]
-    Error at: [file:line]
-
-    Trace the data flow backward from the error.
-    Find where the bad value originates.
-    Report the root cause with file:line evidence.
-```
-
-#### 3b: Find Working Patterns
-
-**Before tracing backwards, look for something similar that already works.** Most codebases contain near-neighbors of the broken code path — another handler using the same library, another caller of the same function, another feature that hit the same framework constraint. Comparing working-vs-broken is faster than pure data-flow tracing and catches "this feature is configured differently" bugs that backward tracing misses entirely.
-
-```
-Task
-  subagent_type: "Explore"
-  description: "Find working neighbors for comparison"
-  prompt: |
-    Broken: [file:line, brief description of the broken behavior]
-    Error: [exact error or symptom]
-
-    Find 2-3 places in this codebase that:
-    - Use the same library/framework call pattern
-    - Or implement similar behavior that currently works
-    - Or handle the same kind of input/data successfully
-
-    For each, report: file:line, how it's called, what's different from the broken path.
-```
-
-When comparing:
-- **List every difference, not just the ones that "seem relevant"** — config values, order of calls, whether a result is awaited, which overload is used, what's passed vs. defaulted. "That can't matter" is how real bugs hide.
-- **Read the reference implementation completely**, not just the signature. Partial understanding of a pattern guarantees the broken version will stay broken.
-- **If no working neighbor exists**, that's evidence too — the feature may be using a pattern nothing else in the codebase uses, which raises the probability of misuse. Investigate the library's docs/tests instead.
-
-Skip this substep ONLY if the error message already names the exact root cause (e.g., "missing required env var FOO") with no ambiguity about WHY it's missing.
-
-#### 3c: Trace Data Flow Backward
-
-**CRITICAL: Find where the bad value ORIGINATES, not just where it causes symptoms.**
-
-```
-Start at error location (symptom)
-    ↓ Where does this value come from?
-    ↓ What called this with that value?
-    ↓ Keep tracing until you find the SOURCE
-    ↓ Fix at SOURCE, not at symptom location
-```
-
-**The distinction matters:** Adding a null check at the crash site is a symptom fix. Finding WHY the value is null and preventing it at the source is a root cause fix.
-
-#### 3d: Form Hypothesis with Evidence
-
-**State clearly:** "I think X is the root cause because Y [evidence]"
-
-Evidence required: stack trace showing call path, log output showing state, code showing missing validation, or test output showing failure mode.
-
-**No evidence? STOP.** Return to 3a-3c.
-
----
-
-### Phase 4: Write Failing Test (RED)
-
-Write the smallest test that reproduces the bug. Reference the bug Task in a comment.
+A failing test is how you *prove* you found the real bug instead of a plausible story. If it passes immediately, you don't understand the bug yet — return to step 2.
 
 ```python
 def test_rejects_empty_email():
-    # Regression test for Bug Task #N
+    # Reproduces the reported bug: empty email slips through registration
     _, err = create_user(User(email=""))
     assert err is not None, "expected validation error for empty email"
 ```
 
-**Run the test. It MUST FAIL.**
+This test is the artifact you hand to brainstorming — it pins down exactly what "fixed" means.
 
-- Test FAILS → Confirms it catches the bug. Go to Phase 5.
-- Test PASSES → **STOP.** Test doesn't catch the bug. Rewrite it.
+### 4. Hand Off to Brainstorming
 
----
+You now hold the two things a good fix needs: **the root cause (with evidence)** and **a failing test that captures it.** That's the seed of the fix epic.
 
-### Phase 5: Fix and Verify (GREEN)
-
-Fix the ROOT CAUSE identified in Phase 3.
-
-**Rules:**
-- ONE change addressing root cause
-- No "while I'm here" improvements
-- No bundled refactoring
-- Minimal code to make test pass
-
-**Verify (both required):**
-1. Regression test now PASSES
-2. Full test suite passes — dispatch agent if output is verbose:
+**Default (almost always) — invoke `gambit:brainstorming`:**
 
 ```
-Task
-  subagent_type: "general-purpose"
-  description: "Run full test suite"
-  prompt: "Run: [test command for this project]. Report pass/fail counts and any failures."
+Skill skill="gambit:brainstorming"
 ```
 
-**If fix doesn't work:**
-- Attempts 1-2: Return to Phase 3, re-analyze with new information
-- **Attempt 3+: STOP.** Question the architecture. Discuss with user before continuing.
+Tell it the investigation is done so it designs the fix rather than re-investigating. Feed it:
+- **Root cause:** the source, with evidence (file:line, the backward trace)
+- **Failing test:** make this pass — that's the immutable success criterion
+- **Symptom location:** mark "patch here" as a forbidden anti-pattern
+- Consider **defense-in-depth** ([references/defense-in-depth.md](references/defense-in-depth.md)) so the whole bug class becomes structurally impossible, not just this instance
 
-Pattern indicating architectural problem: each fix reveals a new problem in a different place, or fixes require "massive refactoring."
+Brainstorming turns this into an epic and routes it through `executing-plans` → `review` like any other work — that's where the fix gets written, verified, and reviewed.
 
----
+**Fast path (one-liners only):** if the root cause is a genuine one-line change and the failing test fully guards it, just make the change and verify (test passes + full suite green). Don't spin up an epic for a typo. Anything larger than a one-liner → brainstorming.
 
-### Phase 6: Close and Document
-
-#### 6a: Classify Fix Status
-
-| Status | Evidence Required | Action |
-|--------|-------------------|--------|
-| **FIXED** | Root cause explanation + regression test PASS + full suite PASS | Close Task |
-| **PARTIALLY_FIXED** | Document what remains | Create follow-up Task, keep open |
-| **NOT_ADDRESSED** | Fix doesn't address the bug | Return to Phase 3, do not close |
-| **CANNOT_DETERMINE** | Insufficient reproduction data | Gather more data |
-
-#### 6b: Mandatory Review
-
-After classifying as FIXED, invoke `gambit:review` before closing:
-
-```
-Skill skill="gambit:review"
-```
-
-Do not skip review for "small" fixes. Do not tell the user to run it manually — invoke it and follow its process immediately. Review validates the fix doesn't introduce regressions, security issues, or quality problems.
-
-#### 6c: Update and Close Task
-
-After review passes:
-
-```
-TaskUpdate
-  taskId: "[bug-task-id]"
-  description: |
-    ## Fix Status: FIXED
-    **Root cause:** [what caused the bug - be specific]
-    **Fix:** [what was changed, file:line]
-    **Regression test:** [test name] PASSES
-    **Full suite:** [N] tests pass
-    **Review:** APPROVED
-  status: "completed"
-```
-
-**Only mark completed if status = FIXED and review passes.** Otherwise keep open or create follow-up.
+**If 3+ hypotheses or fixes have already failed: STOP.** Each fix revealing a new problem elsewhere, or fixes that need "massive refactoring," means your root-cause model is wrong or the architecture is. Question fundamentals *with the user* before handing a shaky diagnosis to brainstorming.
 
 ---
 
@@ -305,70 +111,63 @@ TaskUpdate
 
 ### Rules That Have No Exceptions
 
-1. **Create Task before investigating** → Track from discovery to closure
-2. **No fixes without root cause evidence** → Evidence = code path, logs, or test output showing WHY
-3. **Test must fail before fix (RED)** → If test passes immediately, it doesn't catch the bug
-4. **Run full test suite after fix** → Dispatch general-purpose agent for verbose output
-5. **If 3+ fixes fail, question architecture** → Stop and discuss with user
-6. **Classify fix status with evidence** → Never close without classification
+1. **Evidence before hypothesis** → code path, logs, or test output showing WHY
+2. **Reproduce before investigating** → can't reproduce → gather data, don't guess
+3. **Failing test before handoff** → proves you caught the real bug, not a story
+4. **Trace to the SOURCE** → fix where the bad value originates, not where it crashes
+5. **3+ failed attempts → question architecture** → stop and discuss with the user
+6. **Hand the root cause to brainstorming** → don't rebuild a fix-and-close pipeline here
 
 ### Common Excuses
 
-All mean: **STOP. Return to Phase 2-3.**
+All mean: **STOP. Return to steps 1–2.**
 
 | Excuse | Reality |
 |--------|---------|
-| "Issue is simple, don't need process" | Simple issues have root causes too |
-| "Emergency, no time for process" | Systematic is FASTER than thrashing |
-| "Just try this first, then investigate" | First fix sets the pattern. Do it right. |
-| "I'll write test after confirming fix works" | Untested fixes don't stick |
+| "Issue is simple, don't need to investigate" | Simple issues have root causes too |
+| "Emergency, no time to investigate" | Systematic is FASTER than thrashing |
+| "Just try this fix first, then investigate" | First fix sets the pattern. Do it right. |
+| "I'll write the test after I confirm the fix" | Untested fixes don't stick |
 | "I see the problem, let me fix it" | Seeing symptoms ≠ understanding root cause |
 | "One more fix attempt" (after 2+ failures) | 3+ failures = architectural problem |
-| "Obviously X is the cause" | "Obvious" fixes are often wrong. Get evidence. |
+| "Obviously X is the cause" | "Obvious" causes are often wrong. Get evidence. |
 
 ---
 
 ## Verification Checklist
 
-- [ ] Task created with reproduction steps
 - [ ] Bug reproduced consistently
-- [ ] Root cause identified with EVIDENCE
-- [ ] Failing test catches the bug (RED)
-- [ ] Fix addresses root cause, not symptom (GREEN)
-- [ ] Full test suite passes
-- [ ] Fix status classified with evidence
-- [ ] `gambit:review` invoked and passed (if FIXED)
-- [ ] Task updated and closed (or kept open if not FIXED)
+- [ ] Root cause identified WITH evidence (not a plausible guess)
+- [ ] Failing test reproduces the bug (RED)
+- [ ] Root cause (not symptom) handed to brainstorming — or one-line fix verified green
+- [ ] If 3+ attempts failed: architecture questioned with the user
 
-**Can't check all boxes?** Return to the process.
+**Can't check these?** Return to the process.
 
 ---
 
-## Examples
+## References
 
-See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
-- Symptom fix vs root cause fix
-- Test written after fix vs before (RED-GREEN)
-- Complete debugging workflow walkthrough
+- [references/root-cause-tracing.md](references/root-cause-tracing.md) — backward tracing, stack instrumentation, multi-component boundary logging
+- [references/condition-based-waiting.md](references/condition-based-waiting.md) — fix flaky/timing tests by polling for the condition, not guessing a delay
+- [references/defense-in-depth.md](references/defense-in-depth.md) — after root cause, validate at every layer so the bug class is impossible
+- [references/find-polluter.sh](references/find-polluter.sh) — bisect which test pollutes shared state
+- [REFERENCE.md](REFERENCE.md) — symptom-vs-root-cause and RED-GREEN worked examples
 
 ---
 
 ## Integration
 
 **This skill calls:**
-- `gambit:test-driven-development` (RED-GREEN cycle methodology)
-- `gambit:verification` (evidence before completion claims)
-- `gambit:review` (mandatory, after fix verified as FIXED)
-- Explore agent (`subagent_type: "Explore"`) for codebase investigation
-- general-purpose agent (`subagent_type: "general-purpose"`) for broader investigation and test running
-- WebSearch for error message research
+- `Explore` / `general-purpose` agents for codebase investigation
+- `WebSearch` for error-message research
+- `gambit:brainstorming` (terminal — designs and executes the fix from the root cause)
 
 **Called by:**
-- When bugs discovered during development
-- When test failures need fixing
-- When user reports bugs
+- A bug discovered during development, a failing test, a user-reported bug
+- `gambit:parallel-agents` (investigates each isolated failure)
 
 **Workflow:**
 ```
-Bug discovered → Task → Reproduce → Investigate → Failing test → Fix → Verify → Review → Close
+Bug → reproduce → evidence → root cause → failing test → gambit:brainstorming → (epic → executing-plans → review)
 ```

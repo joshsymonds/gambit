@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Use when user has a new feature idea, rough concept, or unexplored approach. Include when planning before code, exploring architectural options, or requirements are vague. User phrases like "I want to build X", "should we do this", "let's think through Y", "explore approaches". Do NOT use for executing existing plans, fixing bugs, refactoring, or when requirements and an epic already exist.
+description: Use when user has a new feature idea, rough concept, or unexplored approach. Include when planning before code, breaking a design into tasks, creating an implementation plan, laying out tasks and dependencies, exploring architectural options, or requirements are vague. User phrases like "I want to build X", "should we do this", "let's think through Y", "explore approaches", "break this into tasks", "make an implementation plan". Do NOT use for executing existing plans, fixing bugs, refactoring, or when requirements and an epic already exist.
 user_invokable: true
 ---
 
@@ -26,14 +26,15 @@ HIGH FREEDOM - Adapt questioning to context. But always:
 
 | Step | Action | Deliverable |
 |------|--------|-------------|
-| 1 | Ask clarifying questions | Understanding of requirements |
+| 1 | Scope-check, then ask clarifying questions | Right granularity + understanding |
 | 2 | Research codebase and patterns | Existing approaches |
 | 3 | Propose 2-3 approaches | Recommended option |
-| 4 | Present design in sections | Validated architecture |
+| 4 | Present design (isolated units, YAGNI) | Validated architecture |
 | 5 | Create epic Task | Immutable requirements + anti-patterns |
 | 6 | Create ONLY first subtask | Ready for execution |
 | 7 | Apply task refinement | Corner cases covered |
-| 8 | Ask next step, invoke skill | Chain continues automatically |
+| 8 | Confirm immutable requirements with user | Contract locked |
+| 9 | Ask next step, invoke skill | Chain continues automatically |
 
 **Key:** Epic = contract (immutable), Tasks = adaptive (created as you learn)
 
@@ -50,7 +51,7 @@ Do NOT write any code, invoke any implementation skill, or take any implementati
 
 **Don't use for:**
 - Executing existing plans (use `gambit:executing-plans`)
-- Fixing bugs (use `gambit:debugging`)
+- Starting a bug with no root cause yet (investigate with `gambit:debugging` first — it hands the root cause back here to design the fix)
 - Refactoring (use `gambit:refactoring`)
 - Requirements already crystal clear and epic exists
 
@@ -65,6 +66,8 @@ Task
   subagent_type: "Explore"
   prompt: "Find existing [relevant] implementation patterns in this codebase"
 ```
+
+**Check scope before refining.** If the request spans multiple independent subsystems (e.g., "a platform with chat, billing, and analytics"), STOP and decompose before asking detail questions — don't refine something that should be several epics. Identify the independent pieces, how they relate, and what order to build them. Then brainstorm the FIRST piece through the normal flow; each piece gets its own epic → tasks cycle. Refining an over-large project wastes questions and produces a brittle epic.
 
 **Then ask clarifying questions using AskUserQuestion tool.**
 
@@ -118,6 +121,10 @@ I recommend option 1 because [specific reason].
 ### 3. Present the Design
 
 Once approach is chosen, present in digestible sections. Ask "Does this look right?" after each. Cover: architecture, components, data flow, error handling, testing.
+
+**Decompose for isolation.** Break the system into units that each have one clear purpose, communicate through well-defined interfaces, and can be understood and tested independently. For each unit, you should be able to say what it does, how to use it, and what it depends on — without reading its internals. If you can't change a unit's internals without breaking its consumers, the boundaries are wrong; rework them before locking the epic.
+
+**Apply YAGNI ruthlessly.** Cut every feature, abstraction, and "we might want this later" the stated requirements don't demand. Unbuilt scope is the cheapest scope to remove — if the user wants it, they'll say so when you present.
 
 ---
 
@@ -197,7 +204,7 @@ TaskCreate
 
 Before handoff, verify the first task passes these checks:
 
-1. **Scoped:** 2-5 minutes of work (if longer, break down)
+1. **Scoped:** One focused sitting (~15-45 min). If it sprawls past that, break it down.
 2. **Self-contained:** Can execute without asking questions
 3. **Explicit:** All file paths specified
 4. **Testable:** At least 3 success criteria
@@ -222,6 +229,14 @@ Scan for:
 - **Internal consistency:** The first task's files, function names, and success criteria should match the epic's stated approach. Mismatches mean one of them is wrong.
 
 Fix what you find by updating the epic or first task with `TaskUpdate`, then proceed. Do NOT present a plan that has items on this list.
+
+#### Confirm the contract with the user
+
+Epic requirements are IMMUTABLE once execution starts — so the user reviews them BEFORE handoff, not after. Present the epic's Requirements, Success Criteria, and Anti-Patterns and ask for explicit confirmation:
+
+> "Here's the epic contract — these requirements lock once we start: [summary]. Good to lock, or change anything first?"
+
+If they request changes, update the epic and re-run the self-review. Only proceed to handoff once they confirm.
 
 ---
 
@@ -298,30 +313,39 @@ TaskCreate subject: "Epic: OAuth"
 
 ## Critical Rules
 
-1. **Use AskUserQuestion tool** — don't print questions as text
-2. **Research BEFORE proposing** — use Explore agent for codebase context
-3. **Propose 2-3 approaches** — don't jump to a single solution
-4. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
-5. **Include anti-patterns** — prevents watering down under pressure
-6. **Create ONLY first task** — subsequent tasks created iteratively
-7. **Apply task refinement** — before handoff
-8. **Invoke next skill directly** — don't tell user to run it manually
+1. **Decompose multi-subsystem requests** — several subsystems = several epics, before refining
+2. **Use AskUserQuestion tool** — don't print questions as text
+3. **Research BEFORE proposing** — use Explore agent for codebase context
+4. **Propose 2-3 approaches** — don't jump to a single solution
+5. **Decompose for isolation, apply YAGNI** — well-bounded units, no unrequested scope
+6. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
+7. **Include anti-patterns** — prevents watering down under pressure
+8. **Create ONLY first task** — subsequent tasks created iteratively
+9. **Apply task refinement** — before handoff
+10. **Confirm the contract before handoff** — user locks immutable requirements first
+11. **Invoke next skill directly** — don't tell user to run it manually
 
 **Common rationalizations (all mean STOP, follow the process):**
 - "Requirements obvious" → Questions reveal hidden complexity
 - "I know this pattern" → Research might show a better way
 - "Can plan all tasks upfront" → Plans become brittle as you learn
+- "It's one project" → Independent subsystems are separate epics; decompose first
+- "They'll want this feature too" → YAGNI; propose minimal, let them ask for more
 
 ## Verification Checklist
 
+- [ ] Scope-checked: decomposed if multiple independent subsystems
 - [ ] Used AskUserQuestion tool (not printed text)
 - [ ] Researched codebase patterns (Explore agent)
 - [ ] Proposed 2-3 approaches with trade-offs
+- [ ] Design decomposed into well-bounded, independently testable units
+- [ ] YAGNI applied — no scope the requirements don't demand
 - [ ] Created epic with all required sections
 - [ ] Anti-patterns include reasoning
 - [ ] Rejected approaches have DO NOT REVISIT UNLESS
 - [ ] Created ONLY first task (not full tree)
 - [ ] Task refined: scoped, self-contained, explicit, testable
+- [ ] User confirmed immutable requirements before handoff
 - [ ] Asked user next step via AskUserQuestion (execute/worktree/refine)
 - [ ] Invoked chosen skill directly via Skill tool
 

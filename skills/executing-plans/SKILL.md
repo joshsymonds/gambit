@@ -37,10 +37,10 @@ Do not skip checkpoints or verification. Epic requirements never change. Tasks a
 - Epic Task exists with subtasks ready to execute
 - Resuming implementation after a previous checkpoint
 - Need to implement features iteratively with human oversight
-- After `gambit:writing-plans` or `gambit:brainstorming` creates tasks
+- After `gambit:brainstorming` creates the epic and first task
 
 **Don't use when:**
-- No epic exists → use `gambit:brainstorming` or `gambit:writing-plans`
+- No epic exists → use `gambit:brainstorming`
 - Debugging a bug → use `gambit:debugging`
 - Single quick fix → just do it
 
@@ -115,14 +115,14 @@ If implementation reveals unexpected work:
 
 1. Create new task with `TaskCreate` — full detail, no placeholders
 2. Set dependency with `TaskUpdate addBlockedBy` (only on other subtasks — never on the epic, which would deadlock since the epic completes last)
-3. Ensure it's bite-sized (2-5 min), has explicit paths, testable criteria
+3. Ensure it's scoped to one focused sitting (~15-45 min), has explicit paths, testable criteria
 4. Document in checkpoint summary that new task was added
 
 ---
 
 ### 3. Create Next Task
 
-After completing a task, create the NEXT task based on what you learned. This is how executing-plans differs from writing-plans: tasks are created iteratively as reality unfolds, not all upfront.
+After completing a task, create the NEXT task based on what you learned. Tasks are created iteratively as reality unfolds, never all upfront — an upfront task tree goes stale the moment the first task teaches you something.
 
 **Review what you learned:**
 1. What did we discover during implementation?
@@ -144,10 +144,11 @@ After completing a task, create the NEXT task based on what you learned. This is
 - Document learnings in checkpoint
 - Let user decide how to adapt
 
-**Task quality check** (same as writing-plans):
-- Scoped: 2-5 minutes of work
+**Task quality check:**
+- Scoped: one focused sitting (~15-45 min)
 - Self-contained: Can execute without asking questions
 - Explicit: All file paths specified
+- Definitive: Steps reference verified file paths — never conditional ("if exists", "if present"). Verify against the codebase first, then write the step.
 - Testable: Has verification command with expected output
 
 ---
@@ -321,7 +322,7 @@ Before closing epic:
 
 **Called by:**
 - User via `/gambit:executing-plans`
-- After `gambit:writing-plans` or `gambit:brainstorming` creates tasks
+- After `gambit:brainstorming` creates the epic and first task
 
 **Calls:**
 - `gambit:test-driven-development` during implementation

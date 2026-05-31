@@ -221,7 +221,7 @@ Environment: <devenv/npm/cargo/pip/go/none>
 
 **Always use full absolute path.** User needs it for navigation.
 
-**Then chain to the next skill automatically.** If tasks exist (invoked from brainstorming/writing-plans handoff), invoke executing-plans directly:
+**Then chain to the next skill automatically.** If tasks exist (invoked from a brainstorming handoff), invoke executing-plans directly:
 
 ```
 Skill skill="gambit:executing-plans"
@@ -301,7 +301,6 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 
 **Called by:**
 - `gambit:brainstorming` (optional, user chooses at handoff)
-- `gambit:writing-plans` (optional, user chooses at handoff)
 - User via `/gambit:using-worktrees`
 
 **Calls:**
@@ -313,10 +312,9 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 
 **Workflow:**
 ```
-gambit:brainstorming ─┐
-                      ├→ gambit:using-worktrees → gambit:executing-plans
-gambit:writing-plans ─┘                                    ↓
+gambit:brainstorming → gambit:using-worktrees → gambit:executing-plans
+                                                          ↓
                                                  gambit:review
-                                                           ↓
+                                                          ↓
                                                  gambit:finishing-branch
 ```

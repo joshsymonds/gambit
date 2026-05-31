@@ -42,7 +42,6 @@ Use the `Skill` tool. When you invoke a skill, its content is loaded — follow 
 | Task Type | Skill | Slash Command |
 |-----------|-------|---------------|
 | New feature idea | brainstorming | `/gambit:brainstorming` |
-| Create task plan | writing-plans | `/gambit:writing-plans` |
 | Execute tasks | executing-plans | `/gambit:executing-plans` |
 | Fix a bug | debugging | `/gambit:debugging` |
 | Implement with TDD | test-driven-development | `/gambit:test-driven-development` |
@@ -77,19 +76,21 @@ digraph skill_flow {
 
 ## Skill Selection Guide
 
-**User describes a new idea or feature (fork — pick ONE path):**
+**User describes a new idea or feature, no epic yet → gambit:brainstorming**
 
 ```
-├─ Idea is vague or evolving → gambit:brainstorming
-│  Creates epic + first task via Socratic questioning.
-│  Brainstorming will ask: worktree? refine tasks? → then routes to executing-plans.
-│
-└─ Requirements already clear → gambit:writing-plans
-   Creates epic + ALL subtasks with dependencies upfront.
-   Writing-plans will ask: worktree? refine tasks? → then routes to executing-plans.
+gambit:brainstorming
+   Creates epic (immutable requirements) + first task via Socratic questioning,
+   scaled to how clear the idea already is — a crisp spec gets brief questioning,
+   a rough idea gets more. Tasks are created iteratively during execution, never
+   all upfront. Brainstorming will ask: worktree? refine tasks? → routes to executing-plans.
 ```
 
-**After either path, the flow continues automatically:**
+**If an epic and tasks already exist → gambit:executing-plans directly.**
+
+**There is no separate plan-writing skill.** "Break this into tasks", "make an implementation plan", "lay out the tasks and dependencies" all route to `gambit:brainstorming` (which creates the epic + first task; the rest are created iteratively during execution). Do NOT look for or invoke `gambit:writing-plans` — it does not exist. Upfront full task graphs are deliberately not part of gambit.
+
+**The flow then continues automatically:**
 ```
 executing-plans (one task → checkpoint → STOP → repeat)
     ↓ all tasks done
@@ -105,7 +106,7 @@ finishing-branch (verify → merge/PR/keep/discard)
 3. **Verification skills last** (verification, testing-quality) — these confirm results
 
 "Let's build X" → brainstorming first, then TDD.
-"Fix this bug" → debugging first, then TDD for the fix.
+"Fix this bug" → debugging first to find the root cause, then brainstorming designs the fix.
 "I think it's done" → verification before claiming complete.
 
 ## Red Flags

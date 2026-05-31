@@ -177,7 +177,7 @@ See [REFERENCE.md](REFERENCE.md) for the complete corner case tables with specif
 Create epic Task for test quality improvement, then subtasks for each action group (remove RED tests, strengthen YELLOW tests, add missing corner cases).
 
 Each subtask must be:
-- **Scoped:** 2-5 minutes of work
+- **Scoped:** one focused sitting (~15-45 min)
 - **Explicit:** File paths and line numbers specified
 - **Testable:** At least 3 success criteria
 

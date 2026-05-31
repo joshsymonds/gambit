@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use after all tasks in an epic complete, after debugging finishes a fix, after refactoring verifies, or before merging to main. Triggers when independent validation is needed that code meets requirements, has no security gaps, passes quality standards, and has no performance regressions. User phrases like "review this", "is this ready to merge", "validate the implementation".
+description: Use after all tasks in an epic complete, after refactoring verifies, or before merging to main. Triggers when independent validation is needed that code meets requirements, has no security gaps, passes quality standards, and has no performance regressions. User phrases like "review this", "is this ready to merge", "validate the implementation".
 user_invokable: true
 ---
 
@@ -31,7 +31,7 @@ LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approva
 | **1. Detect Context** | Epic Task or workflow Task | Can't find any Task |
 | **2. Load Context** | Task + changed files list | Can't load task |
 | **3. Prepare Brief** | Requirements/goal + file list + base branch | Brief incomplete |
-| **4. Dispatch Reviewers** | 4 agents in parallel | Any agent fails to run |
+| **4. Dispatch Reviewers** | 4 agents in parallel, each reading its own instructions by path | Any agent fails to run |
 | **5. Dedupe Candidates** | Merge reviewer outputs; dedupe on byte-identical `(file, line, verify_by)` tuples | — |
 | **6. Dispatch Verifier** | 1 verifier sub-agent with the deduped candidate list | Verifier fails to run |
 | **7. Assemble Findings** | Route verifier verdicts: confirmed → kept, gap → surfaced, refuted → dropped | — |
@@ -41,7 +41,6 @@ LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approva
 ## When to Use
 
 - All epic subtasks show "completed" (called automatically by `gambit:executing-plans` Step 5)
-- After `gambit:debugging` completes a fix (mandatory)
 - After `gambit:refactoring` completes changes (mandatory)
 - Before `gambit:finishing-branch`
 - Any time you want independent review of completed work
@@ -63,13 +62,13 @@ TaskGet → epic (requirements, success criteria, anti-patterns)
 TaskList → all subtasks (verify all completed)
 ```
 
-**Task context** (debugging, refactoring, or standalone work):
+**Task context** (refactoring or standalone work):
 ```
 TaskList → find the workflow Task (most recent in-progress or just-completed Task)
 TaskGet → task (goal, implementation steps, success criteria)
 ```
 
-The review brief adapts based on which context is detected. If both exist (e.g., debugging during an epic), prefer the epic context.
+The review brief adapts based on which context is detected. If both exist (e.g., a refactor during an epic), prefer the epic context.
 
 ### Step 2: Load Context
 
@@ -109,24 +108,18 @@ Do NOT include your opinions, implementation notes, or rationale. The reviewers 
 
 ### Step 4: Dispatch Four Reviewers
 
-Read the four reviewer instruction files from `reviewers/` within this skill's directory:
-- `reviewers/conformance.md`
-- `reviewers/security.md`
-- `reviewers/quality.md`
-- `reviewers/performance.md`
+Resolve the absolute path to this skill's `reviewers/` directory **once** (Glob `**/skills/review/reviewers/conformance.md` if you don't already know it). You pass this path to the agents — **do NOT read the reviewer files into this context.** The four reviewer files are ~8k tokens; reading them here and re-emitting them as prompts wastes ~18k tokens every review. Each agent reads its own instruction file in its own fresh context.
 
-For each reviewer, dispatch a `general-purpose` agent. The prompt for each agent must contain:
-1. The full contents of that reviewer's instruction file
-2. The review brief (requirements/goal + changed files list) appended after the instructions
+In ONE message, emit exactly four `general-purpose` Agent calls. Each prompt is just: (1) a directive to read and follow that agent's instruction file by path, then (2) the review brief.
 
 ```
-Agent subagent_type="general-purpose" description="Conformance review" prompt="[conformance.md contents]\n\n---\n\n## Review Brief\n\n[brief]"
-Agent subagent_type="general-purpose" description="Security review" prompt="[security.md contents]\n\n---\n\n## Review Brief\n\n[brief]"
-Agent subagent_type="general-purpose" description="Quality review" prompt="[quality.md contents]\n\n---\n\n## Review Brief\n\n[brief]"
-Agent subagent_type="general-purpose" description="Performance review" prompt="[performance.md contents]\n\n---\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" description="Conformance review" prompt="Read <abs>/reviewers/conformance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" description="Security review"    prompt="Read <abs>/reviewers/security.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" description="Quality review"     prompt="Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" description="Performance review" prompt="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
 ```
 
-**Critical:** Dispatch all four in ONE message so they run in parallel. Do not wait for one before dispatching the next.
+**Parallelism is structural, not a reminder.** That single message contains four Agent calls and nothing else — no `Read` calls, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself using `Read` on a reviewer file, you've reverted to the old serializing pattern — stop and dispatch by path.
 
 Each reviewer will:
 - Read the changed files independently
@@ -151,10 +144,10 @@ The deduped list goes to the verifier in Step 6.
 
 ### Step 6: Dispatch Verifier Sub-Agent
 
-Read `reviewers/verifier.md` within this skill's directory. Dispatch ONE `general-purpose` agent with the prompt structure:
+Dispatch ONE `general-purpose` agent. As with the reviewers, **pass the path — do NOT read `verifier.md` into this context.** The candidate list IS passed inline (it's dynamic):
 
 ```
-Agent subagent_type="general-purpose" description="Verify candidates" prompt="[verifier.md contents]\n\n---\n\n## Candidate Findings\n\n[deduped list with ids]"
+Agent subagent_type="general-purpose" description="Verify candidates" prompt="Read <abs>/reviewers/verifier.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Candidate Findings\n\n[deduped list with ids]"
 ```
 
 **Do NOT include reviewer severity, category (Gap vs. Improvement), or reasoning chain in the candidate list.** The verifier receives only: `id`, `path`, `line_range`, `body`, `verify_by`. Fresh context prevents the verifier anchoring on the reviewer's confidence. The stripped `category`, original `verify_by`, and `reviewer` are retained by main context in the Step 5 side-table — they're restored via `id` lookup after the verifier returns.
@@ -171,7 +164,7 @@ Route by verdict, using the Step 5 side-table to recover each finding's original
 
 - **confirmed** → keep in the final report as a finding. Preserve the reviewer's original body text and the verifier's `quoted_evidence` / `evidence_location`. Place the finding in the "Gaps" section if the side-table's `category` is `gap`, or the "Improvements to Implement" section if `improvement`.
 - **gap** → surface in a "🔍 Couldn't verify" section of the final report. NOT a confirmed finding — a coverage boundary. Include the verifier's `gap_reason` verbatim.
-- **refuted** → drop entirely. Do not include in the report. Count only for calibration.
+- **refuted** → drop from the findings and the gate. But list each one **tersely in the "Refuted (dropped)" audit trail** (file:line + the reviewer's one-line claim + the verifier's quoted counter-evidence). This is the only window into the verifier's one documented failure mode — aggressive refutation suppressing a real bug. Do not act on refuted findings, create tasks for them, or let them block; the audit trail exists so you (and the user) can spot a bad refutation, not to re-litigate verdicts.
 
 Present the unified summary:
 
@@ -184,6 +177,8 @@ Present the unified summary:
 - Refuted (dropped): [Y]
 - Gaps (surfaced, not blocking): [Z]
 
+(If [Y] is consistently ~0 across reviews, the verifier is rubber-stamping — reconsider whether it earns its slot. If [Y] is meaningful and the counter-evidence below holds up, it's filtering real noise.)
+
 ### Conformance / Security / Quality / Performance Review
 [Per-reviewer sections with only CONFIRMED findings, each carrying evidence]
 
@@ -195,6 +190,9 @@ Present the unified summary:
 
 ### 🔍 Couldn't verify (for your awareness, not blocking)
 - [Area the reviewer wanted to check] — [verifier's specific gap_reason: tool + error, missing credential, inaccessible system]
+
+### Refuted (dropped — audit trail, not blocking)
+- `path:line` — [reviewer's one-line claim] → refuted: [verifier's quoted counter-evidence]
 
 ### Overall Verdict: APPROVED / GAPS FOUND
 ```
@@ -249,6 +247,9 @@ Invoke `gambit:finishing-branch` directly via Skill tool. **Because tests are kn
 
 ### 🔍 Couldn't verify (for your awareness, not blocking)
 - [Area] — [verifier's specific gap_reason]
+
+### Refuted (dropped — audit trail, not blocking)
+- `path:line` — [reviewer's one-line claim] → refuted: [verifier's quoted counter-evidence]
 ```
 
 Create fix tasks with `TaskCreate` for each confirmed gap. Set dependencies. Then STOP — return to `gambit:executing-plans` to implement fixes (for epic context) or address fixes directly (for task context).
@@ -262,31 +263,32 @@ Create fix tasks with `TaskCreate` for each confirmed gap. Set dependencies. The
 ### Good: Two-Stage Dispatch (reviewers → verifier)
 
 ```
-# Stage 1: Read the four reviewer files. ONE message, four Agent calls, parallel:
-Agent general-purpose: "[conformance.md] + [brief]"  (parallel)
-Agent general-purpose: "[security.md] + [brief]"     (parallel)
-Agent general-purpose: "[quality.md] + [brief]"      (parallel)
-Agent general-purpose: "[performance.md] + [brief]"  (parallel)
+# Stage 1: Resolve reviewers/ path once (no file reads). ONE message, four Agent calls, parallel:
+Agent general-purpose: "Read <abs>/conformance.md + follow it" + [brief]  (parallel)
+Agent general-purpose: "Read <abs>/security.md + follow it"    + [brief]  (parallel)
+Agent general-purpose: "Read <abs>/quality.md + follow it"     + [brief]  (parallel)
+Agent general-purpose: "Read <abs>/performance.md + follow it" + [brief]  (parallel)
 
-# All four return findings independently. Dedupe on byte-identical tuples.
+# All four read their own instructions in their own context and return findings.
+# Dedupe on byte-identical tuples.
 
-# Stage 2: Read verifier.md. ONE more Agent call, sequential:
-Agent general-purpose: "[verifier.md] + [deduped candidate list]"
+# Stage 2: ONE more Agent call, sequential — verifier reads its own file too:
+Agent general-purpose: "Read <abs>/verifier.md + follow it" + [deduped candidate list]
 
 # Verifier returns confirmed/refuted/gap per candidate. Assemble final verdict.
 ```
 
-### Good: Task-Level Review After Debugging
+### Good: Task-Level Review After Refactoring
 
 ```
-# Context detection: no epic, found debugging Task #5
-# TaskGet #5 → goal: "Fix race condition in connection pool"
+# Context detection: no epic, found refactoring Task #5
+# TaskGet #5 → goal: "Extract connection-pool setup into a reusable factory"
 # Brief includes task goal + success criteria + changed files
 # All four reviewers dispatched with task-level brief
-# Conformance checks fix addresses stated goal
+# Conformance checks the change addresses the stated goal
 # Security checks no new vulnerabilities introduced
-# Quality checks code quality of the fix
-# Performance checks fix doesn't regress performance
+# Quality checks the code quality of the change
+# Performance checks the change doesn't regress performance
 ```
 
 ### Bad: Sequential, Skipped, or Ignored
@@ -317,8 +319,17 @@ Agent general-purpose: "[verifier.md] + [full reviewer reports with severity tag
 "The gap says we couldn't check LaunchDarkly — add a fix task to check it"
 # Correct: gap is a tool-access boundary, not a bug
 
-# WRONG: Not reading reviewer/verifier files, writing instructions inline
+# WRONG: Pasting reviewer file contents into the prompt (wastes ~18k tokens/review)
+Agent general-purpose: "[full conformance.md contents] + brief"
+# Correct: pass the path — "Read <abs>/conformance.md and follow it" + brief
+
+# WRONG: Inventing instructions from memory instead of pointing at the file
 "I'll just tell the agent to check for security issues..."
+# Correct: the agent reads the real reviewer file by path
+
+# WRONG: Reading a reviewer file before each dispatch (serializes the agents)
+Read conformance.md → Agent → Read security.md → Agent → ...
+# Correct: no reads; four Agent calls in one message, each pointed at its file
 
 # WRONG: Listing improvements without implementing them
 "Non-blocking suggestions: consider extracting a helper..."
@@ -334,7 +345,7 @@ Agent general-purpose: "[verifier.md] + [full reviewer reports with severity tag
 ## Critical Rules
 
 1. **All four reviewers dispatched** — no skipping for "simple" changes
-2. **Parallel dispatch** — one message, four agents
+2. **Parallel dispatch, by path** — one message, four Agent calls, each pointed at its reviewer file by path. Never read reviewer/verifier files into main context or paste their contents into prompts: the read-before-each-dispatch is what serializes the agents and wastes ~18k tokens/review
 3. **No self-review** — main context prepares brief and assembles, does NOT review or verify code
 4. **Verifier is the single source of truth for classification** — do NOT override confirmed/refuted/gap verdicts; do NOT verify in the main context
 5. **Any confirmed gap blocks** — one confirmed gap = GAPS FOUND overall
@@ -387,20 +398,19 @@ Agent general-purpose: "[verifier.md] + [full reviewer reports with severity tag
 
 **Called by:**
 - `gambit:executing-plans` (Step 5, when all tasks complete)
-- `gambit:debugging` (mandatory, after fix is verified)
 - `gambit:refactoring` (mandatory, after final verification passes)
 - User via `/gambit:review`
 
 **Calls:**
 - `gambit:finishing-branch` (if approved)
 
-**Dispatches general-purpose agents (parallel, read-only) using reviewer instructions from:**
+**Dispatches general-purpose agents (parallel, read-only). Each agent reads its own instruction file by path — main context never loads them:**
 - `reviewers/conformance.md` — completeness, architecture, dead code
 - `reviewers/security.md` — OWASP audit, secrets, auth, data exposure
 - `reviewers/quality.md` — language idioms, linter circumvention, test quality
 - `reviewers/performance.md` — scaling, N+1, resource management
 
-**Dispatches one verification agent (sequential, after reviewers, read-only) using:**
+**Dispatches one verification agent (sequential, after reviewers, read-only), also by path:**
 - `reviewers/verifier.md` — kill-or-keep each candidate finding with evidence, three-verdict enum (confirmed/refuted/gap)
 
 **Call chain (epic context):**
@@ -412,7 +422,7 @@ executing-plans (all tasks done) → review → finishing-branch
 
 **Call chain (task context):**
 ```
-debugging/refactoring (fix verified) → review → finishing-branch
-                                          ↓
-                                    (if gaps: STOP → fix → re-review)
+refactoring (changes verified) → review → finishing-branch
+                                    ↓
+                              (if gaps: STOP → fix → re-review)
 ```

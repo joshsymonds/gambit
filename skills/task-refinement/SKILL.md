@@ -1,6 +1,6 @@
 ---
 name: task-refinement
-description: Use when a task plan has just been created and needs review before execution, when brainstorming or writing-plans just handed off, when unsure whether a junior could execute without questions, or when you see placeholder text, vague success criteria, or missing edge cases. User phrases like "review these tasks", "are these ready?", "before we start", "catch any gaps". Do NOT use when implementation is already in progress or for creating plans from scratch.
+description: Use when a task plan has just been created and needs review before execution, when brainstorming just handed off, when unsure whether a junior could execute without questions, or when you see placeholder text, vague success criteria, or missing edge cases. User phrases like "review these tasks", "are these ready?", "before we start", "catch any gaps". Do NOT use when implementation is already in progress or for creating plans from scratch.
 user_invokable: true
 ---
 
@@ -24,7 +24,7 @@ LOW FREEDOM — Apply all 8 categories to every task. No skipping. Update tasks 
 
 | Category | Key Check | Auto-Reject If |
 |----------|-----------|----------------|
-| 1. Granularity | Tasks 2-5 min? | Any task without breakdown estimate |
+| 1. Granularity | Scoped to one sitting (~15-45m)? | Any task without breakdown estimate |
 | 2. Implementability | Junior executes without questions? | Vague language, missing file paths |
 | 3. Success Criteria | Measurable, verifiable? | "Works correctly", "is implemented" |
 | 4. Dependencies | Correct blocking order? | Circular or missing dependencies |
@@ -36,12 +36,12 @@ LOW FREEDOM — Apply all 8 categories to every task. No skipping. Update tasks 
 ## When to Use
 
 - Before `gambit:executing-plans` starts implementation
-- After `gambit:brainstorming` or `gambit:writing-plans` creates tasks
+- After `gambit:brainstorming` creates tasks
 - When reviewing any plan for quality before execution
 
 **Don't use for:**
 - Task already being implemented (too late)
-- Creating plans from scratch → `gambit:brainstorming` or `gambit:writing-plans`
+- Creating plans from scratch → `gambit:brainstorming`
 - Debugging → `gambit:debugging`
 
 ## The Process
@@ -60,7 +60,7 @@ For each task, apply every category. No skipping — "straightforward" tasks hid
 
 #### Category 1: Granularity
 
-- Each task completable in 2-5 minutes?
+- Each task completable in one focused sitting (~15-45 min)?
 - Large tasks broken into subtasks with clear deliverables?
 - Each subtask independently completable?
 
@@ -269,7 +269,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed examples including:
 
 After refinement is complete, route to execution.
 
-**If invoked from brainstorming or writing-plans handoff:** They already asked about worktrees. Invoke executing-plans directly:
+**If invoked from a brainstorming handoff:** They already asked about worktrees. Invoke executing-plans directly:
 
 ```
 Skill skill="gambit:executing-plans"
@@ -298,7 +298,6 @@ Then invoke the chosen skill directly using the Skill tool.
 
 **Called by:**
 - `gambit:brainstorming` (optional, user chooses at handoff)
-- `gambit:writing-plans` (optional, user chooses at handoff)
 - User via `/gambit:task-refinement`
 
 **Calls:**
@@ -307,8 +306,7 @@ Then invoke the chosen skill directly using the Skill tool.
 
 **Workflow:**
 ```
-gambit:brainstorming ─┐
-                      ├→ gambit:task-refinement → gambit:executing-plans
-gambit:writing-plans ─┘         ↓
+gambit:brainstorming → gambit:task-refinement → gambit:executing-plans
+                                ↓
                          (if gaps: revise tasks, re-review)
 ```

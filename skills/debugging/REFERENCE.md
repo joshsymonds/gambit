@@ -25,14 +25,11 @@ Bug "fixed"... but crashes continue with different data.
 ```
 Developer sees: NullPointerException at UserService:45
 
-Phase 1: Create Task
-  "Bug: NullPointerException in UserService.getEmail()"
-
-Phase 2: Reproduce
+Step 1: Reproduce
   $ curl -X POST /api/register -d '{"name":"test"}'
   # Consistently returns 500
 
-Phase 3: Investigate
+Step 2: Investigate
   WebSearch: "NullPointerException getEmail java"
   Explore agent (subagent_type: "Explore"):
     "Find where User objects are created without email validation"
@@ -44,30 +41,26 @@ Phase 3: Investigate
 
   ROOT CAUSE: Registration doesn't validate email field
 
-Phase 4: Write failing test
+Step 3: Write failing test (proof of understanding)
   @Test void registrationRequiresEmail() {
       assertThrows(ValidationException.class, () ->
           register(new UserDTO(null, "password")));
   }
   // RUN: FAILS (bug exists) ✓
 
-Phase 5: Fix root cause
-  @PostMapping("/register")
-  public User register(@RequestBody UserDTO dto) {
-      if (dto.getEmail() == null || dto.getEmail().isEmpty()) {
-          throw new ValidationException("Email required");
-      }
-      return userService.create(dto);
-  }
-  // RUN: Test PASSES ✓
-  // Full suite (via general-purpose agent): All pass ✓
+Step 4: Hand off to brainstorming
+  Skill skill="gambit:brainstorming"
+  Seed it with:
+    Root cause: Registration endpoint missing email validation (RegistrationHandler:15)
+    Failing test (immutable success criterion): registrationRequiresEmail must pass
+    Anti-pattern (forbidden): null-check at the UserService:45 crash site — that's a symptom patch
+    Consider defense-in-depth: validate at the DTO boundary AND in RegistrationHandler
 
-Phase 6: Close Task
-  Fix Status: FIXED
-  Root cause: Registration endpoint missing email validation
-  Fix: Added validation in RegistrationHandler:15
-  Regression test: registrationRequiresEmail
+  Brainstorming designs the fix epic → executing-plans implements it → review.
 ```
+
+(For a genuine one-liner fully guarded by the failing test, the fast path applies: make
+the change, confirm the test passes and the suite is green, done — no epic needed.)
 
 ## Bad: Test Written After Fix
 

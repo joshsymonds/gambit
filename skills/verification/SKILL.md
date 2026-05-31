@@ -75,7 +75,7 @@ If you catch yourself doing ANY of the following, you are about to claim complet
 - Committing, PR creation, task completion
 - Moving to next task
 
-**Don't use for:** Deciding what to build (`gambit:writing-plans`), how to build it (`gambit:executing-plans`)
+**Don't use for:** Deciding what to build (`gambit:brainstorming`), how to build it (`gambit:executing-plans`)
 
 ## The Process
 
@@ -241,7 +241,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 **This skill is called by:**
 - `gambit:test-driven-development` (verify tests pass/fail)
 - `gambit:executing-plans` (verify task success criteria)
-- `gambit:debugging` (verify fix status)
+- `gambit:debugging` (confirm the failing test reproduces the bug; verify a fast-path fix is green)
 - ALL skills before completion claims
 
 **This skill calls:**

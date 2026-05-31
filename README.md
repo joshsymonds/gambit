@@ -36,7 +36,6 @@ Verify installation:
 |-------|---------|---------|
 | **using-gambit** | `/gambit` | Session entry, skill discovery |
 | **brainstorming** | `/gambit:brainstorming` | Socratic design refinement |
-| **writing-plans** | `/gambit:writing-plans` | Create Tasks with dependencies |
 | **executing-plans** | `/gambit:executing-plans` | One-task-at-a-time execution |
 | **using-worktrees** | `/gambit:using-worktrees` | Git worktree + devenv setup |
 | **finishing-branch** | `/gambit:finishing-branch` | Merge/PR/discard workflow |
@@ -73,7 +72,6 @@ Currently implemented:
 - [x] Plugin structure
 - [x] `using-gambit` skill
 - [ ] `brainstorming`
-- [ ] `writing-plans`
 - [ ] `executing-plans`
 - [ ] ... (see PLAN.md)
 

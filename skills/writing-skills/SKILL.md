@@ -37,6 +37,7 @@ See references for full details, examples, and patterns. These are the non-negot
 - **description:** 1024 chars max, third person, describes WHEN to use (triggers, symptoms, contexts) — NOT what the skill does or its workflow
 - **description is the trigger:** All "when to use" info goes in the description, NOT the body. The body only loads AFTER triggering.
 - **SKILL.md body:** Under 500 lines. Split into `references/` if over.
+- **Hot-skill word budget:** Skills that load every session (e.g. `using-gambit`) cost tokens on every turn. Target <150 words for session-start workflows, <200 for any always-loaded skill. Move detail to `references/` and reference `--help` output instead of documenting flags inline.
 - **References:** One level deep from SKILL.md. Files >100 lines need a table of contents.
 - **No extras:** No README.md, CHANGELOG.md, or auxiliary docs in skill folder.
 - **Conciseness:** Claude is already smart. Only add context it doesn't have. Challenge each paragraph's token cost.
@@ -271,6 +272,8 @@ Task
 
 **Close loopholes:** Add failures to Critical Rules and Common Excuses, retest.
 
+**How to word the counters:** The language that closes loopholes isn't arbitrary — "YOU MUST", "No exceptions", forced A/B/C choices, and required announcements work because of specific persuasion principles (authority, commitment, scarcity, social proof). See `references/persuasion-principles.md` for which principles to combine per skill type, and which to avoid (liking/reciprocity create sycophancy). Research-backed: Meincke et al. 2025 measured compliance rising 33%→72% with these techniques.
+
 ---
 
 ### Phase 5: Multi-Model Test
@@ -382,6 +385,20 @@ TaskUpdate
 | **Technique** | Teach method | Step-by-step, decision trees | Effectiveness |
 | **Pattern** | Provide templates | Placeholders, variations | Output quality |
 | **Reference** | Quick lookup | Condensed tables, fast scan | Completeness |
+
+---
+
+## Content Anti-patterns
+
+What bad skills look like — avoid these regardless of skill type:
+
+| Anti-pattern | Example | Why it's bad |
+|--------------|---------|--------------|
+| **Narrative** | "In session 2025-10-03, we found empty projectDir caused…" | Too specific, not reusable. Skills are reference guides, not stories. |
+| **Multi-language dilution** | `example.js`, `example.py`, `example.go` for one pattern | Mediocre quality, maintenance burden. One excellent example beats five. |
+| **Code in flowcharts** | `step1 [label="import fs"]; step2 [label="read file"]` | Can't copy-paste, hard to read. Use markdown blocks for code. |
+| **Generic labels** | `helper1`, `step3`, `pattern4` | Labels should carry semantic meaning, not be placeholders. |
+| **Documenting what's obvious** | Explaining what a command plainly does | Claude is already smart. Only add context it doesn't have. |
 
 ---
 
