@@ -110,13 +110,13 @@ Do NOT include your opinions, implementation notes, or rationale. The reviewers 
 
 Resolve the absolute path to this skill's `reviewers/` directory **once** (Glob `**/skills/review/reviewers/conformance.md` if you don't already know it). You pass this path to the agents — **do NOT read the reviewer files into this context.** The four reviewer files are ~8k tokens; reading them here and re-emitting them as prompts wastes ~18k tokens every review. Each agent reads its own instruction file in its own fresh context.
 
-In ONE message, emit exactly four `general-purpose` Agent calls. Each prompt is just: (1) a directive to read and follow that agent's instruction file by path, then (2) the review brief.
+In ONE message, emit exactly four `general-purpose` Agent calls, each at the **finder tier** (`model:` resolved per `contracts/models.md` — default most-capable, because a missed finding is unrecoverable; set `model:` explicitly, never `inherit`). Each prompt is just: (1) a directive to read and follow that agent's instruction file by path, then (2) the review brief.
 
 ```
-Agent subagent_type="general-purpose" description="Conformance review" prompt="Read <abs>/reviewers/conformance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
-Agent subagent_type="general-purpose" description="Security review"    prompt="Read <abs>/reviewers/security.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
-Agent subagent_type="general-purpose" description="Quality review"     prompt="Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
-Agent subagent_type="general-purpose" description="Performance review" prompt="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" model="<finder tier — see contracts/models.md>" description="Conformance review" prompt="Read <abs>/reviewers/conformance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" model="<finder tier — see contracts/models.md>" description="Security review"    prompt="Read <abs>/reviewers/security.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" model="<finder tier — see contracts/models.md>" description="Quality review"     prompt="Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" model="<finder tier — see contracts/models.md>" description="Performance review" prompt="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
 ```
 
 **Parallelism is structural, not a reminder.** That single message contains four Agent calls and nothing else — no `Read` calls, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself using `Read` on a reviewer file, you've reverted to the old serializing pattern — stop and dispatch by path.
@@ -144,10 +144,10 @@ The deduped list goes to the verifier in Step 6.
 
 ### Step 6: Dispatch Verifier Sub-Agent
 
-Dispatch ONE `general-purpose` agent. As with the reviewers, **pass the path — do NOT read `verifier.md` into this context.** The candidate list IS passed inline (it's dynamic):
+Dispatch ONE `general-purpose` agent at the **verifier tier** (`model:` per `contracts/models.md` — default most-capable; a cheap verifier is forbidden for code/security review, where verifying a subtle finding is as hard as finding it). As with the reviewers, **pass the path — do NOT read `verifier.md` into this context.** The candidate list IS passed inline (it's dynamic):
 
 ```
-Agent subagent_type="general-purpose" description="Verify candidates" prompt="Read <abs>/reviewers/verifier.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Candidate Findings\n\n[deduped list with ids]"
+Agent subagent_type="general-purpose" model="<verifier tier — see contracts/models.md>" description="Verify candidates" prompt="Read <abs>/reviewers/verifier.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Candidate Findings\n\n[deduped list with ids]"
 ```
 
 **Do NOT include reviewer severity, category (Gap vs. Improvement), or reasoning chain in the candidate list.** The verifier receives only: `id`, `path`, `line_range`, `body`, `verify_by`. Fresh context prevents the verifier anchoring on the reviewer's confidence. The stripped `category`, original `verify_by`, and `reviewer` are retained by main context in the Step 5 side-table — they're restored via `id` lookup after the verifier returns.
@@ -263,7 +263,8 @@ Create fix tasks with `TaskCreate` for each confirmed gap. Set dependencies. The
 ### Good: Two-Stage Dispatch (reviewers → verifier)
 
 ```
-# Stage 1: Resolve reviewers/ path once (no file reads). ONE message, four Agent calls, parallel:
+# Stage 1: Resolve reviewers/ path once (no file reads). ONE message, four Agent calls, parallel
+# (each at the finder tier per contracts/models.md — model omitted here for brevity):
 Agent general-purpose: "Read <abs>/conformance.md + follow it" + [brief]  (parallel)
 Agent general-purpose: "Read <abs>/security.md + follow it"    + [brief]  (parallel)
 Agent general-purpose: "Read <abs>/quality.md + follow it"     + [brief]  (parallel)
@@ -404,13 +405,13 @@ Read conformance.md → Agent → Read security.md → Agent → ...
 **Calls:**
 - `gambit:finishing-branch` (if approved)
 
-**Dispatches general-purpose agents (parallel, read-only). Each agent reads its own instruction file by path — main context never loads them:**
+**Dispatches general-purpose agents (parallel, read-only) at the finder tier (`contracts/models.md`). Each agent reads its own instruction file by path — main context never loads them:**
 - `reviewers/conformance.md` — completeness, architecture, dead code
 - `reviewers/security.md` — OWASP audit, secrets, auth, data exposure
 - `reviewers/quality.md` — language idioms, linter circumvention, test quality
 - `reviewers/performance.md` — scaling, N+1, resource management
 
-**Dispatches one verification agent (sequential, after reviewers, read-only), also by path:**
+**Dispatches one verification agent (sequential, after reviewers, read-only) at the verifier tier (`contracts/models.md`), also by path:**
 - `reviewers/verifier.md` — kill-or-keep each candidate finding with evidence, three-verdict enum (confirmed/refuted/gap)
 
 **Call chain (epic context):**
