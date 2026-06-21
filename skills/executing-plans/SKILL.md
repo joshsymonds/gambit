@@ -80,6 +80,8 @@ Before executing ANY task, read the epic with `TaskGet`.
 2. `TaskUpdate` → mark in_progress
 3. `TaskGet` → load full task details
 
+**Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. Glob `**/contracts/scout.md`, dispatch `subagent_type: "Explore"` with `model:` at the scout tier (`contracts/models.md`), and prompt it to Read `contracts/scout.md` first, then ask your question. The scout returns `file:line` evidence or `NOT FOUND` — never a guess. This is optional per task; skip it when the brief is already clear.
+
 **Dispatch implementation to a worker:**
 
 The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker and stays a coordinator. This preserves orchestrator context and lets a cheaper, faster model do the mechanical work while the orchestrator (whatever model you launched the session with) plans, verifies, and checkpoints. Every worker is governed by the shared **`contracts/worker.md`** — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast Stop Triggers, and a 4-state return.
