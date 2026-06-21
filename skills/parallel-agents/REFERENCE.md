@@ -99,20 +99,23 @@ Task prompt3
 ## Good: Dispatch in Single Message
 
 ```
-# All in ONE message:
+# All in ONE message — each a worker (Read contracts/worker.md first, worker tier per contracts/models.md):
 
 Task
   subagent_type: "general-purpose"
+  model: "<worker tier>"
   description: "Fix tool_abort_test.go"
   prompt: "[prompt 1]"
 
 Task
   subagent_type: "general-purpose"
+  model: "<worker tier>"
   description: "Fix batch_test.go"
   prompt: "[prompt 2]"
 
 Task
   subagent_type: "general-purpose"
+  model: "<worker tier>"
   description: "Fix approval_test.go"
   prompt: "[prompt 3]"
 

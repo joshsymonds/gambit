@@ -147,24 +147,28 @@ Return: Summary of root cause and what you fixed.
 
 ### Step 3: Dispatch All Agents in SINGLE Message
 
-**CRITICAL:** All agents in ONE message with multiple Task() calls.
+**CRITICAL:** All agents in ONE message with multiple Task() calls. Each is a **worker** (the worker class): it reads `contracts/worker.md` first, runs at the explicit **worker tier** (`contracts/models.md`), and is scoped to its ONE assigned domain. Workers do NOT commit — the main context reconciles all changes and commits (Step 5).
 
 ```
-// CORRECT - Single message, parallel execution
+// CORRECT - Single message, parallel execution. Each agent is a worker:
+//   Read contracts/worker.md first · explicit worker-tier model · ONE domain only.
 Task
   subagent_type: "general-purpose"
+  model: "<worker tier — see contracts/models.md>"
   description: "Fix tool_abort_test.go failures"
-  prompt: "[prompt 1]"
+  prompt: "Read <abs>/contracts/worker.md first (your binding worker contract). Your blast radius is THIS domain only — do not touch files outside it. [prompt 1]"
 
 Task
   subagent_type: "general-purpose"
+  model: "<worker tier — see contracts/models.md>"
   description: "Fix batch_completion_test.go failures"
-  prompt: "[prompt 2]"
+  prompt: "Read <abs>/contracts/worker.md first (your binding worker contract). Your blast radius is THIS domain only. [prompt 2]"
 
 Task
   subagent_type: "general-purpose"
+  model: "<worker tier — see contracts/models.md>"
   description: "Fix tool_approval_test.go failures"
-  prompt: "[prompt 3]"
+  prompt: "Read <abs>/contracts/worker.md first (your binding worker contract). Your blast radius is THIS domain only. [prompt 3]"
 ```
 
 ```
@@ -208,8 +212,9 @@ Run full test suite (not just the fixed tests):
 ```
 Task
   subagent_type: "general-purpose"
+  model: "<test-runner tier — see contracts/models.md>"
   description: "Run full test suite"
-  prompt: "Run: [test command]. Report pass/fail counts and any failures."
+  prompt: "Run: [test command]. Report pass/fail counts and any failures — exact output, make no edits."
 ```
 
 **Decision tree:**
@@ -298,7 +303,7 @@ Before completing parallel agent work:
 **This skill calls:**
 - `gambit:debugging` (how to investigate individual failures)
 - `gambit:verification` (verify integration)
-- general-purpose agents (`subagent_type: "general-purpose"`) for parallel investigation and test running
+- worker-class `general-purpose` agents (each reads `contracts/worker.md`, worker tier) for the parallel fixes; a test-runner-tier agent for the integration test run — tiers per `contracts/models.md`
 
 **Called by:**
 - When multiple independent test failures detected
