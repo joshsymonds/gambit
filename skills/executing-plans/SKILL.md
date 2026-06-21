@@ -26,7 +26,7 @@ Do not skip checkpoints or verification. Epic requirements never change. Tasks a
 |------|--------|---------------|
 | **0. Check State** | `TaskList` | Task state tells you where to resume — never ask |
 | **1. Load Epic** | `TaskGet` on epic | Requirements are IMMUTABLE |
-| **2. Execute ONE Task** | Mark in_progress → follow steps → mark completed | TDD cycle, verify each step |
+| **2. Execute ONE Task** | Mark in_progress → dispatch worker → verify → mark completed | Explicit `model:`, TDD cycle, verify each step |
 | **3. Create Next Task** | `TaskCreate` based on learnings | Reflect reality, not original assumptions |
 | **4. Commit & Checkpoint** | Commit to current branch, present summary | STOP — no exceptions |
 
@@ -80,9 +80,37 @@ Before executing ANY task, read the epic with `TaskGet`.
 2. `TaskUpdate` → mark in_progress
 3. `TaskGet` → load full task details
 
+**Dispatch implementation to a language worker:**
+
+The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker and stays a coordinator. This preserves orchestrator context and lets a cheaper, faster model do the mechanical work while the orchestrator (whatever model you launched the session with) plans, verifies, and checkpoints. Specialization comes from a per-language **brief file** the worker reads by path, exactly as the `review` skill specializes agents with `reviewers/*.md`.
+
+1. **Infer the task's primary language** from its target files (the files the task says it will create or modify). See the table in `workers/README.md`: `.go`→`workers/go.md`, `.py`→`workers/python.md`, `.ts`/`.tsx`→`workers/typescript.md`, `.rb`→`workers/ruby.md`, shell/Docker/CI→`workers/devops.md`. Primary = the language of the most target files; tie-break by the file with the most changes, else the first target listed. No matching brief (or the brief doesn't exist yet) → dispatch with **no brief**.
+
+2. **Resolve the worker model by tier** (see `workers/README.md`): read `~/.claude/gambit/models.json` if present and pass its value **verbatim**; otherwise default `worker → "sonnet"`. **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — resolution is config/alias only.
+
+3. **Dispatch one worker** in a single message:
+   ```
+   Agent subagent_type="general-purpose" model="<resolved worker model>" description="Implement: <task subject>"
+     prompt="Read <abs>/skills/executing-plans/workers/<lang>.md — that file is your worker brief; your FIRST action must be to Read it, then follow it exactly.
+
+     Follow gambit:test-driven-development (failing test first) and gambit:verification (fresh evidence before done). Do NOT commit — the orchestrator commits at the checkpoint.
+
+     ## Task
+     <constructed from the task's Goal + Implementation + Success Criteria — never paste session history>
+
+     Return a summary of files+functions changed, the test command run and its output, and any blocker. If you cannot proceed, return exactly: BLOCKED: <reason>."
+   ```
+   Pass the brief by path and the task as **constructed text** — never paste your session history into the worker prompt. Omit the `Read .../workers/<lang>.md` line when no brief matched.
+
+4. **On `BLOCKED`** (or a dead worker): re-resolve the model at the `escalation` tier (default `"opus"`) and re-dispatch **once** with the blocker reason appended. Still blocked → STOP and surface it to the user; do NOT water down requirements.
+
+5. **The worker edits files; the orchestrator verifies.** Do not trust the worker's self-report — run the pre-completion verification below yourself with fresh evidence.
+
+**For non-code tasks** (pure docs, task bookkeeping) skip the dispatch and execute directly — there's no brief to load and the orchestrator does the work itself.
+
 **Execute the steps in the task description:**
 
-Task descriptions contain bite-sized steps. For each:
+The worker (or, for non-code tasks, the orchestrator directly) works through the task's bite-sized steps. For each:
 1. Follow TDD cycle: write test → watch it FAIL → write minimal code → watch it PASS → refactor → commit
    - **Iron law: no production code without a failing test first.** Wrote code before the test? Delete it. Start over. Don't keep it as "reference."
    - If test passes immediately, STOP — test doesn't catch the new behavior. Fix the test.
@@ -328,3 +356,5 @@ Before closing epic:
 - `gambit:test-driven-development` during implementation
 - `gambit:verification` before claiming task complete
 - `gambit:review` (invoked directly when all tasks complete — reviews then calls finishing-branch)
+
+**Dispatches** `general-purpose` workers to implement each task, specialized by a per-language brief the worker reads by path (`workers/<lang>.md`), with the worker model resolved by tier. See `workers/README.md` for the brief format, model-tier resolution, and language inference.
