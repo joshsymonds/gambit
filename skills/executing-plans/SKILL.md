@@ -80,33 +80,36 @@ Before executing ANY task, read the epic with `TaskGet`.
 2. `TaskUpdate` → mark in_progress
 3. `TaskGet` → load full task details
 
-**Dispatch implementation to a language worker:**
+**Dispatch implementation to a worker:**
 
-The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker and stays a coordinator. This preserves orchestrator context and lets a cheaper, faster model do the mechanical work while the orchestrator (whatever model you launched the session with) plans, verifies, and checkpoints. Specialization comes from a per-language **brief file** the worker reads by path, exactly as the `review` skill specializes agents with `reviewers/*.md`.
+The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker and stays a coordinator. This preserves orchestrator context and lets a cheaper, faster model do the mechanical work while the orchestrator (whatever model you launched the session with) plans, verifies, and checkpoints. Every worker is governed by the shared, language-agnostic **`workers/CONTRACT.md`** — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast Stop Triggers, and a 4-state return. The worker reads it by path in fresh context, exactly as the `review` skill specializes agents with `reviewers/*.md`; you never read it into yours.
 
-1. **Infer the task's primary language** from its target files (the files the task says it will create or modify). See the table in `workers/README.md`: `.go`→`workers/go.md`, `.py`→`workers/python.md`, `.ts`/`.tsx`→`workers/typescript.md`, `.rb`→`workers/ruby.md`, shell/Docker/CI→`workers/devops.md`. Primary = the language of the most target files; tie-break by the file with the most changes, else the first target listed. No matching brief (or the brief doesn't exist yet) → dispatch with **no brief**.
+1. **Resolve the worker model by tier** (see `workers/README.md`): read `~/.claude/gambit/models.json` if present and pass its value **verbatim**; otherwise default `worker → "sonnet"`. **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — resolution is config/alias only.
 
-2. **Resolve the worker model by tier** (see `workers/README.md`): read `~/.claude/gambit/models.json` if present and pass its value **verbatim**; otherwise default `worker → "sonnet"`. **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — resolution is config/alias only.
-
-3. **Dispatch one worker** in a single message:
+2. **Dispatch one worker** in a single message:
    ```
    Agent subagent_type="general-purpose" model="<resolved worker model>" description="Implement: <task subject>"
-     prompt="Read <abs>/skills/executing-plans/workers/<lang>.md — that file is your worker brief; your FIRST action must be to Read it, then follow it exactly.
-
-     Follow gambit:test-driven-development (failing test first) and gambit:verification (fresh evidence before done). Do NOT commit — the orchestrator commits at the checkpoint.
+     prompt="Read <abs>/skills/executing-plans/workers/CONTRACT.md — that file is your binding worker contract; your FIRST action must be to Read it, then follow it exactly.
 
      ## Task
-     <constructed from the task's Goal + Implementation + Success Criteria — never paste session history>
+     <constructed from the task's Goal + Implementation + Success Criteria, exact values verbatim — never paste session history>
 
-     Return a summary of files+functions changed, the test command run and its output, and any blocker. If you cannot proceed, return exactly: BLOCKED: <reason>."
+     ## Context
+     <where this task fits + any cross-task interfaces/decisions the brief can't know>
+
+     Test command: <the task's test command>."
    ```
-   Pass the brief by path and the task as **constructed text** — never paste your session history into the worker prompt. Omit the `Read .../workers/<lang>.md` line when no brief matched.
+   Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `workers/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `CONTRACT.md` alone.
 
-4. **On `BLOCKED`** (or a dead worker): re-resolve the model at the `escalation` tier (default `"opus"`) and re-dispatch **once** with the blocker reason appended. Still blocked → STOP and surface it to the user; do NOT water down requirements.
+3. **Route on the worker's returned status** (the contract defines four). **Never retry the same model on the same unchanged task** — something must change:
+   - **DONE** → verify yourself with FRESH evidence (run the full test command now; don't trust the self-report), then proceed.
+   - **DONE_WITH_CONCERNS** → read the concern. Correctness or scope → resolve it (refine + re-dispatch, or fix directly) before accepting. Benign observation → note it and verify as DONE.
+   - **NEEDS_CONTEXT** → supply the missing values/decisions and re-dispatch with them added.
+   - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch at the `escalation` tier (default `"opus"`); task too large → decompose into a new task (`TaskCreate`); the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
 
-5. **The worker edits files; the orchestrator verifies.** Do not trust the worker's self-report — run the pre-completion verification below yourself with fresh evidence.
+4. **The worker edits files; the orchestrator verifies.** The worker never commits — you commit at the checkpoint (Step 4a).
 
-**For non-code tasks** (pure docs, task bookkeeping) skip the dispatch and execute directly — there's no brief to load and the orchestrator does the work itself.
+**For non-code tasks** (pure docs, task bookkeeping) skip the dispatch and execute directly — there's no implementation to delegate and the orchestrator does the work itself.
 
 **Execute the steps in the task description:**
 
@@ -357,4 +360,4 @@ Before closing epic:
 - `gambit:verification` before claiming task complete
 - `gambit:review` (invoked directly when all tasks complete — reviews then calls finishing-branch)
 
-**Dispatches** `general-purpose` workers to implement each task, specialized by a per-language brief the worker reads by path (`workers/<lang>.md`), with the worker model resolved by tier. See `workers/README.md` for the brief format, model-tier resolution, and language inference.
+**Dispatches** `general-purpose` workers to implement each task; every worker reads the shared `workers/CONTRACT.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return), with the worker model resolved by tier. See `workers/README.md` for dispatch composition, the 4-state return, and model-tier resolution.
