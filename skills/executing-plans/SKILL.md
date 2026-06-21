@@ -82,16 +82,16 @@ Before executing ANY task, read the epic with `TaskGet`.
 
 **Dispatch implementation to a worker:**
 
-The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker and stays a coordinator. This preserves orchestrator context and lets a cheaper, faster model do the mechanical work while the orchestrator (whatever model you launched the session with) plans, verifies, and checkpoints. Every worker is governed by the shared, language-agnostic **`workers/CONTRACT.md`** — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast Stop Triggers, and a 4-state return.
+The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker and stays a coordinator. This preserves orchestrator context and lets a cheaper, faster model do the mechanical work while the orchestrator (whatever model you launched the session with) plans, verifies, and checkpoints. Every worker is governed by the shared **`contracts/worker.md`** — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast Stop Triggers, and a 4-state return.
 
-**Resolve the contract path once.** Glob `**/skills/executing-plans/workers/CONTRACT.md` to get its absolute path and pass that path to the worker — **do NOT Read `CONTRACT.md` into your own context.** The worker reads it in its fresh context (exactly as the `review` skill passes `reviewers/*.md` by path); reading it yourself loads ~1.4k tokens into the long-lived orchestrator context on every epic, for nothing. The worker re-reads it on every dispatch, including retries — keep `CONTRACT.md` lean.
+**Resolve the contract path once.** Glob `**/contracts/worker.md` to get its absolute path and pass that path to the worker — **do NOT Read `worker.md` into your own context.** The worker reads it in its fresh context (exactly as the `review` skill passes `reviewers/*.md` by path); reading it yourself loads ~1.4k tokens into the long-lived orchestrator context on every epic, for nothing. The worker re-reads it on every dispatch, including retries — keep `worker.md` lean.
 
-1. **Resolve the worker model by tier.** Read `~/.claude/gambit/models.json` if present and pass its value **verbatim** to `model:` — shape `{ "worker": "<token>", "escalation": "<token>" }`, where a token is a tier alias (`"sonnet"`, `"opus"`) the harness maps to the current generation, or an exact model id. Otherwise default `worker → "sonnet"` (and `escalation → "opus"`). **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — resolution is config/alias only.
+1. **Resolve the worker model by tier** — see `contracts/models.md`. Default `worker → standard`, with `~/.claude/gambit/models.json` overrides and `escalation` for a re-dispatch. **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — resolution is config/alias only.
 
 2. **Dispatch one worker** in a single message:
    ```
    Agent subagent_type="general-purpose" model="<resolved worker model>" description="Implement: <task subject>"
-     prompt="Read <abs>/skills/executing-plans/workers/CONTRACT.md — that file is your binding worker contract; your FIRST action must be to Read it, then follow it exactly.
+     prompt="Read <abs>/contracts/worker.md — that file is your binding worker contract; your FIRST action must be to Read it, then follow it exactly.
 
      ## Task
      <constructed from the task's Goal + Implementation + Success Criteria, exact values verbatim — never paste session history>
@@ -101,7 +101,7 @@ The orchestrator does not write implementation code in the main context — it d
 
      Test command: <the task's test command>."
    ```
-   Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `workers/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `CONTRACT.md` alone.
+   Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 
 3. **Route on the worker's returned status** (the contract defines four). **Never retry the same model on the same unchanged task** — something must change:
    - **DONE** → verify yourself with FRESH evidence (run the full test command now; don't trust the self-report), then proceed.
@@ -361,4 +361,4 @@ Before closing epic:
 - `gambit:verification` before claiming task complete
 - `gambit:review` (invoked directly when all tasks complete — reviews then calls finishing-branch)
 
-**Dispatches** `general-purpose` workers to implement each task; every worker reads the shared `workers/CONTRACT.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return), with the worker model resolved by tier. See the dispatch step (Step 2) above for composition, the 4-state return, and model-tier resolution.
+**Dispatches** `general-purpose` workers to implement each task; every worker reads the shared `contracts/worker.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return), with the worker model resolved by tier (`contracts/models.md`). See the dispatch step (Step 2) above for composition and the 4-state return.
