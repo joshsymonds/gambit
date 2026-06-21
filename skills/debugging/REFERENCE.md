@@ -135,7 +135,7 @@ Dispatch an Explore agent to map the system:
 ```
 Task
   subagent_type: "Explore"          # the read-only scout class
-  model: "<scout tier — see contracts/models.md>"
+  model: "<scout tier — default cheap-or-standard; contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
   description: "Map data flow for [feature]"
   prompt: |
     Read <abs>/contracts/scout.md first (your binding scout contract), then trace the request flow for [operation]:

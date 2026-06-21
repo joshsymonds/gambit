@@ -64,7 +64,7 @@ Do NOT write any code, invoke any implementation skill, or take any implementati
 ```
 Task
   subagent_type: "Explore"          # the read-only scout class
-  model: "<scout tier — see contracts/models.md>"
+  model: "<scout tier — default cheap-or-standard; contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
   prompt: "Read <abs>/contracts/scout.md first (your binding scout contract), then: Find existing [relevant] implementation patterns in this codebase. Report with file:line evidence; say NOT FOUND if absent."
 ```
 

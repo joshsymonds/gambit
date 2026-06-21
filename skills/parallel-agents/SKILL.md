@@ -151,7 +151,7 @@ Return: Summary of root cause and what you fixed.
 
 ```
 // CORRECT - Single message, parallel execution. Each agent is a worker:
-//   Read contracts/worker.md first · explicit worker-tier model · ONE domain only.
+//   Read contracts/worker.md first (resolve <abs> via Glob **/contracts/worker.md) · worker-tier model · ONE domain only.
 Task
   subagent_type: "general-purpose"
   model: "<worker tier — see contracts/models.md>"

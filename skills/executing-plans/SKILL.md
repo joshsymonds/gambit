@@ -80,7 +80,7 @@ Before executing ANY task, read the epic with `TaskGet`.
 2. `TaskUpdate` → mark in_progress
 3. `TaskGet` → load full task details
 
-**Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. Glob `**/contracts/scout.md`, dispatch `subagent_type: "Explore"` with `model:` at the scout tier (`contracts/models.md`), and prompt it to Read `contracts/scout.md` first, then ask your question. The scout returns `file:line` evidence or `NOT FOUND` — never a guess. This is optional per task; skip it when the brief is already clear.
+**Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. Glob `**/contracts/scout.md`, dispatch `subagent_type: "Explore"` with `model:` at the scout tier (default cheap-or-standard; `contracts/models.md`), and prompt it to Read `contracts/scout.md` first, then ask your question. The scout returns `file:line` evidence or `NOT FOUND` — never a guess. This is optional per task; skip it when the brief is already clear.
 
 **Dispatch implementation to a worker:**
 
@@ -117,7 +117,7 @@ The orchestrator does not write implementation code in the main context — it d
 
 **Execute the steps in the task description:**
 
-For a delegated task the worker runs this loop in its own context under `CONTRACT.md`; for a non-code task you run it directly. Commits happen only at the checkpoint (Step 4a) — the worker never commits. For each step:
+For a delegated task the worker runs this loop in its own context under `contracts/worker.md`; for a non-code task you run it directly. Commits happen only at the checkpoint (Step 4a) — the worker never commits. For each step:
 1. Follow the TDD cycle: write test → watch it FAIL → write minimal code → watch it PASS → refactor
    - **Iron law: no production code without a failing test first.** Wrote code before the test? Delete it. Start over. Don't keep it as "reference."
    - If test passes immediately, STOP — test doesn't catch the new behavior. Fix the test.

@@ -54,7 +54,7 @@ Verify installation:
 
 ## Orchestrated Execution
 
-During `executing-plans`, Claude acts as an **orchestrator**: it dispatches a fresh worker subagent per task instead of writing the code itself, staying free to plan, verify, and checkpoint. Every worker is bound by a shared [worker contract](skills/executing-plans/workers/CONTRACT.md) — build only what the task asks, test-first with evidence, and **stop and report** at the first sign of ambiguity or scope creep rather than guessing. Workers return one of four states (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`); the orchestrator routes on it and owns all commits.
+During `executing-plans`, Claude acts as an **orchestrator**: it dispatches a fresh worker subagent per task instead of writing the code itself, staying free to plan, verify, and checkpoint. Every worker is bound by a shared [worker contract](contracts/worker.md) — build only what the task asks, test-first with evidence, and **stop and report** at the first sign of ambiguity or scope creep rather than guessing. Workers return one of four states (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`); the orchestrator routes on it and owns all commits.
 
 Worker models are chosen by capability tier — a cheaper, faster model does the mechanical work, and the orchestrator escalates a blocked task to a stronger one — configurable via `~/.claude/gambit/models.json`.
 
