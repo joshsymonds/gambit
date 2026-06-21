@@ -9,6 +9,8 @@ class's tier (see [models.md](models.md)).
 > A contractless agent has no blast-radius limit, no return protocol, and no tier — the disciplines
 > these contracts encode simply evaporate.
 
+**A class is not a `subagent_type`.** Dispatch `subagent_type: "general-purpose"` for worker / finder / verifier / test-runner, or `subagent_type: "Explore"` for the read-only scout — and attach the class by passing its **contract path** (the agent's first action is to Read it) plus its **model tier**. There is no `subagent_type: "worker"` / `"scout"` / etc.
+
 | Class | Contract | Default tier | Use it when |
 |-------|----------|-------------|-------------|
 | **worker** | [worker.md](worker.md) | standard | implementing a task's code (executing-plans; parallel-agents fix-workers) |
