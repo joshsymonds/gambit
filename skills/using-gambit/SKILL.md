@@ -128,6 +128,7 @@ These thoughts mean STOP — you're rationalizing:
 | "I know the pattern already" | Load the skill. Memory drifts, skills don't. |
 | "Let me just fix this quickly" | Create a Task, follow the process. |
 | "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
+| "I'll just spawn a quick general-purpose agent" | Use a contracted class from `contracts/README.md`. A contractless agent has no blast-radius limit or return protocol. |
 
 ## Core Principles
 
@@ -138,6 +139,7 @@ These apply across ALL gambit skills:
 3. **Evidence over assertions** — Run verification commands and show output before claiming done
 4. **Small steps that stay green** — Tests pass between every change
 5. **Immutable requirements** — Epic requirements don't change; Tasks adapt to reality
+6. **Dispatch contracted agents** — When you spawn a subagent, use a named class from `contracts/README.md` (worker/scout/finder/verifier/test-runner) with its contract by path and explicit model tier. Never a bare `general-purpose` agent without a contract.
 
 ## User Instructions
 

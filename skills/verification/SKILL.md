@@ -100,8 +100,9 @@ Execute the FULL command. Not a partial run. Not a cached result.
 ```
 Task
   subagent_type: "general-purpose"
+  model: "<test-runner tier — see contracts/models.md>"
   description: "Run verification"
-  prompt: "Run: [command]. Report pass/fail counts, exit code, and any failures."
+  prompt: "Run: [command]. Report pass/fail counts, exit code, and any failures. Make no edits."
 ```
 
 **For quick commands:** Run directly with Bash.
@@ -245,7 +246,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 - ALL skills before completion claims
 
 **This skill calls:**
-- general-purpose agent (`subagent_type: "general-purpose"`) for running verbose commands
+- a test-runner-tier `general-purpose` agent (run + report, no edits — `contracts/models.md`) for running verbose commands
 
 **Called by:**
 - Any skill before marking work complete

@@ -62,8 +62,9 @@ Violating the cycle is violating the skill. "I'll test at the end" means you're 
 ```
 Task
   subagent_type: "general-purpose"
+  model: "<test-runner tier — see contracts/models.md>"
   description: "Run test suite"
-  prompt: "Run: [test command for this project]. Report pass/fail counts and any failures."
+  prompt: "Run: [test command for this project]. Report pass/fail counts and any failures. Make no edits."
 ```
 
 **ALL tests must pass.**
@@ -132,8 +133,9 @@ After EVERY small change:
 ```
 Task
   subagent_type: "general-purpose"
+  model: "<test-runner tier — see contracts/models.md>"
   description: "Run test suite"
-  prompt: "Run: [test command for this project]. Report pass/fail counts and any failures."
+  prompt: "Run: [test command for this project]. Report pass/fail counts and any failures. Make no edits."
 ```
 
 **ALL tests must still pass.**
@@ -195,8 +197,9 @@ After all transformations complete:
 ```
 Task
   subagent_type: "general-purpose"
+  model: "<test-runner tier — see contracts/models.md>"
   description: "Run full test suite and linter"
-  prompt: "Run: [test command] && [lint command]. Report all results."
+  prompt: "Run: [test command] && [lint command]. Report all results. Make no edits."
 ```
 
 **Checklist:**
@@ -333,7 +336,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 **This skill requires:**
 - Tests exist (use `gambit:test-driven-development` to write tests first if none exist)
 - `gambit:verification` (for final verification)
-- general-purpose agent (`subagent_type: "general-purpose"`) for running tests
+- a test-runner-tier `general-purpose` agent (run + report, no edits — `contracts/models.md`) for running tests
 
 **Called by:**
 - When improving code structure after features complete
