@@ -12,7 +12,7 @@ class's tier (see [models.md](models.md)).
 | Class | Contract | Default tier | Use it when |
 |-------|----------|-------------|-------------|
 | **worker** | [worker.md](worker.md) | standard | implementing a task's code (executing-plans; parallel-agents fix-workers) |
-| **scout** | [scout.md](scout.md) *(authored in a later task)* | cheap-or-standard | read-only investigation — find code/patterns/answers and return evidence (brainstorming, executing-plans, debugging) |
+| **scout** | [scout.md](scout.md) | cheap-or-standard | read-only investigation — find code/patterns/answers and return evidence (brainstorming, executing-plans, debugging) |
 | **finder** | `skills/review/reviewers/{conformance,security,quality,performance}.md` | most-capable | reviewing changed code for issues |
 | **verifier** | `skills/review/reviewers/verifier.md` | most-capable | kill-or-keep verifying candidate findings |
 | **test-runner** | (none — a command + report) | cheap | running a test/build command and reporting its exact output + exit code |
