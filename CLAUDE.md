@@ -6,7 +6,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Gambit is a Claude Code plugin providing structured development workflows using native Tasks. It combines the polish of [superpowers](https://github.com/obra/superpowers) with the rigor of [hyperpowers](https://github.com/withzombies/hyperpowers), replacing external CLI tools (beads/bd) with Claude Code's native Task system.
 
-**Installation:** `/plugin marketplace add Veraticus/gambit && /plugin install gambit@gambit`
+**Installation:** `/plugin marketplace add joshsymonds/gambit && /plugin install gambit@gambit`
 
 ## Architecture
 

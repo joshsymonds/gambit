@@ -13,7 +13,7 @@ Gambit combines the polish of [superpowers](https://github.com/obra/superpowers)
 ## Installation
 
 ```bash
-/plugin marketplace add Veraticus/gambit
+/plugin marketplace add joshsymonds/gambit
 /plugin install gambit@gambit
 ```
 
