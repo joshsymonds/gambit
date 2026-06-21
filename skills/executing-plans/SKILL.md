@@ -82,9 +82,11 @@ Before executing ANY task, read the epic with `TaskGet`.
 
 **Dispatch implementation to a worker:**
 
-The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker and stays a coordinator. This preserves orchestrator context and lets a cheaper, faster model do the mechanical work while the orchestrator (whatever model you launched the session with) plans, verifies, and checkpoints. Every worker is governed by the shared, language-agnostic **`workers/CONTRACT.md`** — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast Stop Triggers, and a 4-state return. The worker reads it by path in fresh context, exactly as the `review` skill specializes agents with `reviewers/*.md`; you never read it into yours.
+The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker and stays a coordinator. This preserves orchestrator context and lets a cheaper, faster model do the mechanical work while the orchestrator (whatever model you launched the session with) plans, verifies, and checkpoints. Every worker is governed by the shared, language-agnostic **`workers/CONTRACT.md`** — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast Stop Triggers, and a 4-state return.
 
-1. **Resolve the worker model by tier** (see `workers/README.md`): read `~/.claude/gambit/models.json` if present and pass its value **verbatim**; otherwise default `worker → "sonnet"`. **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — resolution is config/alias only.
+**Resolve the contract path once.** Glob `**/skills/executing-plans/workers/CONTRACT.md` to get its absolute path and pass that path to the worker — **do NOT Read `CONTRACT.md` into your own context.** The worker reads it in its fresh context (exactly as the `review` skill passes `reviewers/*.md` by path); reading it yourself loads ~1.4k tokens into the long-lived orchestrator context on every epic, for nothing. The worker re-reads it on every dispatch, including retries — keep `CONTRACT.md` lean.
+
+1. **Resolve the worker model by tier.** Read `~/.claude/gambit/models.json` if present and pass its value **verbatim** to `model:` — shape `{ "worker": "<token>", "escalation": "<token>" }`, where a token is a tier alias (`"sonnet"`, `"opus"`) the harness maps to the current generation, or an exact model id. Otherwise default `worker → "sonnet"` (and `escalation → "opus"`). **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — resolution is config/alias only.
 
 2. **Dispatch one worker** in a single message:
    ```
@@ -113,13 +115,12 @@ The orchestrator does not write implementation code in the main context — it d
 
 **Execute the steps in the task description:**
 
-The worker (or, for non-code tasks, the orchestrator directly) works through the task's bite-sized steps. For each:
-1. Follow TDD cycle: write test → watch it FAIL → write minimal code → watch it PASS → refactor → commit
+For a delegated task the worker runs this loop in its own context under `CONTRACT.md`; for a non-code task you run it directly. Commits happen only at the checkpoint (Step 4a) — the worker never commits. For each step:
+1. Follow the TDD cycle: write test → watch it FAIL → write minimal code → watch it PASS → refactor
    - **Iron law: no production code without a failing test first.** Wrote code before the test? Delete it. Start over. Don't keep it as "reference."
    - If test passes immediately, STOP — test doesn't catch the new behavior. Fix the test.
    - GREEN means minimal: no features the test doesn't exercise, no error handling it doesn't check.
 2. Run verifications exactly as specified
-3. Commit working changes
 
 **Pre-completion verification (FRESH evidence required):**
 - All steps in description completed?
@@ -360,4 +361,4 @@ Before closing epic:
 - `gambit:verification` before claiming task complete
 - `gambit:review` (invoked directly when all tasks complete — reviews then calls finishing-branch)
 
-**Dispatches** `general-purpose` workers to implement each task; every worker reads the shared `workers/CONTRACT.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return), with the worker model resolved by tier. See `workers/README.md` for dispatch composition, the 4-state return, and model-tier resolution.
+**Dispatches** `general-purpose` workers to implement each task; every worker reads the shared `workers/CONTRACT.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return), with the worker model resolved by tier. See the dispatch step (Step 2) above for composition, the 4-state return, and model-tier resolution.

@@ -17,7 +17,7 @@ gambit/
 │   ├── using-gambit/            # Entry point, loaded at session start
 │   ├── brainstorming/           # Socratic design refinement
 │   ├── executing-plans/         # One-task-at-a-time execution; dispatches workers
-│   │   └── workers/             # CONTRACT.md (worker contract) + model-tier config
+│   │   └── workers/             # CONTRACT.md — shared worker contract
 │   ├── test-driven-development/ # RED-GREEN-REFACTOR cycle
 │   ├── verification/            # Evidence before completion
 │   └── ...                      # See PLAN.md for full list
@@ -49,7 +49,7 @@ Gambit uses Claude Code's Task system exclusively:
 ### Orchestrator + Workers
 `executing-plans` runs as an **orchestrator**: it stays a coordinator (whatever model you launched the session with) and dispatches a fresh generic `general-purpose` **worker** per task rather than writing implementation code itself. Every worker reads the shared, language-agnostic `skills/executing-plans/workers/CONTRACT.md` by path — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast **Stop Triggers**, and a **4-state return** (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`). The orchestrator routes on that status (verify / resolve / add context / escalate), never retries the same model on an unchanged task, and commits at the checkpoint — workers never commit.
 
-The worker model is resolved by **capability tier** at dispatch: `~/.claude/gambit/models.json` if present (values passed verbatim), else the `sonnet` / `opus` aliases the harness maps to the current generation. No concrete model ID lives in any skill, and the orchestrator is never named — so nothing drifts when models change. gambit ships no per-language briefs; language idioms come from the worker model, the inherited `CLAUDE.md`, and existing code patterns. A project may add an optional `workers/<lang>.md` override. See `skills/executing-plans/workers/README.md`.
+The worker model is resolved by **capability tier** at dispatch: `~/.claude/gambit/models.json` if present (values passed verbatim), else the `sonnet` / `opus` aliases the harness maps to the current generation. No concrete model ID lives in any skill, and the orchestrator is never named — so nothing drifts when models change. gambit ships no per-language briefs; language idioms come from the worker model, the inherited `CLAUDE.md`, and existing code patterns. A project may add an optional `workers/<lang>.md` override. See the `executing-plans` skill's dispatch step for the full composition.
 
 ### Core Principles
 1. **One-task-then-stop** — Human checkpoint after each task
