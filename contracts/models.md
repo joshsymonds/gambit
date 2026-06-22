@@ -15,28 +15,40 @@ the expensive orchestrator model.
 | `scout` (read-only Explore) | cheap-or-standard | output is cheaply checkable — the orchestrator spot-checks the cited `file:line` |
 | `test-runner` | cheap | objective oracle (exit code) |
 
-Tier words map to the harness's current generation: most-capable → `"opus"`, standard → `"sonnet"`,
-cheap → `"haiku"` (or whatever the user pins). The orchestrator is the session model and is never
-named here.
+Tier words map to the harness model **aliases**: most-capable → `"opus"`, standard → `"sonnet"`,
+cheap → `"haiku"`. The orchestrator is the session model (often `"fable"`) and is never named here.
 
 ## Resolution at dispatch
 
-1. Read `~/.claude/gambit/models.json` if present. Shape (any subset of keys):
-   ```json
-   { "worker": "<token>", "escalation": "<token>", "finder": "<token>",
-     "verifier": "<token>", "scout": "<token>", "test-runner": "<token>" }
-   ```
-   Pass the value **verbatim** to the Task `model:` parameter — a tier alias (`"sonnet"`, `"opus"`,
-   `"haiku"`) the harness maps to the live generation, or an exact model id to pin one. Because the
-   value is transcribed from config, the orchestrator can target a model it has no training
-   knowledge of — it copies the token, it does not recall it.
-2. If the file is absent or a key is missing, fall back to the default-tier table above.
+The orchestrator sets `model:` to the tier's **alias** (`"sonnet"` / `"opus"` / `"haiku"`); gambit
+names no concrete model. WHICH concrete model an alias maps to is controlled OUTSIDE gambit —
+identically on the Anthropic API and on Amazon Bedrock:
+
+1. **Native env vars (primary, recommended).** `ANTHROPIC_DEFAULT_SONNET_MODEL`,
+   `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`, `ANTHROPIC_DEFAULT_FABLE_MODEL`
+   set what each alias resolves to; `ANTHROPIC_MODEL` sets the orchestrator/session model. Point them
+   at full IDs (Anthropic IDs locally; full Bedrock inference-profile IDs under
+   `CLAUDE_CODE_USE_BEDROCK=1`). Switching a whole tier to a new generation is a ONE-env-var change —
+   no gambit edit.
+2. **Alias auto-advance.** If you don't pin, an alias maps to the provider's current recommended model
+   and advances when you UPDATE the Claude Code CLI. **On Bedrock an unpinned alias lags** (e.g.
+   `sonnet` → an older Sonnet) and may not be enabled in your account — so on Bedrock, pin via the
+   env vars in (1).
+3. **Optional per-role override** — `~/.claude/gambit/models.json`, needed ONLY when a role must use a
+   different model than its tier's alias (e.g. `verifier` ≠ `finder` though both are most-capable).
+   Shape (any subset): `{ "worker": "<id>", "escalation": "<id>", "finder": "<id>", "verifier":
+   "<id>", "scout": "<id>", "test-runner": "<id>" }`. The orchestrator reads it and passes the value
+   **verbatim** to `model:`. Absent / missing key → use the tier alias (resolved per 1–2). Most setups
+   don't need this file — the native env vars cover per-tier pinning on both API and Bedrock.
 
 ## Hard rules
 
-- **Always set `model:` explicitly.** An omitted model — or `model: "inherit"` — silently inherits
-  the expensive session model.
-- **No concrete model ID lives in a skill or contract.** Defaults are tier aliases; exact IDs only
-  ever come from `~/.claude/gambit/models.json`.
+- **Always set `model:` explicitly** to the tier alias (or an override value). An omitted model — or
+  `model: "inherit"` — silently inherits the expensive session/orchestrator model.
+- **Never set `CLAUDE_CODE_SUBAGENT_MODEL`.** It is top-precedence and forces EVERY dispatched
+  subagent onto one model, collapsing all role tiers. Pin per-line models via the
+  `ANTHROPIC_DEFAULT_*_MODEL` env vars instead.
+- **No concrete model ID lives in a skill or contract.** gambit emits only tier aliases; exact IDs
+  come from the env vars or the optional `models.json`.
 - **No cheap verifier for code/security review.** Verifying a subtle/security finding needs the same
   deep reasoning as finding it; a weak verifier gets gamed by a strong finder's coherent errors.
