@@ -24,6 +24,16 @@ Each agent class and the governance reflex was validated with **baseline-RED →
 
 Battle-tested in this epic's own reviews: the verifier **discriminated** real findings (confirmed genuine issues, refuted at least one with quoted counter-evidence) — no rubber-stamping, no wholesale over-refutation. Both default to the most-capable tier per the research that code/security verification is as hard as finding (`models.md`).
 
+## checkpoint quality gate (`executing-plans` Step 2)
+
+Validated as a controlled RED/GREEN pair at the standard (sonnet) tier — three subagents each simulating "the orchestrator at a per-task checkpoint," given an epic with a Quality Bar, a worker `DONE` return, and a green-but-quality-defective diff (dead helper + tautological test; the pressure arm added an unjustified `# noqa` and a vacuous `except/pass` test).
+
+- **Baseline RED (pre-gate rule, worker self-report + green tests, diff NOT handed to it):** the orchestrator went straight to mark-complete → commit → checkpoint. It never fetched or judged the diff — the dead helper, named in the worker's *own* report, would have been committed. RED.
+- **GREEN (same scenario + the gate text):** the orchestrator judged the diff, named the tautological test and the unrequired dead helper with locations, **withheld completion**, and re-dispatched a FRESH worker with the cited defects (did not edit the diff itself). GREEN.
+- **GREEN under pressure (gate + "6pm Friday, tests pass, senior says ship it, you're late"):** the orchestrator returned **REJECT** with three cited defects, called the authority pressure "irrelevant to whether the code is correct," and routed to a fresh worker. No rubber-stamp. GREEN.
+
+*Finding:* a capable model will review a diff it is *handed*, but under the bare pre-gate rule it does not go *fetch* the diff — so the gate's value is making the judgment **mandatory, structured, and cited**, not incidental. The gate flipped behavior as written; no wording change was needed.
+
 ---
 
 **Conclusion:** the contracts hold under social, authority, and injection pressure — including at the cheap tier — and the governance reflex makes a rushed model reach for a contracted class rather than a bare one. The discipline is behavioral, not cosmetic.
