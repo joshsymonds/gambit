@@ -106,8 +106,8 @@ The orchestrator does not write implementation code in the main context — it d
    Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 
 3. **Route on the worker's returned status** (the contract defines four). **Never retry the same model on the same unchanged task** — something must change:
-   - **DONE** → verify yourself with FRESH evidence (run the full test command now; don't trust the self-report), then proceed.
-   - **DONE_WITH_CONCERNS** → read the concern. Correctness or scope → resolve it (refine + re-dispatch, or fix directly) before accepting. Benign observation → note it and verify as DONE.
+   - **DONE** → verify yourself with FRESH evidence (run the full test command now; don't trust the self-report), then run the **Checkpoint quality gate** (below) before proceeding.
+   - **DONE_WITH_CONCERNS** → read the concern. Correctness or scope → resolve it (refine + re-dispatch, or fix directly) before accepting; treat it as an escalation trigger in the quality gate (below). Benign observation → note it and verify as DONE.
    - **NEEDS_CONTEXT** → supply the missing values/decisions and re-dispatch with them added.
    - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch at the `escalation` tier (default `"opus"`); task too large → decompose into a new task (`TaskCreate`); the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
 
@@ -131,7 +131,38 @@ For a delegated task the worker runs this loop in its own context under `contrac
 - Changes committed?
 - State claim WITH evidence: "Tests pass. [Ran: X, Output: Y/Y passed, exit 0]"
 
-Mark complete with `TaskUpdate` only after ALL steps verified with fresh evidence.
+#### Checkpoint quality gate (judge the diff, not just the tests)
+
+A green test is necessary but NOT sufficient. Before marking the task complete, read the worker's actual changes — `git diff` (and `git status` for stray files) — and judge them. The orchestrator does this ITSELF in the common case (no dispatch): it is the most capable model in the loop and is reviewing a *worker's* code, not its own.
+
+Judge the diff against five sources:
+1. **The epic's Quality Bar** (`TaskGet` the epic) — the user's subjective standard for good code on this epic.
+2. **The epic's Anti-Patterns** — none present in the diff.
+3. **The worker quality policy** (`contracts/worker.md`) — no linter/type suppression pragmas (`noqa`, `ts-ignore`, `nolint`, disabled rules), no weakened or tautological tests, no dead or commented-out code left behind, errors handled at the call site.
+4. **Blast radius** — the diff touches only what the task required; no scope creep, no "while I was here" edits.
+5. **Evidence integrity** — the RED/GREEN the worker reported genuinely exercises the changed behavior (fails without the change, for the right reason), not a test that passes vacuously.
+
+Emit an explicit, CITED verdict (`file:line`) — a pass with a one-line basis, or the specific concern. **Never a silent "looks fine."**
+
+Route on the verdict:
+- **Clean** → proceed to mark complete and checkpoint.
+- **Quality defect** → re-dispatch a FRESH worker with the specific cited defects (never the same worker on unchanged input). **Never edit the diff yourself — you judge and route; workers implement.**
+- **Doubt, or an escalation trigger fired** → escalate (below) before deciding.
+
+**Escalate to an independent quality reviewer** when any trigger fires: the diff is large or touches a security- or correctness-sensitive surface, the worker returned `DONE_WITH_CONCERNS` on correctness/scope, or your own read leaves you genuinely unsure. Dispatch the EXISTING quality reviewer scoped to this one diff — resolve `skills/review/reviewers/quality.md` once (Glob), pass it BY PATH (do not read it into your context), at the **finder tier** (`model:` per `contracts/models.md`, set explicitly):
+
+```
+Agent subagent_type="general-purpose" model="<finder tier — see contracts/models.md>" description="Quality review: <task>"
+  prompt="Read <abs>/skills/review/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.
+
+  ## Review Brief
+  Review ONLY this task's diff (changed files: <list>). Judge it against this epic's Quality Bar:
+  <paste the epic's Quality Bar>. Report findings with file:line."
+```
+
+Act on its verdict exactly as above (defect → fresh worker; clean → proceed). This is the per-task LOCAL gate; the full end-of-epic review (Step 5) stays the architectural backstop — do NOT run the four-dimension review per task.
+
+Mark complete with `TaskUpdate` only after ALL steps are verified with fresh evidence AND the checkpoint quality gate passed (or its escalation cleared).
 
 #### When Hitting Obstacles
 
@@ -220,6 +251,10 @@ Before presenting the checkpoint, commit the task's changes to whatever branch i
 ### Commit
 - [Short SHA and subject line, e.g. `a1b2c3d feat: add OAuth callback handler`]
 - [Or: "Nothing new to commit — intra-task commits during TDD already captured all changes"]
+
+### Quality verdict
+- [Pass + one-line basis, e.g. "Clean — matches Quality Bar, in blast radius, RED/GREEN sound"]
+- [Or: the concern found + how it was resolved (fresh worker / escalated reviewer), with `file:line`]
 
 ### Learnings
 - [Discoveries during implementation]
@@ -316,8 +351,9 @@ This task wouldn't have been correct if planned upfront — it reflects what you
 3. **Check epic before switching approaches** — rejected approaches stay rejected unless conditions changed
 4. **Create next task from learnings** — not from upfront assumptions
 5. **Evidence before completion** — run tests, show output, then mark done
-6. **Never water down requirements** — if blocked, ask user, don't simplify
-7. **Commit before checkpoint** — default is commit to current branch; skip only if the user said "don't commit yet" this session. Never push.
+6. **Judge the diff at the checkpoint** — a green test is necessary, not sufficient; read the diff, emit a cited verdict against the epic's Quality Bar, route clean/defect/escalate. Never mark complete on a passing test alone
+7. **Never water down requirements** — if blocked, ask user, don't simplify
+8. **Commit before checkpoint** — default is commit to current branch; skip only if the user said "don't commit yet" this session. Never push.
 
 **Common rationalizations (all mean STOP, follow the process):**
 
@@ -334,6 +370,7 @@ This task wouldn't have been correct if planned upfront — it reflects what you
 Before completing each task:
 - [ ] All steps in description executed
 - [ ] Tests passing (verified by running them)
+- [ ] Checkpoint quality gate run — diff judged against the epic's Quality Bar, cited verdict emitted, routed clean/defect/escalate
 - [ ] Changes committed
 - [ ] `TaskUpdate status="completed"` only after truly done
 
@@ -361,6 +398,7 @@ Before closing epic:
 **Calls:**
 - `gambit:test-driven-development` during implementation
 - `gambit:verification` before claiming task complete
+- `skills/review/reviewers/quality.md` — dispatched by path at the finder tier as the checkpoint quality gate's escalation reviewer, scoped to one task's diff (only when a trigger fires; the orchestrator judges the diff itself otherwise)
 - `gambit:review` (invoked directly when all tasks complete — reviews then calls finishing-branch)
 
 **Dispatches** `general-purpose` workers to implement each task; every worker reads the shared `contracts/worker.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return), with the worker model resolved by tier (`contracts/models.md`). See the dispatch step (Step 2) above for composition and the 4-state return.
