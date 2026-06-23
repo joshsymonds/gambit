@@ -47,7 +47,7 @@ LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approva
 
 **Don't use when:**
 - Tasks still in progress → use `gambit:executing-plans`
-- Mid-implementation quality check → too early
+- Mid-implementation, per-task quality check → that's the `executing-plans` checkpoint quality gate's job (it reuses this skill's `quality` reviewer, scoped to one diff, when it escalates). This skill is the multi-dimension end-of-epic backstop, not the per-task gate.
 
 ## The Process
 
