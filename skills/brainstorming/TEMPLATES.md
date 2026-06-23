@@ -25,6 +25,19 @@ TaskCreate
     - NO [Pattern 2] (reason: [why forbidden])
     - NO [Pattern 3] (reason: [why forbidden])
 
+    ## Quality Bar
+    [The user-authored standard for what "good code" means on THIS epic — the subjective bar a
+     reviewer (and the orchestrator at each checkpoint) judges each diff against, on top of the
+     mechanical floor the worker contract already enforces (no suppression, no weakened tests, no
+     dead code). State it as standards a capable model can APPLY to a diff, not metrics and not
+     vague adjectives. Author it from the user's words, not your own.]
+    - [standard 1, e.g. "parsimonious — no abstraction the requirements don't demand"]
+    - [standard 2, e.g. "reads like the surrounding code: same naming, idioms, structure"]
+    - [standard 3, e.g. "comments only where the WHY isn't obvious from the code"]
+    [Default if the user offers no specifics — record this and tell them you did: "Code a senior
+     engineer would approve without changes: clear, minimal, correct, idiomatic to the surrounding
+     code, and commented only where the intent isn't self-evident."]
+
     ## Approach
     [2-3 paragraph summary of chosen approach]
 
@@ -70,6 +83,25 @@ TaskCreate
 - NO mocking OAuth in integration tests (reason: defeats purpose of testing real flow)
 - NO Socket.IO (reason: user confirmed mobile clients use raw WebSocket)
 - NO separate WebSocket port (reason: deployment complexity, firewall rules)
+```
+
+### Quality Bar Examples
+
+Good — standards a reviewer can apply to a diff:
+
+```
+- Parsimonious: no helper, layer, or option the task's requirements don't demand
+- Reads like the file it lives in: matches existing naming, structure, and idioms
+- Names say what the thing is; no comments restating the code, comments only for non-obvious WHY
+- Public surface is minimal: nothing exported or generalized the requirements don't need
+```
+
+Bad — vague adjectives a reviewer can't act on (rewrite or use the default):
+
+```
+- High-quality, clean code
+- Good performance
+- Well-structured and maintainable
 ```
 
 ## First Task Template

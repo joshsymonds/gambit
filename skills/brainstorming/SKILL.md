@@ -140,8 +140,11 @@ After design is validated, create epic as immutable contract. See [TEMPLATES.md]
 | Requirements (IMMUTABLE) | Specific, testable conditions that must be true |
 | Success Criteria | Objective, checkable items including "all tests passing" |
 | Anti-Patterns (FORBIDDEN) | Explicitly forbidden patterns with reasoning |
+| Quality Bar | The user-authored subjective standard for "good code" on this epic — what reviewers, and the orchestrator at each task checkpoint, judge each diff against, beyond the objective Success Criteria |
 | Approach | 2-3 paragraph summary of chosen approach |
 | Approaches Considered | Rejected alternatives with DO NOT REVISIT conditions |
+
+**Elicit the Quality Bar from the user — don't write it yourself.** Success Criteria are objective; the Quality Bar is the *subjective* standard for what "good code" means here, and it must come from the user. Ask them, in their words, what the bar is — elegance, parsimony, comment expectations, "matches existing patterns", "as good as a senior dev would ship". Capture it as standards a capable model can apply to a diff (see [TEMPLATES.md](TEMPLATES.md)). If they offer nothing specific, record the template default and tell them you did. A bar a reviewer can't act on ("good code", "high quality") is not good enough — push for applicable standards.
 
 ```
 TaskCreate
@@ -156,6 +159,9 @@ TaskCreate
 
     ## Anti-Patterns (FORBIDDEN)
     - NO [pattern] (reason: [why])
+
+    ## Quality Bar
+    - [user-authored standard a reviewer can apply to a diff]
 
     ## Approach
     [2-3 paragraph summary]
@@ -228,12 +234,13 @@ Scan for:
 - **Scope drift:** Does the first task introduce files, behaviors, or dependencies the epic's requirements don't justify? Either tighten the task or add the requirement to the epic explicitly.
 - **Ambiguity:** Any sentence where two readers could reach different implementations. Pick one and say it.
 - **Internal consistency:** The first task's files, function names, and success criteria should match the epic's stated approach. Mismatches mean one of them is wrong.
+- **Quality Bar concreteness:** Is the Quality Bar stated as standards a reviewer could apply to a diff, or vague boilerplate ("good code", "clean", "high quality")? A vague bar gives the checkpoint review nothing to enforce — rewrite as applicable standards, or record the template default.
 
 Fix what you find by updating the epic or first task with `TaskUpdate`, then proceed. Do NOT present a plan that has items on this list.
 
 #### Confirm the contract with the user
 
-Epic requirements are IMMUTABLE once execution starts — so the user reviews them BEFORE handoff, not after. Present the epic's Requirements, Success Criteria, and Anti-Patterns and ask for explicit confirmation:
+Epic requirements are IMMUTABLE once execution starts — so the user reviews them BEFORE handoff, not after. Present the epic's Requirements, Success Criteria, Anti-Patterns, and Quality Bar and ask for explicit confirmation:
 
 > "Here's the epic contract — these requirements lock once we start: [summary]. Good to lock, or change anything first?"
 
@@ -343,6 +350,7 @@ TaskCreate subject: "Epic: OAuth"
 - [ ] YAGNI applied — no scope the requirements don't demand
 - [ ] Created epic with all required sections
 - [ ] Anti-patterns include reasoning
+- [ ] Quality Bar elicited from the user and stated as reviewer-applicable standards (not vague boilerplate)
 - [ ] Rejected approaches have DO NOT REVISIT UNLESS
 - [ ] Created ONLY first task (not full tree)
 - [ ] Task refined: scoped, self-contained, explicit, testable
