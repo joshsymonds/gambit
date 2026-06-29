@@ -136,7 +136,7 @@ For a delegated task the worker runs this loop in its own context under `contrac
 A green test is necessary but NOT sufficient. Before marking the task complete, read the worker's actual changes — `git diff` (and `git status` for stray files) — and judge them. The orchestrator does this ITSELF in the common case (no dispatch): it is the most capable model in the loop and is reviewing a *worker's* code, not its own.
 
 Judge the diff against five sources:
-1. **The epic's Quality Bar** (`TaskGet` the epic) — the user's subjective standard for good code on this epic.
+1. **The epic's Quality Bar** (`TaskGet` the epic) — gambit's fixed maximal standard for good code, carried verbatim in every epic.
 2. **The epic's Anti-Patterns** — none present in the diff.
 3. **The worker quality policy** (`contracts/worker.md`) — no linter/type suppression pragmas (`noqa`, `ts-ignore`, `nolint`, disabled rules), no weakened or tautological tests, no dead or commented-out code left behind, errors handled at the call site.
 4. **Blast radius** — the diff touches only what the task required; no scope creep, no "while I was here" edits.

@@ -140,11 +140,11 @@ After design is validated, create epic as immutable contract. See [TEMPLATES.md]
 | Requirements (IMMUTABLE) | Specific, testable conditions that must be true |
 | Success Criteria | Objective, checkable items including "all tests passing" |
 | Anti-Patterns (FORBIDDEN) | Explicitly forbidden patterns with reasoning |
-| Quality Bar | The user-authored subjective standard for "good code" on this epic — what reviewers, and the orchestrator at each task checkpoint, judge each diff against, beyond the objective Success Criteria |
+| Quality Bar | gambit's fixed maximal standard for "good code" — the highest professional quality, written verbatim into every epic and judged against each diff by reviewers and the orchestrator at every checkpoint, beyond the objective Success Criteria |
 | Approach | 2-3 paragraph summary of chosen approach |
 | Approaches Considered | Rejected alternatives with DO NOT REVISIT conditions |
 
-**Elicit the Quality Bar from the user — don't write it yourself.** Success Criteria are objective; the Quality Bar is the *subjective* standard for what "good code" means here, and it must come from the user. Ask them, in their words, what the bar is — elegance, parsimony, comment expectations, "matches existing patterns", "as good as a senior dev would ship". Capture it as standards a capable model can apply to a diff (see [TEMPLATES.md](TEMPLATES.md)). If they offer nothing specific, record the template default and tell them you did. A bar a reviewer can't act on ("good code", "high quality") is not good enough — push for applicable standards.
+**The Quality Bar is fixed — write it verbatim, don't elicit it.** Every epic carries the same bar: the highest professional standard, the code a master engineer would ship — elegant, complete, built on a superb foundation. It is not a per-project preference and is never negotiated down. Copy it verbatim from [TEMPLATES.md](TEMPLATES.md) into the epic so the checkpoint gate and reviewers have it locally. It governs *craftsmanship, not scope* — how well the required work is built, never how much of it; project-specific prohibitions go in Anti-Patterns. It sits on top of the mechanical floor the worker contract enforces (no suppression, no weakened tests, no dead code).
 
 ```
 TaskCreate
@@ -161,7 +161,8 @@ TaskCreate
     - NO [pattern] (reason: [why])
 
     ## Quality Bar
-    - [user-authored standard a reviewer can apply to a diff]
+    The highest professional standard — code a master engineer would ship: elegant, complete,
+    built on a superb foundation. Fixed for every epic; copy it verbatim from TEMPLATES.md.
 
     ## Approach
     [2-3 paragraph summary]
@@ -234,13 +235,13 @@ Scan for:
 - **Scope drift:** Does the first task introduce files, behaviors, or dependencies the epic's requirements don't justify? Either tighten the task or add the requirement to the epic explicitly.
 - **Ambiguity:** Any sentence where two readers could reach different implementations. Pick one and say it.
 - **Internal consistency:** The first task's files, function names, and success criteria should match the epic's stated approach. Mismatches mean one of them is wrong.
-- **Quality Bar concreteness:** Is the Quality Bar stated as standards a reviewer could apply to a diff, or vague boilerplate ("good code", "clean", "high quality")? A vague bar gives the checkpoint review nothing to enforce — rewrite as applicable standards, or record the template default.
+- **Quality Bar present:** Does the epic carry the fixed Quality Bar verbatim from [TEMPLATES.md](TEMPLATES.md), unweakened? It's the same standard on every epic — restore it if it's missing, paraphrased, or watered down.
 
 Fix what you find by updating the epic or first task with `TaskUpdate`, then proceed. Do NOT present a plan that has items on this list.
 
 #### Confirm the contract with the user
 
-Epic requirements are IMMUTABLE once execution starts — so the user reviews them BEFORE handoff, not after. Present the epic's Requirements, Success Criteria, Anti-Patterns, and Quality Bar and ask for explicit confirmation:
+Epic requirements are IMMUTABLE once execution starts — so the user reviews them BEFORE handoff, not after. Present the epic's Requirements, Success Criteria, and Anti-Patterns for confirmation; the Quality Bar is gambit's fixed standard and applies to every epic, so note it rather than asking the user to set it:
 
 > "Here's the epic contract — these requirements lock once we start: [summary]. Good to lock, or change anything first?"
 
@@ -350,7 +351,7 @@ TaskCreate subject: "Epic: OAuth"
 - [ ] YAGNI applied — no scope the requirements don't demand
 - [ ] Created epic with all required sections
 - [ ] Anti-patterns include reasoning
-- [ ] Quality Bar elicited from the user and stated as reviewer-applicable standards (not vague boilerplate)
+- [ ] Quality Bar present in the epic — gambit's fixed maximal standard, copied verbatim (not elicited, not weakened)
 - [ ] Rejected approaches have DO NOT REVISIT UNLESS
 - [ ] Created ONLY first task (not full tree)
 - [ ] Task refined: scoped, self-contained, explicit, testable
