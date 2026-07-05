@@ -67,6 +67,8 @@ Run `TaskList` and analyze:
 
 **Do NOT ask "where did we leave off?"** — Task state tells you exactly where to resume.
 
+**If the task store is empty or wiped** (e.g. an MCP reconnect drops the session's tasks mid-epic) — this is recoverable state loss, not a halt. You hold the epic's requirements and the current wave in your own context; recreate the epic and the in-flight tasks with `TaskCreate` from that context, then resume. Never abandon an epic because the store reset.
+
 ---
 
 ### 1. Load Epic Context
@@ -154,12 +156,13 @@ For a delegated task the worker runs this loop in its own context under `contrac
 
 A green test is necessary but NOT sufficient. Before marking the task complete, read the worker's actual changes — `git diff` (and `git status` for stray files) — and judge them. The orchestrator does this ITSELF in the common case (no dispatch): it is the most capable model in the loop and is reviewing a *worker's* code, not its own.
 
-Judge the diff against five sources:
+Judge the diff against six sources:
 1. **The epic's Quality Bar** (`TaskGet` the epic) — gambit's fixed maximal standard for good code, carried verbatim in every epic.
 2. **The epic's Anti-Patterns** — none present in the diff.
 3. **The worker quality policy** (`contracts/worker.md`) — no linter/type suppression pragmas (`noqa`, `ts-ignore`, `nolint`, disabled rules), no weakened or tautological tests, no dead or commented-out code left behind, errors handled at the call site.
-4. **Blast radius** — the diff touches only what the task required; no scope creep, no "while I was here" edits.
+4. **Blast radius** — the diff touches only what the task required; no scope creep, no "while I was here" edits. (Exception: mechanical fallout of a correct change that breaks the shared gate — regenerated fixtures/goldens, a cross-package test that must update — is in-scope to repair; the worker reports it, you authorize it, and it is not scope creep.)
 5. **Evidence integrity** — the RED/GREEN the worker reported genuinely exercises the changed behavior (fails without the change, for the right reason), not a test that passes vacuously.
+6. **Wiring completeness** — trace each new field, event, or behavior in the diff to its read/consumption path. A value written but never read, a branch never taken, or a path that bypasses a new guard is an incomplete implementation even when tests pass — green certifies plumbing, not the feature. This is the class of gap that only the end-of-epic review otherwise catches.
 
 Emit an explicit, CITED verdict (`file:line`) — a pass with a one-line basis, or the specific concern. **Never a silent "looks fine."**
 
@@ -369,6 +372,8 @@ TaskCreate
 This task wouldn't have been correct if planned upfront — it reflects what you actually found.
 
 ## Critical Rules
+
+**Answer the user before you dispatch.** When the user asks a direct question mid-epic, answer it in prose before or alongside your next action. A dispatch, a task update, or a checkpoint summary is never a substitute for the answer. Deferring a question to "keep the loop moving" is the drift, not the discipline; if you can't answer, say so plainly rather than fabricating (e.g. per-worker token cost isn't surfaced to you — point the user at the session telemetry, don't guess a number).
 
 1. **One wave then STOP** — no second wave this cycle, no "just one more"
 2. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
