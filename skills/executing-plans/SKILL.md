@@ -14,6 +14,16 @@ Execute Tasks one at a time with mandatory human checkpoints. Load epic → Exec
 
 **Announce at start:** "I'm using gambit:executing-plans to implement this task."
 
+## Execution and continuation
+
+Each invocation runs **one cycle** — execute the ready work, verify, run the quality gate, commit, present the checkpoint — then **STOPs (ends the turn)**. The skill never loops across cycles within a single turn.
+
+STOP does not mean the epic halts; it means this turn ends and the next cycle begins on the next invocation. Two things can trigger that next invocation:
+- **A human** re-running `/gambit:executing-plans` — the default.
+- **A goal Stop-hook** that re-invokes the skill automatically — the ONLY sanctioned way to run cycle-after-cycle without a human pause.
+
+Continuous, no-human-pause execution is therefore **authorized only by a goal Stop-hook — never self-granted.** An in-session "just keep going, don't stop for me" does NOT authorize it: if the user wants unattended execution they set a goal; surface that in the checkpoint rather than batching cycles yourself. Every safeguard — quality gate, commit, checkpoint summary, and this re-invocation — runs on every cycle regardless; the goal changes only who triggers the next one, never what happens inside a cycle.
+
 ## Rigidity Level
 
 LOW FREEDOM — Follow exact process: load epic, execute ONE task, checkpoint, STOP.
@@ -30,7 +40,7 @@ Do not skip checkpoints or verification. Epic requirements never change. Tasks a
 | **3. Create Next Task** | `TaskCreate` based on learnings | Reflect reality, not original assumptions |
 | **4. Commit & Checkpoint** | Commit to current branch, present summary | STOP — no exceptions |
 
-**Iron Law:** One task → Checkpoint → STOP → User reviews → Next task. No batching. No "just one more."
+**Iron Law:** One task → Checkpoint → STOP → Next cycle. No batching. No "just one more." The STOP always happens; whether a human or a goal Stop-hook triggers the next cycle is the only thing that varies (see **Execution and continuation**).
 
 ## When to Use
 
@@ -101,7 +111,8 @@ The orchestrator does not write implementation code in the main context — it d
      ## Context
      <where this task fits + any cross-task interfaces/decisions the brief can't know>
 
-     Test command: <the task's test command>."
+     Test command: <the task's test command>.
+     Workspace: <worktree path>, branch <branch> at <expected HEAD short-SHA>."
    ```
    Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 
@@ -217,6 +228,7 @@ After completing a task, create the NEXT task based on what you learned. Tasks a
 - Explicit: All file paths specified
 - Definitive: Steps reference verified file paths — never conditional ("if exists", "if present"). Verify against the codebase first, then write the step.
 - Testable: Has verification command with expected output
+- Anchored: names the exact existing functions/files to mirror and the established idiom to follow — anchor quality visibly drives worker output quality
 
 ---
 
@@ -282,6 +294,7 @@ Run `/gambit:executing-plans` to execute the next task.
 - User can clear context if conversation is long
 - User can adjust direction based on learnings
 - Prevents runaway execution without oversight
+- Ending the turn is also what lets a goal Stop-hook fire and re-invoke you for the next cycle — so STOP is what *arms* autonomous continuation, never what blocks it. Continuing in the same turn would skip the hook entirely.
 
 ---
 
@@ -364,6 +377,7 @@ This task wouldn't have been correct if planned upfront — it reflects what you
 | "Good context loaded" | STOP anyway — user reviews matter |
 | "Just one more quick task" | STOP anyway — quick tasks compound |
 | "User trusts me" | STOP anyway — one invocation ≠ blanket permission |
+| "User said 'keep going' in chat" | STOP anyway — autonomy is authorized by a goal Stop-hook, not a chat aside; note it in the checkpoint and let them set a goal |
 | "This is trivial" | STOP anyway — trivial tasks can have unexpected effects |
 | "I'll save time by continuing" | STOP anyway — wrong direction wastes more time |
 
