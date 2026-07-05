@@ -8,9 +8,9 @@ user_invokable: true
 
 ## Overview
 
-Execute Tasks one at a time with mandatory human checkpoints. Load epic → Execute ONE task → Present checkpoint → STOP. User reviews, then invokes again to continue.
+Execute an epic in cycles with mandatory checkpoints. Load epic → run one wave (one task, or several independent tasks in parallel) → Present checkpoint → STOP. User reviews, then invokes again to continue.
 
-**Core principle:** Epic requirements are immutable. Tasks adapt to reality. STOP after each task for human oversight — no exceptions.
+**Core principle:** Epic requirements are immutable. Tasks adapt to reality. STOP after each wave for human oversight — no exceptions. A wave of independent parallel tasks is one cycle with one checkpoint; running a *second* wave without stopping is the batching that's forbidden.
 
 **Announce at start:** "I'm using gambit:executing-plans to implement this task."
 
@@ -26,7 +26,7 @@ Continuous, no-human-pause execution is therefore **authorized only by a goal St
 
 ## Rigidity Level
 
-LOW FREEDOM — Follow exact process: load epic, execute ONE task, checkpoint, STOP.
+LOW FREEDOM — Follow exact process: load epic, execute one wave, checkpoint, STOP.
 
 Do not skip checkpoints or verification. Epic requirements never change. Tasks adapt to discoveries.
 
@@ -36,11 +36,11 @@ Do not skip checkpoints or verification. Epic requirements never change. Tasks a
 |------|--------|---------------|
 | **0. Check State** | `TaskList` | Task state tells you where to resume — never ask |
 | **1. Load Epic** | `TaskGet` on epic | Requirements are IMMUTABLE |
-| **2. Execute ONE Task** | Mark in_progress → dispatch worker → verify → mark completed | Explicit `model:`, TDD cycle, verify each step |
-| **3. Create Next Task** | `TaskCreate` based on learnings | Reflect reality, not original assumptions |
+| **2. Execute the Wave** | Mark in_progress → dispatch worker(s) → verify → integrate → mark completed | Explicit `model:`, TDD cycle, worktree-isolate a ≥2 wave |
+| **3. Create Next Wave** | `TaskCreate` based on learnings | Disjoint file sets; reflect reality, not upfront assumptions |
 | **4. Commit & Checkpoint** | Commit to current branch, present summary | STOP — no exceptions |
 
-**Iron Law:** One task → Checkpoint → STOP → Next cycle. No batching. No "just one more." The STOP always happens; whether a human or a goal Stop-hook triggers the next cycle is the only thing that varies (see **Execution and continuation**).
+**Iron Law:** One wave → Checkpoint → STOP → Next cycle. No batching (no second wave this cycle). No "just one more." The STOP always happens; whether a human or a goal Stop-hook triggers the next cycle is the only thing that varies (see **Execution and continuation**).
 
 ## When to Use
 
@@ -92,15 +92,20 @@ Before executing ANY task, read the epic with `TaskGet`.
 
 **Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. Glob `**/contracts/scout.md`, dispatch `subagent_type: "Explore"` with `model:` at the scout tier (default cheap-or-standard; `contracts/models.md`), and prompt it to Read `contracts/scout.md` first, then ask your question. The scout returns `file:line` evidence or `NOT FOUND` — never a guess. This is optional per task; skip it when the brief is already clear.
 
-**Dispatch implementation to a worker:**
+**Settle architecture before dispatching.** A worker implements; it does not decide cross-file design. If a task carries an unresolved architectural question, resolve it first — scout it, record the decision in the brief, or decompose the task — then dispatch. A design question tangled into an implementation task is what produces same-pass-TDD drift.
 
-The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker and stays a coordinator. This preserves orchestrator context and lets a cheaper, faster model do the mechanical work while the orchestrator (whatever model you launched the session with) plans, verifies, and checkpoints. Every worker is governed by the shared **`contracts/worker.md`** — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast Stop Triggers, and a 4-state return.
+**Dispatch the wave to workers:**
+
+The ready work is a **wave** — one or more ready tasks whose file sets are **pairwise disjoint** and that have **no semantic dependency** on each other (a task needing another's output belongs in a later wave). One cycle dispatches one wave. The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker per task and stays a coordinator: it plans, verifies, integrates, and checkpoints while a cheaper, faster model does the mechanical work. Every worker is governed by the shared **`contracts/worker.md`** — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast Stop Triggers, and a 4-state return.
+
+- **Single-task wave** → dispatch one worker; it works directly in the epic's working tree.
+- **Wave of ≥2** → run each worker in its OWN isolated worktree so their tests, lints, and builds cannot interfere; brief each with a `## Neighbors` section; integrate the returned diffs serially. Never let two workers edit the same working tree. Full mechanics: **`references/wave-dispatch.md`** — read it whenever a wave has ≥2 tasks.
 
 **Resolve the contract path once.** Glob `**/contracts/worker.md` to get its absolute path and pass that path to the worker — **do NOT Read `worker.md` into your own context.** The worker reads it in its fresh context (exactly as the `review` skill passes `reviewers/*.md` by path); reading it yourself loads ~1.4k tokens into the long-lived orchestrator context on every epic, for nothing. The worker re-reads it on every dispatch, including retries — keep `worker.md` lean.
 
 1. **Resolve the worker model by tier** — see `contracts/models.md`. Default `worker → standard`, with `~/.claude/gambit/models.json` overrides and `escalation` for a re-dispatch. **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — resolution is config/alias only.
 
-2. **Dispatch one worker** in a single message:
+2. **Dispatch the wave** — every worker in a single message (so a ≥2 wave runs concurrently):
    ```
    Agent subagent_type="general-purpose" model="<resolved worker model>" description="Implement: <task subject>"
      prompt="Read <abs>/contracts/worker.md — that file is your binding worker contract; your FIRST action must be to Read it, then follow it exactly.
@@ -111,8 +116,11 @@ The orchestrator does not write implementation code in the main context — it d
      ## Context
      <where this task fits + any cross-task interfaces/decisions the brief can't know>
 
+     ## Neighbors        # ONLY in a wave of ≥2 — omit for a single-task wave
+     <for each concurrent task: its subject + the exact files it owns; these are off-limits to you>
+
      Test command: <the task's test command>.
-     Workspace: <worktree path>, branch <branch> at <expected HEAD short-SHA>."
+     Workspace: <the worker's own worktree path> on branch <branch>; baseline is <prior task's commit SHA>."
    ```
    Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 
@@ -122,7 +130,7 @@ The orchestrator does not write implementation code in the main context — it d
    - **NEEDS_CONTEXT** → supply the missing values/decisions and re-dispatch with them added.
    - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch at the `escalation` tier (default `"opus"`); task too large → decompose into a new task (`TaskCreate`); the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
 
-4. **The worker edits files; the orchestrator verifies.** The worker never commits — you commit at the checkpoint (Step 4a).
+4. **Integrate the wave serially — you are the sole committer.** Workers edit; you verify and commit. Single-task wave → gate the diff, then commit at the checkpoint (Step 4a). Wave of ≥2 → take each worker's diff in turn: gate it, apply it to the epic's tree, run the FULL suite, commit that task's files — one worker at a time, never two unverified diffs at once (`references/wave-dispatch.md`). Workers never commit, even in their own worktrees. While a wave runs, scout and brief the next wave rather than idling.
 
 **For non-code tasks** (pure docs, task bookkeeping) skip the dispatch and execute directly — there's no implementation to delegate and the orchestrator does the work itself.
 
@@ -198,9 +206,9 @@ If implementation reveals unexpected work:
 
 ---
 
-### 3. Create Next Task
+### 3. Create the Next Wave
 
-After completing a task, create the NEXT task based on what you learned. Tasks are created iteratively as reality unfolds, never all upfront — an upfront task tree goes stale the moment the first task teaches you something.
+After a wave completes, build the NEXT wave from what you learned — the set of ready follow-on tasks whose file sets are **pairwise disjoint** and that don't depend on each other's output, so they can run concurrently. Often that's a single task; when the work genuinely fans out into independent pieces, scope them as a wave. Tasks are created iteratively as reality unfolds, never all upfront — an upfront task tree goes stale the moment the first task teaches you something. Overlapping or dependent work goes into a *later* wave, never the same one.
 
 **Review what you learned:**
 1. What did we discover during implementation?
@@ -229,6 +237,7 @@ After completing a task, create the NEXT task based on what you learned. Tasks a
 - Definitive: Steps reference verified file paths — never conditional ("if exists", "if present"). Verify against the codebase first, then write the step.
 - Testable: Has verification command with expected output
 - Anchored: names the exact existing functions/files to mirror and the established idiom to follow — anchor quality visibly drives worker output quality
+- Disjoint: names its exact file set; no overlap and no output-dependency with any other task in the same wave (overlap or dependency → a later wave)
 
 ---
 
@@ -238,14 +247,14 @@ Two parts: commit any work that isn't already on the branch, then present the ch
 
 #### 4a: Commit Task's Work to Current Branch (Default)
 
-Before presenting the checkpoint, commit the task's changes to whatever branch is currently checked out — `main`, a feature branch, a worktree branch, whichever is active. The checkpoint is the agreed "one task done" unit; a commit at this boundary makes each task a durable, reviewable history entry so the user's next action (review, clear context, hand off, walk away) finds the work preserved.
+Before presenting the checkpoint, commit the wave's work to whatever branch is currently checked out — `main`, a feature branch, a worktree branch, whichever is active. The checkpoint is the agreed "one wave done" unit; a commit at this boundary makes each task a durable, reviewable history entry so the user's next action (review, clear context, hand off, walk away) finds the work preserved. A ≥2 wave commits each task as it integrates (Step 2), so its work is already on the branch — here you only confirm nothing is left uncommitted.
 
 1. Run `git status` to see what's uncommitted
 2. If there are changes:
-   - Stage the task's files by name — avoid `git add -A`, which can sweep in accidentally-created files
+   - Stage each task's files by name — avoid `git add -A`, which can sweep in accidentally-created files. One commit per task, even within a wave.
    - Write a concise commit message: one-line subject describing what the task accomplished; optional short body for non-obvious WHY
    - Create a NEW commit (don't amend). Don't skip hooks. Don't push.
-3. If `git status` is clean (intra-task commits during the TDD cycle already captured everything, or the task was marked SKIPPED with no code changes), note it under "Commit" in the checkpoint summary
+3. If `git status` is clean (a ≥2 wave already committed each task at integration, intra-task commits during the TDD cycle captured everything, or the task was marked SKIPPED with no code changes), note it under "Commit" in the checkpoint summary
 
 **Do NOT push.** Committing is local — the user decides when to push.
 
@@ -361,7 +370,7 @@ This task wouldn't have been correct if planned upfront — it reflects what you
 
 ## Critical Rules
 
-1. **ONE task then STOP** — no batching, no "just one more"
+1. **One wave then STOP** — no second wave this cycle, no "just one more"
 2. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
 3. **Check epic before switching approaches** — rejected approaches stay rejected unless conditions changed
 4. **Create next task from learnings** — not from upfront assumptions
