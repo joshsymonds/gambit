@@ -19,7 +19,7 @@ Turn rough ideas into validated designs stored as epic Tasks with immutable requ
 HIGH FREEDOM - Adapt questioning to context. But always:
 - Create immutable epic before code
 - Create only first task (not full tree)
-- Use AskUserQuestion tool for questions
+- Use AskUserQuestion for closed choices and the handoff; prose with a recommendation for open design questions
 - Apply task refinement before handoff
 
 ## Quick Reference
@@ -72,7 +72,7 @@ Task
 
 **Then ask clarifying questions using AskUserQuestion tool.**
 
-Aim for 2-4 questions per round, 2-4 rounds total. Use multiple choice with recommended defaults. Stop when you understand scope, constraints, existing patterns, and scale.
+Aim for 2-4 questions per round, 2-4 rounds total. For closed clarifiers (scope, scale, pick-one-of-N with defined options) use multiple choice with recommended defaults. Stop when you understand scope, constraints, existing patterns, and scale.
 
 ```
 AskUserQuestion
@@ -87,7 +87,7 @@ AskUserQuestion
       multiSelect: false
 ```
 
-**Do NOT print questions as text and wait** — always use the AskUserQuestion tool.
+**Match the form to the question.** For **closed choices** — scope, scale, a pick-one-of-N with defined options, the handoff menu — use the AskUserQuestion tool; don't print those as text and wait. For **open-ended design, approach, and aesthetic questions** — where the value is the trade-offs and your reasoning — present them in prose with your recommendation and why, across the relevant axes. A fixed-option widget flattens those (compressed descriptions can't carry the trade-off), and some environments don't render the tool at all. Never contradict a captured user preference to see the tool or to get prose.
 
 ---
 
@@ -323,7 +323,7 @@ TaskCreate subject: "Epic: OAuth"
 ## Critical Rules
 
 1. **Decompose multi-subsystem requests** — several subsystems = several epics, before refining
-2. **Use AskUserQuestion tool** — don't print questions as text
+2. **Match question form** — AskUserQuestion for closed choices and the handoff; prose with a recommendation for open design/aesthetic questions
 3. **Research BEFORE proposing** — use Explore agent for codebase context
 4. **Propose 2-3 approaches** — don't jump to a single solution
 5. **Decompose for isolation, apply YAGNI** — well-bounded units, no unrequested scope
@@ -344,7 +344,7 @@ TaskCreate subject: "Epic: OAuth"
 ## Verification Checklist
 
 - [ ] Scope-checked: decomposed if multiple independent subsystems
-- [ ] Used AskUserQuestion tool (not printed text)
+- [ ] Closed choices via AskUserQuestion; open design/aesthetic questions in prose with a recommendation
 - [ ] Researched codebase patterns (Explore agent)
 - [ ] Proposed 2-3 approaches with trade-offs
 - [ ] Design decomposed into well-bounded, independently testable units
