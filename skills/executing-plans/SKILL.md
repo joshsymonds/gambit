@@ -134,7 +134,13 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
 
 4. **Integrate the wave serially — you are the sole committer.** Workers edit; you verify and commit. Single-task wave → gate the diff, then commit at the checkpoint (Step 4a). Wave of ≥2 → take each worker's diff in turn: gate it, apply it to the epic's tree, run the FULL suite, commit that task's files — one worker at a time, never two unverified diffs at once (`references/wave-dispatch.md`). Workers never commit, even in their own worktrees. While a wave runs, scout and brief the next wave rather than idling.
 
-**For non-code tasks** (pure docs, task bookkeeping) skip the dispatch and execute directly — there's no implementation to delegate and the orchestrator does the work itself.
+**What you do yourself vs dispatch.** Two kinds of task the orchestrator executes directly; everything else is dispatched to a worker:
+- **Non-code tasks** (pure docs, task bookkeeping) — there's no implementation to delegate.
+- **Aesthetic-judgment tasks** (visual design, layout, typography, art direction — success is *does it look right*, not a functional spec) — the ONE code exception to dispatch, because visual taste is the orchestrator's strength and a worker's weakness. Exact-spec mechanical markup is NOT this exception — dispatch that normally.
+
+Everything else is worker work — including **operational work**: live-run debugging, timeout/retry tuning, incident chasing, and log-driven fixes are code changes; dispatch them (a reproducing test first — the worker's TDD loop, or `gambit:debugging`), never absorb them into your own context because "you're already in the logs." Read-only investigation (tailing logs, a scout, forming a hypothesis) is fine; the moment you edit source to fix it, that's a worker's job.
+
+**Verify visual work by looking.** However the code was produced — self-implemented or dispatched — an aesthetic or visual task is not done until you have seen it rendered: build → screenshot at desktop + mobile widths (+ reduced-motion where it matters) → judge the pixels against the brief. Reading the diff cannot tell you whether it looks right. Full loop: `references/visual-verification.md`.
 
 **Execute the steps in the task description:**
 
