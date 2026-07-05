@@ -32,17 +32,20 @@ The worker contract treats a neighbor's file as out of scope (a Stop Trigger), s
 
 ## Integrate serially — you are the sole committer
 
-Workers never commit, even in their own worktrees. Integrate one at a time, in the epic worktree:
+Workers never commit, even in their own worktrees — so a worker's changes are **uncommitted working-tree edits**, and its worktree HEAD is still `$BASE`. Retrieve them with a plain working-tree diff (NOT `$BASE..HEAD`, which compares two identical commits and yields nothing). Integrate one at a time, in the epic worktree:
 
 ```bash
-git -C ../wave-<id> diff "$BASE"..HEAD > /tmp/<id>.patch   # retrieve the worker's diff
+patch=$(mktemp)                                   # scratch file (mktemp, not a predictable /tmp path)
+git -C ../wave-<id> diff > "$patch"               # the worker's uncommitted edits
 # → run the checkpoint quality gate on this diff (Step 2)
-git apply /tmp/<id>.patch                                  # apply into the epic tree
+git apply "$patch"                                # apply into the epic tree
 # → run the FULL test suite here, in the epic tree (not the worktree)
-git add <the task's files by name> && git commit           # per-task commit (this is Step 4a)
+git add <the task's files by name> && git commit  # per-task commit (this is Step 4a)
 ```
 
 Gate → apply → full suite → commit, then the next worker. Never apply two unverified diffs at once. If an apply conflicts, or the suite fails after applying, that task drops to BLOCKED / quality-defect routing (Step 2) — the workers already integrated stay committed; the wave does not roll back.
+
+Integration is **serial**: each task's full-suite run happens one at a time, so a wave of N tasks costs ~N × the suite. The wave parallelizes worker *write* time, not integration — keep waves small, or reserve larger ones for fast suites.
 
 ## Remove the worktrees
 

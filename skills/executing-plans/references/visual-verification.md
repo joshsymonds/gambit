@@ -8,10 +8,11 @@ An aesthetic or visual task is not verified by reading the diff — diffs of mar
 2. Capture the changed view with a headless browser, at more than one width:
 
 ```bash
+shots=$(mktemp -d)             # scratch dir (mktemp, not a predictable /tmp path)
 cd <build-dir> && python3 -m http.server 8000 &
 for w in 1440 390; do          # desktop, mobile
   chromium --headless --disable-gpu --hide-scrollbars \
-    --window-size=${w},2000 --screenshot=/tmp/view-${w}.png "http://localhost:8000/"
+    --window-size=${w},2000 --screenshot=${shots}/view-${w}.png "http://localhost:8000/"
 done
 ```
 

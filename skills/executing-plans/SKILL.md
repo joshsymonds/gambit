@@ -85,12 +85,12 @@ Before executing ANY task, read the epic with `TaskGet`.
 
 ---
 
-### 2. Execute Current Ready Task
+### 2. Execute the Wave
 
-**Find and claim:**
-1. `TaskList` → identify ready task (status="pending", blockedBy=[])
-2. `TaskUpdate` → mark in_progress
-3. `TaskGet` → load full task details
+**Find and claim the wave:**
+1. `TaskList` → identify the ready tasks (status="pending", blockedBy=[]). The wave is those whose file sets are pairwise disjoint with no cross-dependency — usually one, sometimes several. Overlapping or dependent tasks wait for a later wave.
+2. `TaskUpdate` → mark each wave task in_progress
+3. `TaskGet` → load each task's full details
 
 **Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. Glob `**/contracts/scout.md`, dispatch `subagent_type: "Explore"` with `model:` at the scout tier (default cheap-or-standard; `contracts/models.md`), and prompt it to Read `contracts/scout.md` first, then ask your question. The scout returns `file:line` evidence or `NOT FOUND` — never a guess. This is optional per task; skip it when the brief is already clear.
 
@@ -122,7 +122,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
      <for each concurrent task: its subject + the exact files it owns; these are off-limits to you>
 
      Test command: <the task's test command>.
-     Workspace: <the worker's own worktree path> on branch <branch>; baseline is <prior task's commit SHA>."
+     Workspace: <the worker's own worktree path> on branch <branch>; baseline is <the wave's fork-point SHA — the prior task's commit for a single-task wave, or the shared wave-start HEAD for a ≥2 wave>."
    ```
    Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 
