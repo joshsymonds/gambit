@@ -13,6 +13,8 @@ Git worktrees create isolated workspaces sharing the same repository. No switchi
 
 **Iron Law:** NO skipping baseline verification. Tests must pass in the new worktree BEFORE reporting ready. No exceptions.
 
+**Not this skill:** the transient per-worker worktrees `executing-plans` forks during a parallel wave are orchestrator-managed and separate (see `executing-plans/references/wave-dispatch.md`). This skill sets up the durable epic/feature workspace a human works in.
+
 **Announce at start:** "I'm using gambit:using-worktrees to set up an isolated workspace."
 
 ## Rigidity Level

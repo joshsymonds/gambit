@@ -92,7 +92,7 @@ gambit:brainstorming
 
 **The flow then continues automatically:**
 ```
-executing-plans (one task → checkpoint → STOP → repeat)
+executing-plans (one wave → checkpoint → STOP → repeat)
     ↓ all tasks done
 review (4-reviewer parallel code review)
     ↓ approved
@@ -134,7 +134,7 @@ These thoughts mean STOP — you're rationalizing:
 
 These apply across ALL gambit skills:
 
-1. **One task then stop** — Execute one Task, present checkpoint, STOP for human review
+1. **One wave then stop** — execute one wave (one task, or several independent tasks in parallel), checkpoint, STOP; a goal Stop-hook resumes without a human
 2. **Tasks are source of truth** — Use `TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`. Never track work mentally
 3. **Evidence over assertions** — Run verification commands and show output before claiming done
 4. **Small steps that stay green** — Tests pass between every change
