@@ -36,8 +36,7 @@ Verify installation:
 |-------|---------|---------|
 | **using-gambit** | `/gambit` | Session entry, skill discovery |
 | **brainstorming** | `/gambit:brainstorming` | Socratic design refinement |
-| **executing-plans** | `/gambit:executing-plans` | One-task-at-a-time execution |
-| **using-worktrees** | `/gambit:using-worktrees` | Git worktree + devenv setup |
+| **executing-plans** | `/gambit:executing-plans` | One-task-at-a-time execution (in an epic worktree) |
 | **finishing-branch** | `/gambit:finishing-branch` | Merge/PR/discard workflow |
 | **test-driven-development** | `/gambit:test-driven-development` | RED-GREEN-REFACTOR |
 | **verification** | `/gambit:verification` | Evidence before completion |
@@ -62,7 +61,7 @@ Worker models are chosen by capability tier — a cheaper, faster model does the
 
 | Feature | Superpowers | Hyperpowers | Gambit |
 |---------|-------------|-------------|--------|
-| Worktree setup | ✅ | ❌ | ✅ + devenv |
+| Worktree setup | ✅ | ❌ | Automatic per epic (native `EnterWorktree`) |
 | Task tracking | Markdown plans | bd/beads CLI | Native Tasks |
 | Execution style | Batch (3 at a time) | One-then-stop | One-then-stop |
 | Human checkpoints | Between batches | After every task | After every task |

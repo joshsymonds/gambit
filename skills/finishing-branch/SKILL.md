@@ -203,7 +203,8 @@ Check if a worktree exists for this branch:
 git worktree list
 ```
 
-- Worktree found → `git worktree remove <path>`
+- Session is inside a worktree created by `EnterWorktree` this session → `ExitWorktree action: "remove"` (for Discard, pass `discard_changes: true` only after the typed confirmation)
+- Worktree exists from an earlier session or repo tooling (`.claude/worktrees/`, `.worktrees/`) → return to the base branch, then `git worktree remove <path>`
 - No worktree → skip (branch may not have used one)
 
 Report cleanup results.
@@ -225,7 +226,7 @@ Step 5: git checkout main
         git merge feature-auth
         npm test → 127 tests passed  (verify merged result)
         git branch -d feature-auth
-Step 6: git worktree remove .worktrees/auth
+Step 6: ExitWorktree action:"remove"   (or git worktree remove for an older worktree)
 
 Done. Feature merged to main.
 ```
@@ -255,7 +256,7 @@ git log --oneline main..HEAD
 User: "discard"
 
 git checkout main && git branch -D feature-experimental
-git worktree remove .worktrees/experimental
+git worktree remove .claude/worktrees/experimental
 ```
 
 ## Critical Rules
@@ -304,4 +305,4 @@ git worktree remove .worktrees/experimental
 - `git` commands (merge, branch, worktree)
 
 **Pairs with:**
-- `gambit:using-worktrees` — cleans up worktree created by that skill
+- The epic worktree (native `.claude/worktrees/` via `ExitWorktree`, or repo-managed) — cleaned up here on merge/discard

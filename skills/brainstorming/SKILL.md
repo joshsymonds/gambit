@@ -18,8 +18,8 @@ Turn rough ideas into validated designs stored as epic Tasks with immutable requ
 
 HIGH FREEDOM - Adapt questioning to context. But always:
 - Create immutable epic before code
-- Create only first task (not full tree)
-- Use AskUserQuestion for closed choices and the handoff; prose with a recommendation for open design questions
+- Create only the first wave — independently pluckable tasks, never the full tree
+- Ask every question in prose with context and a recommendation — never the AskUserQuestion tool
 - Apply task refinement before handoff
 
 ## Quick Reference
@@ -31,7 +31,7 @@ HIGH FREEDOM - Adapt questioning to context. But always:
 | 3 | Propose 2-3 approaches | Recommended option |
 | 4 | Present design (isolated units, YAGNI) | Validated architecture |
 | 5 | Create epic Task | Immutable requirements + anti-patterns |
-| 6 | Create ONLY first subtask | Ready for execution |
+| 6 | Create first wave (pluckable tasks only) | Ready for execution |
 | 7 | Apply task refinement | Corner cases covered |
 | 8 | Confirm immutable requirements with user | Contract locked |
 | 9 | Ask next step, invoke skill | Chain continues automatically |
@@ -70,24 +70,22 @@ Task
 
 **Check scope before refining.** If the request spans multiple independent subsystems (e.g., "a platform with chat, billing, and analytics"), STOP and decompose before asking detail questions — don't refine something that should be several epics. Identify the independent pieces, how they relate, and what order to build them. Then brainstorm the FIRST piece through the normal flow; each piece gets its own epic → tasks cycle. Refining an over-large project wastes questions and produces a brittle epic.
 
-**Then ask clarifying questions using AskUserQuestion tool.**
+**Then ask clarifying questions in prose. Never use the AskUserQuestion tool — in this step or anywhere else in this skill.**
 
-Aim for 2-4 questions per round, 2-4 rounds total. For closed clarifiers (scope, scale, pick-one-of-N with defined options) use multiple choice with recommended defaults. Stop when you understand scope, constraints, existing patterns, and scale.
+Aim for 2-4 questions per round, 2-4 rounds total. Every question carries its own context: why you're asking, what the realistic options are, and which one you recommend and why. A bare question with no setup arrives confusing — the reader shouldn't have to reconstruct what prompted it. Stop when you understand scope, constraints, existing patterns, and scale.
 
 ```
-AskUserQuestion
-  questions:
-    - question: "Where should OAuth tokens be stored?"
-      header: "Token storage"
-      options:
-        - label: "httpOnly cookies (Recommended)"
-          description: "Prevents XSS token theft, industry standard"
-        - label: "sessionStorage"
-          description: "Cleared on tab close, less persistent"
-      multiSelect: false
+Two things before I propose an approach:
+
+**Token storage.** The OAuth tokens have to live somewhere the browser sends
+them from. httpOnly cookies block XSS token theft and are the industry default;
+sessionStorage clears on tab close but any injected script can read it. I'd go
+httpOnly cookies unless you need the token client-side. Which fits?
+
+**Scale.** [context → options → recommendation → question]
 ```
 
-**Match the form to the question.** For **closed choices** — scope, scale, a pick-one-of-N with defined options, the handoff menu — use the AskUserQuestion tool; don't print those as text and wait. For **open-ended design, approach, and aesthetic questions** — where the value is the trade-offs and your reasoning — present them in prose with your recommendation and why, across the relevant axes. A fixed-option widget flattens those (compressed descriptions can't carry the trade-off), and some environments don't render the tool at all. Never contradict a captured user preference to see the tool or to get prose.
+**Why prose, not the question widget.** The widget strips the context that makes a question answerable: compressed option labels can't carry the trade-off, and the question lands without the reasoning that prompted it. Prose keeps the question, its context, and your recommendation together — and it works in every environment. This applies to every question in this skill, closed or open, including the handoff menu.
 
 ---
 
@@ -178,11 +176,11 @@ TaskCreate
 
 ---
 
-### 5. Create ONLY First Task
+### 5. Create the First Wave
 
-One task, not a full tree. Subsequent tasks are created by executing-plans as you learn.
+Author every task that is **independently pluckable from the current codebase**: its brief can be written entirely from code that exists right now — exact file set, cited anchors, testable criteria — with no placeholder for another task's output, and its file set is disjoint from the others'. Often that's one task; when the design genuinely starts in parallel pieces, it's several. Never a full tree — everything whose spec depends on what execution will teach stays unauthored, created by executing-plans as you learn. Don't manufacture disjointness by splitting one behavior across a file boundary.
 
-**Do NOT set the first task as blocked by the epic.** The epic is a documentation container for immutable requirements, not a workflow prerequisite. The Task API's `blockedBy` means "cannot start until the blocker completes" — since the epic only completes after all subtasks do, marking a subtask as blocked by the epic creates a deadlock. Subtasks are only blocked by other subtasks.
+**Do NOT set first-wave tasks as blocked by the epic.** The epic is a documentation container for immutable requirements, not a workflow prerequisite. The Task API's `blockedBy` means "cannot start until the blocker completes" — since the epic only completes after all subtasks do, marking a subtask as blocked by the epic creates a deadlock. Subtasks are only blocked by other subtasks.
 
 ```
 TaskCreate
@@ -204,13 +202,13 @@ TaskCreate
   activeForm: "Adding [deliverable]"
 ```
 
-**Why only one?** Each subsequent task reflects learnings from the previous one. Upfront task trees become brittle when assumptions change.
+**Why so few?** Later tasks reflect learnings from execution. Upfront task trees become brittle when assumptions change.
 
 ---
 
 ### 6. Apply Task Refinement
 
-Before handoff, verify the first task passes these checks:
+Before handoff, verify each first-wave task passes these checks:
 
 1. **Scoped:** One focused sitting (~15-45 min). If it sprawls past that, break it down.
 2. **Self-contained:** Can execute without asking questions
@@ -251,27 +249,13 @@ If they request changes, update the epic and re-run the self-review. Only procee
 
 ### 7. Handoff
 
-**REQUIRED: Use AskUserQuestion to offer next steps, then invoke the chosen skill directly.**
+**Offer next steps in prose (not AskUserQuestion), then invoke the chosen skill directly.**
 
-```
-AskUserQuestion
-  questions:
-    - question: "Epic and first task ready. How should we proceed?"
-      header: "Next step"
-      options:
-        - label: "Start executing (Recommended)"
-          description: "Begin implementing with gambit:executing-plans"
-        - label: "Set up worktree first"
-          description: "Create isolated workspace with gambit:using-worktrees"
-        - label: "Refine tasks first"
-          description: "Strengthen task quality with gambit:task-refinement"
-      multiSelect: false
-```
+> "Epic and first task are ready. I'd start executing now — gambit:executing-plans opens a fresh worktree for the epic automatically. Or I can tighten the task further first with gambit:task-refinement. Which do you want?"
 
 **After user responds, invoke the chosen skill directly using the Skill tool.** Do not just tell the user to run it — load and follow the skill immediately.
 
 - "Start executing" → `Skill skill="gambit:executing-plans"`
-- "Set up worktree first" → `Skill skill="gambit:using-worktrees"` (then executing-plans after)
 - "Refine tasks first" → `Skill skill="gambit:task-refinement"` (then executing-plans after)
 
 ## Examples
@@ -323,13 +307,13 @@ TaskCreate subject: "Epic: OAuth"
 ## Critical Rules
 
 1. **Decompose multi-subsystem requests** — several subsystems = several epics, before refining
-2. **Match question form** — AskUserQuestion for closed choices and the handoff; prose with a recommendation for open design/aesthetic questions
+2. **Questions in prose, with context** — never AskUserQuestion; every question states why you're asking and your recommendation
 3. **Research BEFORE proposing** — use Explore agent for codebase context
 4. **Propose 2-3 approaches** — don't jump to a single solution
 5. **Decompose for isolation, apply YAGNI** — well-bounded units, no unrequested scope
 6. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
 7. **Include anti-patterns** — prevents watering down under pressure
-8. **Create ONLY first task** — subsequent tasks created iteratively
+8. **Author only the first wave** — independently pluckable tasks; the rest created iteratively
 9. **Apply task refinement** — before handoff
 10. **Confirm the contract before handoff** — user locks immutable requirements first
 11. **Invoke next skill directly** — don't tell user to run it manually
@@ -344,7 +328,7 @@ TaskCreate subject: "Epic: OAuth"
 ## Verification Checklist
 
 - [ ] Scope-checked: decomposed if multiple independent subsystems
-- [ ] Closed choices via AskUserQuestion; open design/aesthetic questions in prose with a recommendation
+- [ ] All questions asked in prose with context and a recommendation (no AskUserQuestion)
 - [ ] Researched codebase patterns (Explore agent)
 - [ ] Proposed 2-3 approaches with trade-offs
 - [ ] Design decomposed into well-bounded, independently testable units
@@ -353,15 +337,14 @@ TaskCreate subject: "Epic: OAuth"
 - [ ] Anti-patterns include reasoning
 - [ ] Quality Bar present in the epic — gambit's fixed maximal standard, copied verbatim (not elicited, not weakened)
 - [ ] Rejected approaches have DO NOT REVISIT UNLESS
-- [ ] Created ONLY first task (not full tree)
+- [ ] Created only the first wave (pluckable tasks, not full tree)
 - [ ] Task refined: scoped, self-contained, explicit, testable
 - [ ] User confirmed immutable requirements before handoff
-- [ ] Asked user next step via AskUserQuestion (execute/worktree/refine)
+- [ ] Offered next step in prose (execute/refine)
 - [ ] Invoked chosen skill directly via Skill tool
 
 ## Integration
 
-**Calls:** Explore agent → AskUserQuestion → invokes one of:
-- `gambit:executing-plans` (default)
-- `gambit:using-worktrees` (optional, before execution)
+**Calls:** Explore agent → prose next-step question → invokes one of:
+- `gambit:executing-plans` (default — enters the epic worktree automatically)
 - `gambit:task-refinement` (optional, before execution)

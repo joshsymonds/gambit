@@ -35,9 +35,9 @@ Do not skip checkpoints or verification. Epic requirements never change. Tasks a
 | Step | Action | Critical Rule |
 |------|--------|---------------|
 | **0. Check State** | `TaskList` | Task state tells you where to resume — never ask |
-| **1. Load Epic** | `TaskGet` on epic | Requirements are IMMUTABLE |
+| **1. Load Epic + Enter Worktree** | `TaskGet` on epic; enter/re-enter the epic worktree | Requirements are IMMUTABLE; never execute on main |
 | **2. Execute the Wave** | Mark in_progress → dispatch worker(s) → verify → integrate → mark completed | Explicit `model:`, TDD cycle, worktree-isolate a ≥2 wave |
-| **3. Create Next Wave** | `TaskCreate` based on learnings | Disjoint file sets; reflect reality, not upfront assumptions |
+| **3. Create Next Wave** | `TaskCreate` every pluckable task based on learnings | As wide as pluckability allows; disjoint file sets; reflect reality |
 | **4. Commit & Checkpoint** | Commit to current branch, present summary | STOP — no exceptions |
 
 **Iron Law:** One wave → Checkpoint → STOP → Next cycle. No batching (no second wave this cycle). No "just one more." The STOP always happens; whether a human or a goal Stop-hook triggers the next cycle is the only thing that varies (see **Execution and continuation**).
@@ -71,7 +71,7 @@ Run `TaskList` and analyze:
 
 ---
 
-### 1. Load Epic Context
+### 1. Load Epic Context and Enter the Worktree
 
 Before executing ANY task, read the epic with `TaskGet`.
 
@@ -82,6 +82,19 @@ Before executing ANY task, read the epic with `TaskGet`.
 - Approaches Considered (what was already REJECTED and why)
 
 **Why:** Requirements prevent rationalizing shortcuts when implementation gets hard.
+
+**Enter the epic worktree.** All epic work happens in a worktree — never directly on main. Working on main risks orphaned commits and a corrupted mainline while waves land.
+
+On a **fresh start** (Step 0 found all tasks pending):
+
+1. **Repo convention first.** If the repo provides its own worktree setup (an existing `.worktrees/` or `worktrees/` directory, a CLAUDE.md worktree preference, or project tooling like a `just worktree` target), follow it: `git worktree add <dir>/<epic-slug> -b <branch>` and work there.
+2. **Otherwise use the native facility:** `EnterWorktree name: "<epic-slug>"` — creates the worktree under `.claude/worktrees/` on a new branch and switches the session into it. The base ref follows the `worktree.baseRef` setting (`fresh` = origin default branch; `head` = current HEAD).
+
+Then prepare it: run the project's dependency setup (match the tooling — `npm install`, `cargo build`, `direnv allow`/devenv, etc.), and run the test suite once to pin the baseline. Report baseline failures before dispatching any wave — you can't distinguish new breakage from inherited breakage without this.
+
+On **resume**: if the session is already in the epic's worktree, continue. In a fresh session, re-enter it — `EnterWorktree path: "<worktree path>"` for a native one (it must appear in `git worktree list`), or switch to a repo-managed one directly. Never dispatch a wave from main.
+
+The transient per-worker worktrees of a ≥2 wave (`references/wave-dispatch.md`) fork off THIS worktree's HEAD — they are orchestrator-managed and separate from the epic workspace.
 
 ---
 
@@ -177,7 +190,7 @@ Route on the verdict:
 - **Quality defect** → re-dispatch a FRESH worker with the specific cited defects (never the same worker on unchanged input). **Never edit the diff yourself — you judge and route; workers implement.**
 - **Doubt, or an escalation trigger fired** → escalate (below) before deciding.
 
-**Escalate to an independent quality reviewer** when any trigger fires: the diff is large or touches a security- or correctness-sensitive surface, the worker returned `DONE_WITH_CONCERNS` on correctness/scope, or your own read leaves you genuinely unsure. Dispatch the EXISTING quality reviewer scoped to this one diff — resolve `skills/review/reviewers/quality.md` once (Glob), pass it BY PATH (do not read it into your context), at the **finder tier** (`model:` per `contracts/models.md`, set explicitly):
+**Escalate to an independent quality reviewer** when any trigger fires: the diff is large or touches a security- or correctness-sensitive surface, the worker returned `DONE_WITH_CONCERNS` on correctness/scope, the wave is wide (≥4 diffs this checkpoint — inline gate attention dilutes across many diffs, so escalate the ones you'd otherwise skim), or your own read leaves you genuinely unsure. Dispatch the EXISTING quality reviewer scoped to this one diff — resolve `skills/review/reviewers/quality.md` once (Glob), pass it BY PATH (do not read it into your context), at the **finder tier** (`model:` per `contracts/models.md`, set explicitly):
 
 ```
 Agent subagent_type="general-purpose" model="<finder tier — see contracts/models.md>" description="Quality review: <task>"
@@ -217,7 +230,20 @@ If implementation reveals unexpected work:
 
 ### 3. Create the Next Wave
 
-After a wave completes, build the NEXT wave from what you learned — the set of ready follow-on tasks whose file sets are **pairwise disjoint** and that don't depend on each other's output, so they can run concurrently. Often that's a single task; when the work genuinely fans out into independent pieces, scope them as a wave. Tasks are created iteratively as reality unfolds, never all upfront — an upfront task tree goes stale the moment the first task teaches you something. Overlapping or dependent work goes into a *later* wave, never the same one.
+After a wave completes, build the NEXT wave from what you learned — and make it **as wide as the design genuinely supports**. Author EVERY follow-on task that passes the pluckability test, not just the single next step. Defaulting to one task when three are pluckable wastes the parallel machinery.
+
+**The pluckability test:** a task belongs in the next wave iff its brief can be written entirely from code that exists right now — exact file set, anchors cited by `file:line`, testable criteria — with no placeholder for anything another open task will produce. If the brief needs a stand-in ("use whatever interface task N exposes"), it isn't pluckable; it waits.
+
+**Genuinely serial — a later wave (or a solo wave), never widened into this one:**
+- **Output consumers** — the task needs another open task's code, interface, schema, or answer.
+- **Unsettled design** — a cross-file contract (API shape, data model, error policy) is still open. Settle it first (Step 2), then author its consumers.
+- **Shared files, including hidden ones** — beyond the named file sets, check surfaces tasks touch *implicitly*: lockfiles/manifests when both add dependencies, generated code, migration sequence numbers, barrel/index/`mod.rs` files, route tables, DI registries, snapshot directories. A collision on any of these is overlap, same as a named file.
+- **Repo-wide sweeps** — renames, dependency upgrades, format passes conflict with everything; always a solo wave.
+- **Speculative specs** — work whose shape depends on what this wave will teach stays *unauthored*. Tasks are created iteratively as reality unfolds, never all upfront — an upfront task tree goes stale the moment the first task teaches you something.
+
+**Never manufacture disjointness.** Don't split one behavior along a file boundary to fake width — two halves of one change brief badly and integrate worse. Harvest width where the design provides it; don't engineer it.
+
+**Scale width to suite speed.** Integration is serial (gate → apply → full suite → commit, per task), so a wave of N costs ~N full-suite runs at the checkpoint. A fast suite affords a wide wave; a slow one argues for a narrower one.
 
 **Review what you learned:**
 1. What did we discover during implementation?
@@ -227,7 +253,7 @@ After a wave completes, build the NEXT wave from what you learned — the set of
 
 **Three cases:**
 
-**A) Clear next step** → Create task with `TaskCreate`, set dependencies, proceed to checkpoint
+**A) Clear next step(s)** → `TaskCreate` every pluckable task as the next wave, set dependencies for the serial remainder, proceed to checkpoint
 
 **B) Planned next task now redundant:**
 - Discovery makes it unnecessary
@@ -402,6 +428,10 @@ This task wouldn't have been correct if planned upfront — it reflects what you
 | "I'll save time by continuing" | STOP anyway — wrong direction wastes more time |
 
 ## Verification Checklist
+
+Before the first wave:
+- [ ] Epic worktree entered (repo convention or native `EnterWorktree`) — never executing on main
+- [ ] Environment set up and baseline test run pinned
 
 Before completing each task:
 - [ ] All steps in description executed

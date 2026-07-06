@@ -269,28 +269,13 @@ See [REFERENCE.md](REFERENCE.md) for detailed examples including:
 
 After refinement is complete, route to execution.
 
-**If invoked from a brainstorming handoff:** They already asked about worktrees. Invoke executing-plans directly:
+Invoke executing-plans directly — it enters the epic worktree automatically:
 
 ```
 Skill skill="gambit:executing-plans"
 ```
 
-**If invoked standalone by user:** Ask what's next:
-
-```
-AskUserQuestion
-  questions:
-    - question: "Tasks refined and ready. How should we proceed?"
-      header: "Next step"
-      options:
-        - label: "Start executing (Recommended)"
-          description: "Begin implementing with gambit:executing-plans"
-        - label: "Set up worktree first"
-          description: "Create isolated workspace with gambit:using-worktrees"
-      multiSelect: false
-```
-
-Then invoke the chosen skill directly using the Skill tool.
+Announce it in one line first ("Tasks refined and ready — starting execution.") so the transition is visible.
 
 ---
 
@@ -301,8 +286,7 @@ Then invoke the chosen skill directly using the Skill tool.
 - User via `/gambit:task-refinement`
 
 **Calls:**
-- `gambit:executing-plans` (invoked directly after refinement)
-- `gambit:using-worktrees` (optional, if user wants isolation)
+- `gambit:executing-plans` (invoked directly after refinement — enters the epic worktree automatically)
 
 **Workflow:**
 ```

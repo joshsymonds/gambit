@@ -45,7 +45,7 @@ git add <the task's files by name> && git commit  # per-task commit (this is Ste
 
 Gate → apply → full suite → commit, then the next worker. Never apply two unverified diffs at once. If an apply conflicts, or the suite fails after applying, that task drops to BLOCKED / quality-defect routing (Step 2) — the workers already integrated stay committed; the wave does not roll back.
 
-Integration is **serial**: each task's full-suite run happens one at a time, so a wave of N tasks costs ~N × the suite. The wave parallelizes worker *write* time, not integration — keep waves small, or reserve larger ones for fast suites.
+Integration is **serial**: each task's full-suite run happens one at a time, so a wave of N tasks costs ~N × the suite. The wave parallelizes worker *write* time, not integration — scale width to suite speed: a fast suite affords a wide wave, a slow one argues for narrower.
 
 ## Remove the worktrees
 

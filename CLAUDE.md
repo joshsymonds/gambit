@@ -13,7 +13,7 @@ Gambit is a Claude Code plugin providing structured development workflows using 
 ```
 gambit/
 ├── .claude-plugin/              # Plugin manifest (plugin.json, marketplace.json)
-├── skills/                      # 14 executable skills (SKILL.md files)
+├── skills/                      # 13 executable skills (SKILL.md files)
 │   ├── using-gambit/            # Entry point, loaded at session start
 │   ├── brainstorming/           # Socratic design refinement
 │   ├── executing-plans/         # One-task-at-a-time execution; dispatches workers

@@ -52,7 +52,6 @@ Use the `Skill` tool. When you invoke a skill, its content is loaded — follow 
 | Verify completion | verification | `/gambit:verification` |
 | Parallel investigations | parallel-agents | `/gambit:parallel-agents` |
 | Create/modify skills | writing-skills | `/gambit:writing-skills` |
-| Start feature branch | using-worktrees | `/gambit:using-worktrees` |
 | Finish feature branch | finishing-branch | `/gambit:finishing-branch` |
 
 ## The Rule
@@ -80,15 +79,16 @@ digraph skill_flow {
 
 ```
 gambit:brainstorming
-   Creates epic (immutable requirements) + first task via Socratic questioning,
+   Creates epic (immutable requirements) + first wave of pluckable tasks via Socratic questioning,
    scaled to how clear the idea already is — a crisp spec gets brief questioning,
    a rough idea gets more. Tasks are created iteratively during execution, never
-   all upfront. Brainstorming will ask: worktree? refine tasks? → routes to executing-plans.
+   all upfront. Brainstorming asks (in prose): refine tasks first? → routes to
+   executing-plans, which enters the epic worktree automatically.
 ```
 
 **If an epic and tasks already exist → gambit:executing-plans directly.**
 
-**There is no separate plan-writing skill.** "Break this into tasks", "make an implementation plan", "lay out the tasks and dependencies" all route to `gambit:brainstorming` (which creates the epic + first task; the rest are created iteratively during execution). Do NOT look for or invoke `gambit:writing-plans` — it does not exist. Upfront full task graphs are deliberately not part of gambit.
+**There is no separate plan-writing skill.** "Break this into tasks", "make an implementation plan", "lay out the tasks and dependencies" all route to `gambit:brainstorming` (which creates the epic + first wave of pluckable tasks; the rest are created iteratively during execution). Do NOT look for or invoke `gambit:writing-plans` — it does not exist. Upfront full task graphs are deliberately not part of gambit.
 
 **The flow then continues automatically:**
 ```
