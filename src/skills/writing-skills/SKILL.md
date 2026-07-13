@@ -37,7 +37,7 @@ See references for full details, examples, and patterns. These are the non-negot
 - **description:** 1024 chars max, third person, describes WHEN to use (triggers, symptoms, contexts) — NOT what the skill does or its workflow
 - **description is the trigger:** All "when to use" info goes in the description, NOT the body. The body only loads AFTER triggering.
 - **SKILL.md body:** Under 500 lines. Split into `references/` if over.
-- **Hot-skill word budget:** Skills that load every session (e.g. `using-gambit`) cost tokens on every turn. Target <150 words for session-start workflows, <200 for any always-loaded skill. Move detail to `references/` and reference `--help` output instead of documenting flags inline.
+- **Hot-skill word budget:** Frequently invoked entry-point skills (e.g. `using-gambit`) consume context whenever selected. Target <200 words for broadly triggered skills. Move detail to `references/` and reference `--help` output instead of documenting flags inline.
 - **References:** One level deep from SKILL.md. Files >100 lines need a table of contents.
 - **No extras:** No README.md, CHANGELOG.md, or auxiliary docs in skill folder.
 - **Conciseness:** Claude is already smart. Only add context it doesn't have. Challenge each paragraph's token cost.

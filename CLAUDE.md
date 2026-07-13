@@ -16,19 +16,13 @@ gambit/
 ├── .claude-plugin/              # Plugin manifest (plugin.json, marketplace.json)
 ├── skills/                      # Generated Claude skills — do not edit
 ├── plugins/gambit/              # Generated Codex plugin — do not edit
-│   ├── using-gambit/            # Entry point, loaded at session start
+│   ├── using-gambit/            # Entry point for skill discovery and routing
 │   ├── brainstorming/           # Socratic design refinement
 │   ├── executing-plans/         # One-task-at-a-time execution; dispatches workers
 │   ├── test-driven-development/ # RED-GREEN-REFACTOR cycle
 │   ├── verification/            # Evidence before completion
 │   └── ...                      # See PLAN.md for full list
-├── contracts/                   # Agent-class contracts (worker, scout) + registry + model tiers
-├── hooks/                       # Bash hooks for automation (~5ms startup)
-│   ├── hooks.json               # Hook configuration
-│   ├── session-start/           # Inject using-gambit at start
-│   ├── post-tool-use/           # Track file edits
-│   └── stop/                    # Gentle reminders
-└── context/                     # Runtime state (edit logs)
+└── contracts/                   # Agent-class contracts (worker, scout) + registry + model tiers
 ```
 
 Run `just generate` after changing `src/`; run `just check` before committing.
@@ -95,17 +89,6 @@ What NOT to do and why.
 - Called by: which skills invoke this
 - Calls: which skills this invokes
 ```
-
-## Hook System
-
-Hooks are bash scripts that run at lifecycle points. They read JSON from stdin and optionally write JSON to stdout.
-
-**Testing hooks:**
-```bash
-echo '{"hook_event_name": "SessionStart", "source": "startup"}' | ./hooks/session-start/inject-using-gambit.sh
-```
-
-**Dependencies:** `bash` 4.0+, `jq`
 
 ## Releasing
 

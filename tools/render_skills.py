@@ -339,7 +339,6 @@ def render_backend(backend: str, root: Path) -> tuple[Path, Path]:
         manifest_dir = plugin_root / ".codex-plugin"
         manifest_dir.mkdir(exist_ok=True)
         shutil.copy2(CODEX_BACKEND / "plugin.json", manifest_dir / "plugin.json")
-        shutil.copytree(ROOT / "hooks", plugin_root / "hooks")
     return skills_out, contracts_out
 
 
@@ -395,7 +394,7 @@ def main() -> int:
                 differences.extend(compare_files(expected_skills, actual_skills))
                 differences.extend(compare_files(expected_contracts, actual_contracts))
                 if backend == "codex":
-                    for extra in [Path(".codex-plugin"), Path("hooks")]:
+                    for extra in [Path(".codex-plugin")]:
                         differences.extend(
                             compare_files(expected_skills.parent / extra, actual_skills.parent / extra)
                         )

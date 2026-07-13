@@ -51,7 +51,10 @@ class RenderedSkillsTest(unittest.TestCase):
     def test_codex_plugin_uses_native_layout(self) -> None:
         self.assertTrue((CODEX_PLUGIN / ".codex-plugin" / "plugin.json").exists())
         self.assertTrue((CODEX_PLUGIN / "skills").is_dir())
-        self.assertTrue((CODEX_PLUGIN / "hooks" / "hooks.json").exists())
+
+    def test_plugins_do_not_bundle_lifecycle_hooks(self) -> None:
+        self.assertFalse((ROOT / "hooks").exists())
+        self.assertFalse((CODEX_PLUGIN / "hooks").exists())
 
 
 if __name__ == "__main__":

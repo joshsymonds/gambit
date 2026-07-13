@@ -13,7 +13,7 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 # Using Gambit
 
-Gambit provides structured development workflows using native Claude Code Tasks. This skill loads at session start and routes work to the correct skill.
+Gambit provides structured development workflows using native Claude Code Tasks. This skill is the entry point for routing work to the correct skill.
 
 **Invoke relevant skills BEFORE any response or action.** Even a 1% chance a skill might apply means you invoke the skill to check. If it turns out to be wrong, you don't need to follow it.
 
@@ -147,7 +147,7 @@ Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows. 
 
 ## Integration
 
-**Loaded by:** Session start hook (automatic)
+**Triggered by:** Native skill discovery or explicit invocation
 
 **Calls:** All other gambit skills based on task context
 

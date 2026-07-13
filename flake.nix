@@ -23,7 +23,7 @@
 
           mkdir -p "$out"
           if [ "${backend}" = claude ]; then
-            cp -r .claude-plugin skills contracts hooks README.md gambit.png "$out/"
+            cp -r .claude-plugin skills contracts README.md gambit.png "$out/"
           else
             cp -r plugins/gambit/. "$out/"
             cp README.md gambit.png "$out/"
