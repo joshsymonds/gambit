@@ -1,6 +1,6 @@
 {
   "name": "gambit",
-  "version": "1.17.0",
+  "version": "1.18.0",
   "description": "Structured development workflows for Codex with durable tasks, TDD, review, and verification.",
   "author": {
     "name": "Josh Symonds",

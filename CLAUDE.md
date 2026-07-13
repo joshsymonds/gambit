@@ -102,7 +102,7 @@ Hooks are bash scripts that run at lifecycle points. They read JSON from stdin a
 
 **Testing hooks:**
 ```bash
-echo '{"response": "Done!"}' | ./hooks/stop/gentle-reminders.sh
+echo '{"hook_event_name": "SessionStart", "source": "startup"}' | ./hooks/session-start/inject-using-gambit.sh
 ```
 
 **Dependencies:** `bash` 4.0+, `jq`
