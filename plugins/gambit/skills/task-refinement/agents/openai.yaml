@@ -1,0 +1,4 @@
+interface:
+  display_name: "Task Refinement"
+  short_description: "Use when a task plan has just been created and needs review before execution, when brainstorming..."
+  default_prompt: "Use $gambit:task-refinement for this task."

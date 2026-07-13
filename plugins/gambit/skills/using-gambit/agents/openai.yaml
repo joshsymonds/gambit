@@ -1,0 +1,4 @@
+interface:
+  display_name: "Using Gambit"
+  short_description: "Use at the start of every session before any response or action. Also invoke whenever uncertain w..."
+  default_prompt: "Use $gambit:using-gambit for this task."

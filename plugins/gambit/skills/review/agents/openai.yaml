@@ -1,0 +1,4 @@
+interface:
+  display_name: "Review"
+  short_description: "Use after all tasks in an epic complete, after refactoring verifies, or before merging to main. T..."
+  default_prompt: "Use $gambit:review for this task."

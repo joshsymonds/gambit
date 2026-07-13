@@ -1,0 +1,4 @@
+interface:
+  display_name: "Finishing a Branch"
+  short_description: "Use when all epic tasks show completed, when ready to integrate after review approval, when choos..."
+  default_prompt: "Use $gambit:finishing-branch for this task."

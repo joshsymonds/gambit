@@ -1,0 +1,4 @@
+interface:
+  display_name: "Executing Plans"
+  short_description: "Use when an epic Task exists and subtasks are ready to implement, when resuming work after a prev..."
+  default_prompt: "Use $gambit:executing-plans for this task."

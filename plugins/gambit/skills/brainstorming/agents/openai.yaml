@@ -1,0 +1,4 @@
+interface:
+  display_name: "Brainstorming Ideas Into Designs"
+  short_description: "Use when user has a new feature idea, rough concept, or unexplored approach. Include when plannin..."
+  default_prompt: "Use $gambit:brainstorming for this task."

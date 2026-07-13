@@ -1,0 +1,40 @@
+{
+  "name": "gambit",
+  "version": "1.17.0",
+  "description": "Structured development workflows for Codex with durable tasks, TDD, review, and verification.",
+  "author": {
+    "name": "Josh Symonds",
+    "email": "josh@joshsymonds.com",
+    "url": "https://github.com/joshsymonds"
+  },
+  "homepage": "https://github.com/joshsymonds/gambit",
+  "repository": "https://github.com/joshsymonds/gambit",
+  "license": "MIT",
+  "keywords": [
+    "skills",
+    "workflows",
+    "tasks",
+    "tdd",
+    "debugging",
+    "review",
+    "worktrees"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Gambit",
+    "shortDescription": "Disciplined planning, TDD, review, and delivery workflows",
+    "longDescription": "Use Gambit to turn ideas and bugs into durable task plans, execute one verified wave at a time, review independently, and finish branches safely.",
+    "developerName": "Josh Symonds",
+    "category": "Coding",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "defaultPrompt": [
+      "Help me refine a feature idea into an implementation plan.",
+      "Continue the next verified task in my current plan.",
+      "Investigate this bug and prove its root cause."
+    ]
+  }
+}
