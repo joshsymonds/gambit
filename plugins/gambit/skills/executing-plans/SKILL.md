@@ -133,7 +133,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
 
 2. **Dispatch the wave** — every worker in a single message (so a ≥2 wave runs concurrently):
    ```
-   SpawnAgent agent_type="worker" task_name="implement_task_subject" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false.
+   SpawnAgent agent_type="worker" task_name="implement_task_subject" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
      message="Read <abs>/codex-contracts/worker.md — that file is your binding worker contract; your FIRST action must be to Read it, then follow it exactly.
 
      ## Task
@@ -220,7 +220,7 @@ Route on the verdict:
 **Escalate to an independent quality reviewer** when any trigger fires: the diff is large or touches a security- or correctness-sensitive surface, the worker returned `DONE_WITH_CONCERNS` on correctness/scope, the wave is wide (≥4 diffs this checkpoint — inline gate attention dilutes across many diffs, so escalate the ones you'd otherwise skim), or your own read leaves you genuinely unsure. Dispatch the EXISTING quality reviewer scoped to this one diff — resolve `skills/review/reviewers/quality.md` once (Glob), pass it BY PATH (do not read it into your context), with the `finder` role (see `codex-contracts/models.md`):
 
 ```
-SpawnAgent agent_type="finder" task_name="quality_review_task" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false.
+SpawnAgent agent_type="finder" task_name="quality_review_task" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
   message="Read <abs>/skills/review/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.
 
   ## Review Brief

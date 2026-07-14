@@ -113,7 +113,7 @@ def validated_codex_dispatch_examples(
                 )
                 test_case.assertRegex(
                     example,
-                    r"(?i)profile-aware[^\n]*hide_spawn_agent_metadata",
+                    r"(?i)profile-aware[^\n]*hide_spawn_agent_metadata[^\n]*non-reserved[^\n]*tool_namespace",
                 )
                 test_case.assertNotEqual(fork_turns.group(1), "all")
 
@@ -352,6 +352,15 @@ class RenderedSkillsTest(unittest.TestCase):
                 '`fork_turns: "none"`',
                 "metadata is hidden by default",
                 "`hide_spawn_agent_metadata = false`",
+                "non-reserved",
+                "`tool_namespace`",
+                "`collaboration.spawn_agent`",
+                "[features.multi_agent_v2]",
+                "enabled = true",
+                'tool_namespace = "gambit_agents"',
+                "root_agent_usage_hint_text",
+                "subagent_usage_hint_text",
+                "functions.gambit_agents.spawn_agent",
                 "inherited turns",
                 "self-contained",
             ):
@@ -367,6 +376,15 @@ class RenderedSkillsTest(unittest.TestCase):
                 "hidden by default",
                 "built-in fallback",
                 "`fork_turns: \"none\"`",
+                "non-reserved",
+                "`tool_namespace`",
+                "`collaboration.spawn_agent`",
+                "[features.multi_agent_v2]",
+                "enabled = true",
+                'tool_namespace = "gambit_agents"',
+                "root_agent_usage_hint_text",
+                "subagent_usage_hint_text",
+                "functions.gambit_agents.spawn_agent",
             ):
                 self.assertIn(required, contracts_readme)
 

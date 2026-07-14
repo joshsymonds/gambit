@@ -76,7 +76,7 @@ Do NOT write any code, invoke any implementation skill, or take any implementati
 SpawnAgent
   task_name: "scout"
   fork_turns: "none"
-  agent_type: "scout"  # Profile-aware: requires hide_spawn_agent_metadata = false.
+  agent_type: "scout"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
   message: "Read <abs>/codex-contracts/scout.md first (your binding scout contract), then: Find existing [relevant] implementation patterns in this codebase. Report with file:line evidence; say NOT FOUND if absent."
 ```
 

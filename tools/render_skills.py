@@ -54,7 +54,7 @@ RETIRED_PROMPT_SHORTHAND = re.compile(
     r"(?m)^[ \t]*(?:Task|SpawnAgent)[ \t]+prompt\d+(?:[ \t]|$)"
 )
 PROFILE_AWARE_NOTE = (
-    "Profile-aware: requires hide_spawn_agent_metadata = false."
+    "Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace."
 )
 CODEX_AGENT_CLASSES = frozenset(
     {

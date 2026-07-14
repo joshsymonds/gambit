@@ -25,11 +25,28 @@ only `task_name`, `message`, and `fork_turns: "none"`. It omits `agent_type`;
 the binding contract named in the self-contained message still defines the
 class, and Codex uses its built-in default spawning behavior.
 
-Gambit's Nix configuration sets `hide_spawn_agent_metadata = false`. On that
-profile-aware surface, a call may also set `agent_type` to the named class. An
-installed class wins; otherwise select the built-in fallback in the table
+Gambit's Nix configuration sets `hide_spawn_agent_metadata = false` and uses a
+non-reserved `tool_namespace`. Both are required for its profile-aware surface:
+the default `collaboration.spawn_agent` function has a server-reserved schema,
+so exposing additional metadata there makes the request fail before the turn
+starts. Codex 0.144.4's default root and subagent hints name the collaboration
+namespace; a configuration that replaces it must also replace those hints with
+the configured namespace. A call may then set `agent_type` to the named class.
+An installed class wins; otherwise select the built-in fallback in the table
 above. Never add `model`, `reasoning_effort`, or `service_tier` to skill
 examples.
+
+The profile-aware feature configuration uses one table with the real Codex
+0.144.4 hint keys:
+
+```toml
+[features.multi_agent_v2]
+enabled = true
+tool_namespace = "gambit_agents"
+hide_spawn_agent_metadata = false
+root_agent_usage_hint_text = "Call collaboration tools through functions.gambit_agents, including to=functions.gambit_agents.spawn_agent."
+subagent_usage_hint_text = "Call collaboration tools through functions.gambit_agents, including to=functions.gambit_agents.spawn_agent."
+```
 
 Both forms use `fork_turns: "none"`. Gambit worker and reviewer briefs already
 contain their complete context, so inheriting root-session turns adds noise and

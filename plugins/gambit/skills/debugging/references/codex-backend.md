@@ -106,9 +106,26 @@ not require `agent_type`, model, reasoning, or service-tier fields.
 Codex exposes `agent_type` and the other optional metadata only when
 `hide_spawn_agent_metadata = false`. In that environment, an explicitly
 profile-aware example may add `agent_type` to select an installed named Gambit
-class. It must still use a non-full fork. Skills select classes, never concrete
-model IDs or reasoning settings; those choices belong to the installed Codex
-agent profile.
+class. Visible metadata must also use a non-reserved `tool_namespace`, for
+example `gambit_agents`: the default `collaboration.spawn_agent` function has a
+server-reserved schema, and extending it makes the request fail before the turn
+starts. Codex 0.144.4's default root and subagent hints name the collaboration
+namespace, so configurations that replace it must also replace those hints with
+the configured namespace. A profile-aware call must still use a non-full fork.
+Skills select classes, never concrete model IDs or reasoning settings; those
+choices belong to the installed Codex agent profile.
+
+Use the real V2 feature table and hint keys; do not split the feature toggle
+from its configuration or invent a parallel config table:
+
+```toml
+[features.multi_agent_v2]
+enabled = true
+tool_namespace = "gambit_agents"
+hide_spawn_agent_metadata = false
+root_agent_usage_hint_text = "Call collaboration tools through functions.gambit_agents, including to=functions.gambit_agents.spawn_agent."
+subagent_usage_hint_text = "Call collaboration tools through functions.gambit_agents, including to=functions.gambit_agents.spawn_agent."
+```
 
 Prefer a matching installed class, then use its built-in fallback: `scout` →
 `explorer`, `worker` and `test-runner` → `worker`, and `finder` and `verifier`

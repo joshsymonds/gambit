@@ -115,7 +115,7 @@ Execute the FULL command. Not a partial run. Not a cached result.
 
 ```
 SpawnAgent
-  agent_type: "test-runner"  # Profile-aware: requires hide_spawn_agent_metadata = false.
+  agent_type: "test-runner"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
   task_name: "run_verification"
   fork_turns: "none"
   message: "Run: [command]. Report pass/fail counts, exit code, and any failures. Make no edits."

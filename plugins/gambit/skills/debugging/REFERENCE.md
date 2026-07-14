@@ -134,7 +134,7 @@ Dispatch an explorer agent to map the system:
 
 ```
 SpawnAgent
-  agent_type: "explorer"  # Profile-aware: requires hide_spawn_agent_metadata = false.          # the read-only scout class
+  agent_type: "explorer"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.          # the read-only scout class
   task_name: "map_data_flow_for_feature"
   fork_turns: "none"
   message: |
