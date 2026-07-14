@@ -8,8 +8,11 @@ description: Use when facing 3+ independent test failures, bugs in unrelated sub
 ## Codex Backend
 
 This skill is assembled for Codex. Before following the workflow, read
-`references/codex-backend.md` completely. Its operation mappings are binding;
-names such as `GambitTaskList` and `SpawnAgent` are backend operations, not
+`references/codex-backend.md` completely. Its operation mappings are binding:
+`SessionPlanRead` reads the root session's native wave plan, `SessionPlanWrite`
+mutates it only through `update_plan`, and `SessionContextRead` reads the same
+root transcript. One native plan step is one Gambit wave; parallel workers are
+subagent threads inside that single step. These are backend operations, not
 literal shell commands.
 
 # Parallel Agent Dispatch
@@ -82,12 +85,10 @@ MEDIUM FREEDOM — Follow the 6-step process strictly. Independence verification
 
 **If < 3 independent domains: STOP.** Investigate sequentially instead.
 
-**Create coordination Task:**
+**Present the complete coordination brief in the root transcript:**
 
 ```
-GambitTaskCreate
-  subject: "Parallel Investigation: [N] independent failures"
-  description: |
+Present as "Coordination Brief: Parallel Investigation of [N] independent failures":
     ## Independent Domains
     1. [Domain 1]: [files/tests]
     2. [Domain 2]: [files/tests]
@@ -108,10 +109,9 @@ GambitTaskCreate
     - [ ] All agents returned
     - [ ] No conflicts found
     - [ ] Integration verified (full test suite)
-  activeForm: "Coordinating parallel investigation"
 ```
 
-Then: `GambitTaskUpdate taskId: "[id]" status: "in_progress"`
+All investigators are native subagent threads inside one parallel wave. Use `SessionPlanWrite` only as a complete-list replacement that preserves every existing step and marks one concise investigation wave `in_progress`; never create one plan step per investigator.
 
 ---
 
@@ -223,15 +223,13 @@ SpawnAgent
 ```
 
 **Decision tree:**
-- All pass → mark coordination Task complete
+- All pass → record all investigator results in the root checkpoint, then replace the complete plan to mark the one investigation wave completed
 - Failures → identify which agent's change caused regression
 
-**Update coordination Task:**
+**Present the complete coordination result in the root checkpoint:**
 
 ```
-GambitTaskUpdate
-  taskId: "[coordination-task-id]"
-  description: |
+Present as "Parallel Investigation Results":
     ## Results
     - Agent 1: Fixed [X] in [files]
     - Agent 2: Fixed [Y] in [files]
@@ -242,8 +240,9 @@ GambitTaskUpdate
 
     ## Integration
     All tests pass. Changes integrated successfully.
-  status: "completed"
 ```
+
+After checkpointing the full results, call `SessionPlanWrite` only with the complete ordered plan, preserving every other wave and marking the single parallel-investigation wave completed. Individual investigator status comes from native subagent results, not plan records.
 
 ---
 
@@ -297,7 +296,7 @@ Before completing parallel agent work:
 - [ ] Resolved any conflicts manually
 - [ ] Ran full test suite
 - [ ] Documented which agents fixed what
-- [ ] Coordination Task marked complete
+- [ ] Current wave recorded complete in the root native plan
 
 **Can't check all boxes?** Return to process.
 

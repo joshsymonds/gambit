@@ -8,8 +8,11 @@ description: Use at the start of every session before any response or action. Al
 ## Codex Backend
 
 This skill is assembled for Codex. Before following the workflow, read
-`references/codex-backend.md` completely. Its operation mappings are binding;
-names such as `GambitTaskList` and `SpawnAgent` are backend operations, not
+`references/codex-backend.md` completely. Its operation mappings are binding:
+`SessionPlanRead` reads the root session's native wave plan, `SessionPlanWrite`
+mutates it only through `update_plan`, and `SessionContextRead` reads the same
+root transcript. One native plan step is one Gambit wave; parallel workers are
+subagent threads inside that single step. These are backend operations, not
 literal shell commands.
 
 <EXTREMELY-IMPORTANT>
@@ -22,7 +25,7 @@ This is not negotiable. This is not optional. You cannot rationalize your way ou
 
 # Using Gambit
 
-Gambit provides structured development workflows using Gambit's durable Codex task store. This skill is the entry point for routing work to the correct skill.
+Gambit provides structured development workflows using Codex's native per-root-session plan. This skill is the entry point for routing work to the correct skill.
 
 **Invoke relevant skills BEFORE any response or action.** Even a 1% chance a skill might apply means you invoke the skill to check. If it turns out to be wrong, you don't need to follow it.
 
@@ -88,21 +91,20 @@ digraph skill_flow {
 
 ```
 gambit:brainstorming
-   Creates epic (immutable requirements) + first wave of pluckable tasks via Socratic questioning,
-   scaled to how clear the idea already is — a crisp spec gets brief questioning,
-   a rough idea gets more. Tasks are created iteratively during execution, never
-   all upfront. Brainstorming asks (in prose): refine tasks first? → routes to
-   executing-plans, which enters the epic worktree automatically.
+   Presents the approved epic contract and complete first-wave worker briefs in the root transcript,
+   then initializes concise native wave state after explicit confirmation. Later briefs and waves
+   are authored iteratively from execution learnings, never all upfront. Brainstorming asks in prose:
+   refine first? → routes to executing-plans, which enters the epic worktree automatically.
 ```
 
-**If an epic and tasks already exist → gambit:executing-plans directly.**
+**If an approved epic contract and native wave plan already exist in this root session → gambit:executing-plans directly.**
 
-**There is no separate plan-writing skill.** "Break this into tasks", "make an implementation plan", "lay out the tasks and dependencies" all route to `gambit:brainstorming` (which creates the epic + first wave of pluckable tasks; the rest are created iteratively during execution). Do NOT look for or invoke `gambit:writing-plans` — it does not exist. Upfront full task graphs are deliberately not part of gambit.
+**There is no separate plan-writing skill.** "Break this into tasks", "make an implementation plan", and "lay out tasks and dependencies" all route to `gambit:brainstorming`, which presents the contract and first-wave briefs before initializing concise wave state. Later briefs and waves are authored iteratively during execution. Do NOT look for or invoke `gambit:writing-plans` — it does not exist. Upfront full work graphs are deliberately not part of Gambit.
 
 **The flow then continues automatically:**
 ```
 executing-plans (one wave → checkpoint → STOP → repeat)
-    ↓ all tasks done
+    ↓ all waves complete
 review (4-reviewer parallel code review)
     ↓ approved
 finishing-branch (verify → merge/PR/keep/discard)
@@ -133,9 +135,9 @@ These thoughts mean STOP — you're rationalizing:
 | "The skill is overkill for this" | Simple things become complex. Use it. |
 | "I'll just do this one thing first" | Check BEFORE doing anything. |
 | "This is almost done, no need" | If you haven't verified, you're not done. |
-| "Too simple for Tasks" | Simple tasks finish fast. Track them anyway. |
+| "Too simple for a plan" | Small waves finish fast. Keep their state in this root session. |
 | "I know the pattern already" | Load the skill. Memory drifts, skills don't. |
-| "Let me just fix this quickly" | Create a Task, follow the process. |
+| "Let me just fix this quickly" | Follow the matching workflow and keep wave state in the root session. |
 | "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
 | "I'll just spawn a quick default agent" | Use a contracted class from `codex-contracts/README.md`. A contractless agent has no blast-radius limit or return protocol. |
 
@@ -144,10 +146,10 @@ These thoughts mean STOP — you're rationalizing:
 These apply across ALL gambit skills:
 
 1. **One wave then stop** — execute one wave (one task, or several independent tasks in parallel), checkpoint, STOP; a goal Stop-hook resumes without a human
-2. **Tasks are source of truth** — Use `GambitTaskCreate`, `GambitTaskUpdate`, `GambitTaskList`, `GambitTaskGet`. Never track work mentally
+2. **Session state is the source of truth** — Use `SessionPlanRead` and `SessionPlanWrite` for complete wave state, and `SessionContextRead` for the approved contract, worker briefs, and latest checkpoint. Never track work mentally
 3. **Evidence over assertions** — Run verification commands and show output before claiming done
 4. **Small steps that stay green** — Tests pass between every change
-5. **Immutable requirements** — Epic requirements don't change; Tasks adapt to reality
+5. **Immutable requirements** — Epic requirements don't change; worker briefs and wave state adapt to reality
 6. **Dispatch contracted agents** — When you spawn a subagent, use a named class from `codex-contracts/README.md` (worker/scout/finder/verifier/test-runner) with its contract by path and an explicit role. Never a bare `default` agent without a contract.
 
 ## User Instructions
@@ -160,8 +162,7 @@ Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows. 
 
 **Calls:** All other gambit skills based on task context
 
-**Task tools used:**
-- `GambitTaskCreate` — Create tasks with subject, description, activeForm
-- `GambitTaskUpdate` — Set status (in_progress/completed), add blockers via `addBlockedBy`
-- `GambitTaskList` — Find ready tasks (status=pending, blockedBy=[])
-- `GambitTaskGet` — Read full task details and success criteria
+**Session operations used:**
+- `SessionPlanWrite` — Replace the complete native plan with one concise step per wave and at most one wave in progress
+- `SessionPlanRead` — Read the root session's wave steps and native statuses
+- `SessionContextRead` — Read the approved contract, complete worker briefs, and latest checkpoint from the same root transcript

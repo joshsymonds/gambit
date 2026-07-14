@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: Use when an epic Task exists and subtasks are ready to implement, when resuming work after a previous checkpoint, when iteratively building a feature, or when implementation has revealed unexpected work that needs a new task. User phrases like "continue the plan", "next task", "resume where we left off", "pick up the epic".
+description: Use when an approved epic contract and native wave plan exist in the current root session, when resuming work after a previous checkpoint, or when iteratively building a feature and execution learnings require a later wave. User phrases like "continue the plan", "next wave", "resume where we left off", "pick up the epic".
 ---
 
 <!-- Generated backend adapter: edit src/backends/codex/, not plugins/gambit/. -->
@@ -8,19 +8,22 @@ description: Use when an epic Task exists and subtasks are ready to implement, w
 ## Codex Backend
 
 This skill is assembled for Codex. Before following the workflow, read
-`references/codex-backend.md` completely. Its operation mappings are binding;
-names such as `GambitTaskList` and `SpawnAgent` are backend operations, not
+`references/codex-backend.md` completely. Its operation mappings are binding:
+`SessionPlanRead` reads the root session's native wave plan, `SessionPlanWrite`
+mutates it only through `update_plan`, and `SessionContextRead` reads the same
+root transcript. One native plan step is one Gambit wave; parallel workers are
+subagent threads inside that single step. These are backend operations, not
 literal shell commands.
 
 # Executing Plans
 
 ## Overview
 
-Execute an epic in cycles with mandatory checkpoints. Load epic → run one wave (one task, or several independent tasks in parallel) → Present checkpoint → STOP. User reviews, then invokes again to continue.
+Execute an epic in cycles with mandatory checkpoints. Load the approved root-session contract and wave plan → run one wave with one or more workers → create the durable checkpoint → STOP. User reviews, then invokes again to continue.
 
-**Core principle:** Epic requirements are immutable. Tasks adapt to reality. STOP after each wave for human oversight — no exceptions. A wave of independent parallel tasks is one cycle with one checkpoint; running a *second* wave without stopping is the batching that's forbidden.
+**Core principle:** Epic requirements are immutable. Worker briefs and later waves adapt to reality. STOP after each wave for human oversight — no exceptions. Running a *second* wave without stopping is the batching that's forbidden.
 
-**Announce at start:** "I'm using gambit:executing-plans to implement this task."
+**Announce at start:** "I'm using gambit:executing-plans to implement this wave."
 
 ## Execution and continuation
 
@@ -36,26 +39,26 @@ Continuous, no-human-pause execution is therefore **authorized only by a goal St
 
 LOW FREEDOM — Follow exact process: load epic, execute one wave, checkpoint, STOP.
 
-Do not skip checkpoints or verification. Epic requirements never change. Tasks adapt to discoveries.
+Do not skip checkpoints or verification. Epic requirements never change. Worker briefs and later wave summaries adapt to discoveries.
 
 ## Quick Reference
 
 | Step | Action | Critical Rule |
 |------|--------|---------------|
-| **0. Check State** | `GambitTaskList` | Task state tells you where to resume — never ask |
-| **1. Load Epic + Enter Worktree** | `GambitTaskGet` on epic; enter/re-enter the epic worktree | Requirements are IMMUTABLE; never execute on main |
-| **2. Execute the Wave** | Mark in_progress → dispatch worker(s) → verify → integrate → mark completed | Explicit worker role, TDD cycle, worktree-isolate a ≥2 wave |
-| **3. Create Next Wave** | `GambitTaskCreate` every pluckable task based on learnings | As wide as pluckability allows; disjoint file sets; reflect reality |
-| **4. Commit & Checkpoint** | Commit to current branch, present summary | STOP — no exceptions |
+| **0. Check State** | `SessionPlanRead` | Wave state tells you where to resume — never ask |
+| **1. Load Contract + Enter Worktree** | `SessionContextRead` in this root session; enter/re-enter the epic worktree | Requirements are IMMUTABLE; never execute on main |
+| **2. Execute the Wave** | Replace the complete plan to mark one wave in progress → dispatch worker(s) → verify → integrate → report readiness while leaving the wave in progress | Explicit worker role, TDD cycle, worktree-isolate a ≥2 wave |
+| **3. Create Next Wave** | Prepare complete worker briefs for the checkpoint; defer plan mutation | As wide as pluckability allows; disjoint file sets; reflect reality |
+| **4. Durable Checkpoint** | Commit → present full checkpoint and next-wave briefs → replace the complete plan to complete this wave | STOP — no exceptions |
 
 **Iron Law:** One wave → Checkpoint → STOP → Next cycle. No batching (no second wave this cycle). No "just one more." The STOP always happens; whether a human or a goal Stop-hook triggers the next cycle is the only thing that varies (see **Execution and continuation**).
 
 ## When to Use
 
-- Epic Task exists with subtasks ready to execute
+- The same root session contains an approved epic contract, complete worker briefs, and native wave plan ready to execute
 - Resuming implementation after a previous checkpoint
 - Need to implement features iteratively with human oversight
-- After `gambit:brainstorming` creates the epic and first task
+- After `gambit:brainstorming` records the approved contract, first-wave briefs, and native plan in this root session
 
 **Don't use when:**
 - No epic exists → use `gambit:brainstorming`
@@ -66,22 +69,22 @@ Do not skip checkpoints or verification. Epic requirements never change. Tasks a
 
 ### 0. Resumption Check (Every Invocation)
 
-Run `GambitTaskList` and analyze:
+Run `SessionPlanRead` and analyze the wave steps:
 
-- **Fresh start:** All tasks "pending", none "in_progress" → Step 1
-- **Resume in-progress:** Found task with status="in_progress" → Step 2
-- **Start next:** Previous completed, next "pending" with empty blockedBy → Step 1 then 2
-- **All done:** All subtasks "completed" → Step 5 (final validation)
+- **Fresh start:** Every wave is pending, none is in progress → Step 1
+- **Resume in-progress:** One wave has status `in_progress` → Step 2
+- **Start next:** Previous wave completed and the next wave is pending → Step 1 then 2
+- **All done:** Every wave step is completed → Step 5 (final validation)
 
-**Do NOT ask "where did we leave off?"** — Task state tells you exactly where to resume.
+**Do NOT ask "where did we leave off?"** — the root session's wave state tells you exactly where to resume.
 
-**If the task store is empty or wiped** (e.g. an MCP reconnect drops the session's tasks mid-epic) — this is recoverable state loss, not a halt. You hold the epic's requirements and the current wave in your own context; recreate the epic and the in-flight tasks with `GambitTaskCreate` from that context, then resume. Never abandon an epic because the store reset.
+**If native plan state is absent**, use `SessionContextRead` to recover only from this root session's approved contract and latest checkpoint, then reconstruct the complete ordered wave list with `SessionPlanWrite`. If same-session context is insufficient, or native plan mutation is unavailable, fail closed and ask the user; never recover orchestration state from the repository, another session, a goal, or legacy state.
 
 ---
 
 ### 1. Load Epic Context and Enter the Worktree
 
-Before executing ANY task, read the epic with `GambitTaskGet`.
+Before executing ANY wave, use `SessionContextRead` to reread the complete approved epic contract from this root transcript.
 
 **Extract and keep in mind:**
 - Requirements (IMMUTABLE — never water these down)
@@ -93,7 +96,7 @@ Before executing ANY task, read the epic with `GambitTaskGet`.
 
 **Enter the epic worktree.** All epic work happens in a worktree — never directly on main. Working on main risks orphaned commits and a corrupted mainline while waves land.
 
-On a **fresh start** (Step 0 found all tasks pending):
+On a **fresh start** (Step 0 found all wave steps pending):
 
 1. **Repo convention first.** If the repo provides its own worktree setup (an existing `.worktrees/` or `worktrees/` directory, a AGENTS.md worktree preference, or project tooling like a `just worktree` target), follow it: `git worktree add <dir>/<epic-slug> -b <branch>` and work there.
 2. **Otherwise use the native facility:** `GambitEnterWorktree name: "<epic-slug>"` — creates the worktree under `.claude/worktrees/` on a new branch and switches the session into it. The base ref follows the `worktree.baseRef` setting (`fresh` = origin default branch; `head` = current HEAD).
@@ -109,9 +112,9 @@ The transient per-worker worktrees of a ≥2 wave (`references/wave-dispatch.md`
 ### 2. Execute the Wave
 
 **Find and claim the wave:**
-1. `GambitTaskList` → identify the ready tasks (status="pending", blockedBy=[]). The wave is those whose file sets are pairwise disjoint with no cross-dependency — usually one, sometimes several. Overlapping or dependent tasks wait for a later wave.
-2. `GambitTaskUpdate` → mark each wave task in_progress
-3. `GambitTaskGet` → load each task's full details
+1. `SessionPlanRead` → identify the next pending wave step. Its workers have pairwise-disjoint file sets and no cross-dependency — usually one worker, sometimes several. Overlapping or dependent work waits for a later wave.
+2. `SessionContextRead` → load every worker's complete self-contained brief from this root transcript or latest checkpoint. Individual worker state comes from native subagent threads and checkpoint results, never plan records.
+3. `SessionPlanWrite` → replace the complete ordered plan, preserving every other step and marking only that single wave `in_progress`. At most one wave may be in progress.
 
 **Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. Glob `**/codex-contracts/scout.md`, dispatch the `scout` role using `explorer` (see `codex-contracts/models.md`), and prompt it to Read `codex-contracts/scout.md` first, then ask your question. The scout returns `file:line` evidence or `NOT FOUND` — never a guess. This is optional per task; skip it when the brief is already clear.
 
@@ -151,7 +154,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
    - **DONE** → verify yourself with FRESH evidence (run the full test command now; don't trust the self-report), then run the **Checkpoint quality gate** (below) before proceeding.
    - **DONE_WITH_CONCERNS** → read the concern. Correctness or scope → resolve it (refine + re-dispatch, or fix directly) before accepting; treat it as an escalation trigger in the quality gate (below). Benign observation → note it and verify as DONE. **A "bigger behavior change than the brief implied" flag usually means the brief was wrong, not the worker** — re-read the requirement the worker cites and fix the brief, don't wave the flag through because the worker followed instructions literally. A worker's scope-surprise is often your spec catching itself.
    - **NEEDS_CONTEXT** → supply the missing values/decisions and re-dispatch with them added.
-   - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch at the `escalation` tier (the default escalation profile); task too large → decompose into a new task (`GambitTaskCreate`); the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
+   - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch with `default` or an installed `escalation` profile; brief too large → split it into complete worker briefs in the checkpoint and revise the complete ordered wave list; the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
 
 **One of the four statuses is the ONLY signal that advances a task — silence is not one of them.** A worker that has not returned DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED is still working, even when it looks otherwise. A worker spends a long opening stretch reading, grepping, and reasoning before it writes a single byte — so a **flat `git status`, an unchanged diff across several checks, and an unanswered status ping are indistinguishable from a dead worker but are not one.** Worker↔orchestrator messaging also lags: a worker deep in work often does not read its inbox for a while, and its replies can arrive minutes after you'd expect (sometimes crossing your own next message). **Do not presume a silent worker is dead, and above all do not spawn a replacement on silence alone** — re-dispatching a still-live worker onto its own task and tree manufactures a file collision (two workers editing the same files), the single most expensive and recurrent orchestration mistake. If you genuinely must probe, send **one** status ping framed as informational ("not a stand-down — where are you?") and wait a full cycle; only a returned BLOCKED/failure, or a process you have confirmed dead by other means, justifies re-dispatch. When a collision does happen anyway, workers detect it (`## Neighbors` / blast-radius) and stand down cleanly — so before integrating a tree two workers may have touched, confirm it has been **stable across a couple of checks** (no files changing under you) and re-run the full gate, rather than reading a half-written state. Patience here is not idleness; it is the cheapest thing you will do all epic.
 
@@ -186,7 +189,7 @@ For a delegated task the worker runs this loop in its own context under `codex-c
 A green test is necessary but NOT sufficient. Before marking the task complete, read the worker's actual changes — `git diff` (and `git status` for stray files) — and judge them. The orchestrator does this ITSELF in the common case (no dispatch): it is the most capable model in the loop and is reviewing a *worker's* code, not its own.
 
 Judge the diff against six sources:
-1. **The epic's Quality Bar** (`GambitTaskGet` the epic) — gambit's fixed maximal standard for good code, carried verbatim in every epic.
+1. **The epic's Quality Bar** (`SessionContextRead` the epic) — gambit's fixed maximal standard for good code, carried verbatim in every epic.
 2. **The epic's Anti-Patterns** — none present in the diff.
 3. **The worker quality policy** (`codex-contracts/worker.md`) — no linter/type suppression pragmas (`noqa`, `ts-ignore`, `nolint`, disabled rules), no weakened or tautological tests, no dead or commented-out code left behind, errors handled at the call site.
 4. **Blast radius** — the diff touches only what the task required; no scope creep, no "while I was here" edits. (Exception: mechanical fallout of a correct change that breaks the shared gate — regenerated fixtures/goldens, a cross-package test that must update — is in-scope to repair; the worker reports it, you authorize it, and it is not scope creep.)
@@ -196,7 +199,7 @@ Judge the diff against six sources:
 Emit an explicit, CITED verdict (`file:line`) — a pass with a one-line basis, or the specific concern. **Never a silent "looks fine."**
 
 Route on the verdict:
-- **Clean** → proceed to mark complete and checkpoint.
+- **Clean** → proceed to the durable checkpoint with the native wave still `in_progress`.
 - **Quality defect** → re-dispatch a FRESH worker with the specific cited defects (never the same worker on unchanged input). **Never edit the diff yourself — you judge and route; workers implement.**
 - **Doubt, or an escalation trigger fired** → escalate (below) before deciding.
 
@@ -215,13 +218,13 @@ SpawnAgent role="finder" description="Quality review: <task>"
 
 This solo dispatch has no verifier behind it (unlike the end-of-epic review, which pairs reviewers with a dedicated verifier) — so YOU are the adjudicator the quality reviewer's contract assumes downstream. Before acting on any finding it returns, confirm it yourself by reading the `file:line` its `Verify by:` cites; drop any finding you cannot confirm. Then act on the confirmed findings exactly as above (defect → fresh worker; clean → proceed). This is the per-task LOCAL gate; the full end-of-epic review (Step 5) — four reviewers plus that verifier — stays the architectural backstop, so do NOT run the four-dimension review per task.
 
-Mark complete with `GambitTaskUpdate` only after ALL steps are verified with fresh evidence AND the checkpoint quality gate passed (or its escalation cleared).
+After every worker result is independently verified and the checkpoint quality gate passes (or its escalation clears), report that the wave is ready for its durable checkpoint. Keep the native wave `in_progress`; only Step 4 owns the completion mutation after the verified work and full root-transcript checkpoint are durable. Individual workers never become plan steps.
 
 #### When Hitting Obstacles
 
 **CRITICAL: Check epic BEFORE switching approaches.**
 
-1. Re-read epic with `GambitTaskGet` — check "Approaches Considered" and "Anti-patterns"
+1. Re-read epic with `SessionContextRead` — check "Approaches Considered" and "Anti-patterns"
 2. If alternative was already REJECTED, note original rejection reason
 3. Only switch if rejection reason no longer applies AND user approves
 
@@ -231,16 +234,16 @@ Mark complete with `GambitTaskUpdate` only after ALL steps are verified with fre
 
 If implementation reveals unexpected work:
 
-1. Create new task with `GambitTaskCreate` — full detail, no placeholders
-2. Set dependency with `GambitTaskUpdate addBlockedBy` (only on other subtasks — never on the epic, which would deadlock since the epic completes last)
-3. Ensure it's scoped to one focused sitting (~15-45 min), has explicit paths, testable criteria
-4. Document in checkpoint summary that new task was added
+1. Write every new worker's complete self-contained brief in the checkpoint — full detail, no placeholders
+2. Group independent workers into one later wave; order dependent work in a still-later wave, never as dependency edges
+3. Ensure each brief is scoped to one focused sitting (~15-45 min), has explicit paths, and testable criteria
+4. Retain the complete briefs for the root-transcript checkpoint and defer the complete-list plan update to Step 4, after the commit and checkpoint are durable
 
 ---
 
 ### 3. Create the Next Wave
 
-After a wave completes, build the NEXT wave from what you learned — and make it **as wide as the design genuinely supports**. Author EVERY follow-on task that passes the pluckability test, not just the single next step. Defaulting to one task when three are pluckable wastes the parallel machinery.
+After the current wave's implementation and quality gate are verified, build the NEXT wave from what you learned — and make it **as wide as the design genuinely supports**. Author a complete checkpoint worker brief for EVERY follow-on worker that passes the pluckability test, not just a single next worker. Defaulting to one worker when three are pluckable wastes the parallel machinery. Keep the current native wave `in_progress` until Step 4 makes the commit and full checkpoint durable.
 
 **The pluckability test:** a task belongs in the next wave iff its brief can be written entirely from code that exists right now — exact file set, anchors cited by `file:line`, testable criteria — with no placeholder for anything another open task will produce. If the brief needs a stand-in ("use whatever interface task N exposes"), it isn't pluckable; it waits.
 
@@ -263,19 +266,18 @@ After a wave completes, build the NEXT wave from what you learned — and make i
 
 **Three cases:**
 
-**A) Clear next step(s)** → `GambitTaskCreate` every pluckable task as the next wave, set dependencies for the serial remainder, proceed to checkpoint
+**A) Clear next step(s)** → retain every complete pluckable worker brief for the Step 4 checkpoint; prepare concise next-wave summaries, but do not mutate plan state yet. Place serial work in later waves only when its full brief is known
 
-**B) Planned next task now redundant:**
+**B) Planned later work is now redundant:**
 - Discovery makes it unnecessary
-- Document why in checkpoint
-- Mark completed with note: "SKIPPED: [reason]"
-- Create the actual next task if one exists
+- Document why in the checkpoint
+- Prepare the revised complete wave list without that pending work, but defer mutation to Step 4
 
 **C) Need to adjust approach:**
 - Document learnings in checkpoint
 - Let user decide how to adapt
 
-**Task quality check:**
+**Worker brief quality check:**
 - Scoped: one focused sitting (~15-45 min)
 - Self-contained: Can execute without asking questions
 - Explicit: All file paths specified
@@ -288,16 +290,16 @@ After a wave completes, build the NEXT wave from what you learned — and make i
 
 ### 4. Commit and STOP Checkpoint (Mandatory)
 
-Two parts: commit any work that isn't already on the branch, then present the checkpoint and STOP.
+Three ordered parts: commit the verified work, present the full checkpoint and next-wave briefs in the root transcript, then complete native wave state and STOP.
 
-#### 4a: Commit Task's Work to Current Branch (Default)
+#### 4a: Commit the Verified Wave to the Current Branch (Default)
 
-Before presenting the checkpoint, commit the wave's work to whatever branch is currently checked out — `main`, a feature branch, a worktree branch, whichever is active. The checkpoint is the agreed "one wave done" unit; a commit at this boundary makes each task a durable, reviewable history entry so the user's next action (review, clear context, hand off, walk away) finds the work preserved. A ≥2 wave commits each task as it integrates (Step 2), so its work is already on the branch — here you only confirm nothing is left uncommitted.
+Commit the verified wave to whatever branch is currently checked out — `main`, a feature branch, a worktree branch, whichever is active. This makes the implementation durable before native plan state can claim completion. A ≥2 wave may already have one verified commit per worker from serial integration; here confirm every accepted diff is committed and nothing remains uncommitted.
 
 1. Run `git status` to see what's uncommitted
 2. If there are changes:
-   - Stage each task's files by name — avoid `git add -A`, which can sweep in accidentally-created files. One commit per task, even within a wave.
-   - Write a concise commit message: one-line subject describing what the task accomplished; optional short body for non-obvious WHY
+   - Stage each worker's files by name — avoid `git add -A`, which can sweep in accidentally-created files. One commit per worker, even within a wave.
+   - Write a concise commit message: one-line subject describing what the worker accomplished; optional short body for non-obvious WHY
    - Create a NEW commit (don't amend). Don't skip hooks. Don't push.
 3. If `git status` is clean (a ≥2 wave already committed each task at integration, intra-task commits during the TDD cycle captured everything, or the task was marked SKIPPED with no code changes), note it under "Commit" in the checkpoint summary
 
@@ -307,7 +309,7 @@ Before presenting the checkpoint, commit the wave's work to whatever branch is c
 
 #### 4b: Present Checkpoint Summary
 
-**Present this summary, then STOP:**
+Present the full checkpoint and every complete next-wave worker brief in the root transcript using this summary. Do not mark the current native wave completed yet; continue to Step 4c after the checkpoint content is durable:
 
 ```markdown
 ## Checkpoint
@@ -328,20 +330,25 @@ Before presenting the checkpoint, commit the wave's work to whatever branch is c
 - [Discoveries during implementation]
 - [Anything that affects future tasks]
 
-### Task Status
-[GambitTaskList output — completed, in-progress, pending]
+### Plan Status Before Completion Write
+[SessionPlanRead output — the current wave is still in progress; prior and pending waves are preserved]
 
 ### Epic Progress
 - [X/Y success criteria met]
 - [What remains]
 
-### Next Task
-- [Title and brief description]
-- [Why this is the right next step based on learnings]
+### Next Wave
+- [Concise wave summary to add as a pending plan step in Step 4c]
+- [Full self-contained worker brief for each worker]
+- [Why this is the right next wave based on learnings]
 
 ### To Continue
 Run `$gambit:executing-plans` to execute the next task.
 ```
+
+#### 4c: Complete Native Wave State and STOP
+
+Only after the commit and root-transcript checkpoint are durable, use `SessionPlanWrite` to replace the complete ordered plan. Mark only the current wave `completed`, preserve every prior status, and add or revise concise pending wave summaries that have complete worker briefs in the checkpoint. Then append the resulting plan status to the checkpoint and STOP. This is an existing-plan checkpoint update and does not require new epic approval.
 
 **Why STOP is mandatory:**
 - User can review implementation quality
@@ -354,10 +361,10 @@ Run `$gambit:executing-plans` to execute the next task.
 
 ### 5. Epic Review
 
-When all subtasks completed:
+When every native wave step is completed:
 
-1. `GambitTaskList` — verify all subtasks show "completed"
-2. `GambitTaskGet` on epic — review each success criterion
+1. `SessionPlanRead` — verify every wave step is `completed`
+2. `SessionContextRead` — reread the complete approved epic contract and review each success criterion; use checkpoint and native subagent results for individual worker completion
 3. Run full verification suite
 
 **Then invoke review directly using Codex skill invocation:**
@@ -387,14 +394,12 @@ When blocked, check epic BEFORE switching approaches:
 
 **Wrong:** "PKCE doesn't work, let me just use implicit flow" (REJECTED approach)
 
-### Creating Next Task Based on Learnings
+### Authoring the Next Worker Brief Based on Learnings
 
 After completing "Set up OAuth config", you discover the framework has built-in session middleware:
 
 ```
-GambitTaskCreate
-  subject: "Integrate with existing session middleware"
-  description: |
+Present in the checkpoint as "Worker Brief: Integrate with existing session middleware":
     ## Goal
     Use framework's built-in session middleware instead of custom implementation.
 
@@ -408,23 +413,33 @@ GambitTaskCreate
     - [ ] OAuth tokens stored via existing session middleware
     - [ ] No duplicate session logic
     - [ ] Tests passing
-  activeForm: "Integrating session middleware"
 ```
 
-This task wouldn't have been correct if planned upfront — it reflects what you actually found.
+Then replace the complete ordered plan, preserving prior wave statuses:
+
+```
+SessionPlanWrite
+  plan:
+    - step: "Wave 1: Configure OAuth"
+      status: completed
+    - step: "Wave 2: Integrate existing session middleware"
+      status: pending
+```
+
+This worker brief would not have been correct if drafted upfront — it reflects what you actually found.
 
 ## Critical Rules
 
 **Answer the user before you dispatch.** When the user asks a direct question mid-epic, answer it in prose before or alongside your next action. A dispatch, a task update, or a checkpoint summary is never a substitute for the answer. Deferring a question to "keep the loop moving" is the drift, not the discipline; if you can't answer, say so plainly rather than fabricating (e.g. per-worker token cost isn't surfaced to you — point the user at the session telemetry, don't guess a number).
 
 1. **One wave then STOP** — no second wave this cycle, no "just one more"
-2. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
+2. **Epic requirements IMMUTABLE** — worker briefs and later waves adapt, requirements don't
 3. **Check epic before switching approaches** — rejected approaches stay rejected unless conditions changed
-4. **Create next task from learnings** — not from upfront assumptions
+4. **Author the next worker brief from learnings** — not from upfront assumptions
 5. **Evidence before completion** — run tests, show output, then mark done
 6. **Judge the diff at the checkpoint** — a green test is necessary, not sufficient; read the diff, emit a cited verdict against the epic's Quality Bar, route clean/defect/escalate. Never mark complete on a passing test alone
 7. **Never water down requirements** — if blocked, ask user, don't simplify
-8. **Commit before checkpoint** — default is commit to current branch; skip only if the user said "don't commit yet" this session. Never push.
+8. **Durability before completion state** — commit the verified wave, present the full root-transcript checkpoint and next-wave briefs, then mark the native wave completed. Never push.
 
 **Common rationalizations (all mean STOP, follow the process):**
 
@@ -443,23 +458,21 @@ Before the first wave:
 - [ ] Epic worktree entered (repo convention or native `GambitEnterWorktree`) — never executing on main
 - [ ] Environment set up and baseline test run pinned
 
-Before completing each task:
-- [ ] All steps in description executed
+Before completing the current wave:
+- [ ] Every worker's brief steps executed and returned status verified from native subagent results
 - [ ] Tests passing (verified by running them)
-- [ ] Checkpoint quality gate run — diff judged against the epic's Quality Bar, cited verdict emitted, routed clean/defect/escalate
-- [ ] Changes committed
-- [ ] `GambitTaskUpdate status="completed"` only after truly done
-
-After completing each task:
-- [ ] Reviewed learnings against epic (`GambitTaskGet`)
-- [ ] Created next task based on learnings (or documented why not)
-- [ ] Committed the task's work to the current branch (or noted `git status` was clean)
-- [ ] Presented checkpoint summary with commit SHA + subject line
+- [ ] Checkpoint quality gate run — each diff judged against the epic's Quality Bar, cited verdict emitted, routed clean/defect/escalate
+- [ ] Reviewed learnings against the approved contract (`SessionContextRead`)
+- [ ] Committed the wave's work to the current branch (or noted `git status` was clean)
+- [ ] Presented the full checkpoint summary and complete next-wave worker briefs in the root transcript (or documented why no next wave remains)
+- [ ] Only then used `SessionPlanWrite` to replace the complete ordered plan and mark just this wave completed
+- [ ] Appended resulting plan status to the checkpoint
 - [ ] STOPPED execution
 - [ ] Waiting for user to run `$gambit:executing-plans` again
 
 Before closing epic:
-- [ ] ALL subtasks show "completed" in `GambitTaskList`
+- [ ] ALL wave steps show `completed` in `SessionPlanRead`
+- [ ] Individual worker completion confirmed from checkpoint and native subagent results, not plan records
 - [ ] ALL success criteria verified with evidence
 - [ ] ALL anti-patterns avoided
 - [ ] Invoked `gambit:review` directly via Codex skill invocation
@@ -469,12 +482,12 @@ Before closing epic:
 
 **Called by:**
 - User via `$gambit:executing-plans`
-- After `gambit:brainstorming` creates the epic and first task
+- After `gambit:brainstorming` records the approved contract, complete first-wave briefs, and native plan in this root session
 
 **Calls:**
 - `gambit:test-driven-development` during implementation
-- `gambit:verification` before claiming task complete
+- `gambit:verification` before reporting a wave ready for its durable checkpoint
 - `skills/review/reviewers/quality.md` — dispatched by path at the finder tier as the checkpoint quality gate's escalation reviewer, scoped to one task's diff (only when a trigger fires; the orchestrator judges the diff itself otherwise)
-- `gambit:review` (invoked directly when all tasks complete — reviews then calls finishing-branch)
+- `gambit:review` (invoked directly when every native wave is completed — reviews then calls finishing-branch)
 
-**Dispatches** `default` workers to implement each task; every worker reads the shared `codex-contracts/worker.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return), with the worker role selected through `codex-contracts/models.md`. See the dispatch step (Step 2) above for composition and the 4-state return.
+**Dispatches** `default` workers from complete root-transcript briefs; every worker reads the shared `codex-codex-contracts/worker.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return), with the worker role selected through `codex-codex-contracts/models.md`. See the dispatch step (Step 2) above for composition and the 4-state return.

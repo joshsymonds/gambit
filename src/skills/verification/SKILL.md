@@ -29,7 +29,13 @@ Violating the letter of the rules is violating the spirit of the rules.
 | **Linter clean** | Linter output: 0 errors | Partial check, extrapolation |
 | **Regression test works** | Red-green cycle verified | Test passes once |
 | **Task complete** | Check ALL success criteria individually | "Implemented the feature" |
+<!-- gambit-backend:claude -->
 | **All tasks done** | `TaskList` shows all completed | "All tasks done" |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| **Wave ready for checkpoint** | Every worker result and criterion is verified and readiness is reported to the owning workflow | Individual worker reports alone |
+| **All waves done** | `SessionPlanRead` shows every wave step completed | "All work is done" |
+<!-- /gambit-backend -->
 | **Agent completed** | VCS diff shows changes | Agent reports "success" |
 
 ## The Iron Law
@@ -89,7 +95,12 @@ Before making any completion claim, ask: "What command proves this?"
 | Build succeeds | Project's build command |
 | Linter clean | Project's lint command |
 | Task complete | Each success criterion verified individually |
+<!-- gambit-backend:claude -->
 | Epic complete | `TaskList` + each epic criterion verified |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| Epic complete | Every `SessionPlanRead` wave step completed + each approved-contract criterion verified |
+<!-- /gambit-backend -->
 
 ### 2. Run the Command (Fresh)
 
@@ -139,6 +150,7 @@ Tests pass. [Ran: go test ./..., Output: 34/34 passed, exit 0]
 Ready to commit.
 ```
 
+<!-- gambit-backend:claude -->
 ### 5. Task Completion: Verify Each Criterion
 
 Before marking any task complete:
@@ -170,6 +182,41 @@ TaskUpdate taskId: "current-task-id" status: "completed"
 ```
 
 **For epic completion:** Run `TaskList` first, confirm ALL subtasks show completed, then verify epic-level criteria the same way.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+### 5. Wave Completion: Verify Every Worker Criterion
+
+Before reporting the current wave ready for its durable checkpoint:
+
+1. Use `SessionContextRead` to reread the complete worker briefs for the current wave and the approved epic contract
+2. Verify EACH worker criterion with its own command/check
+3. Confirm individual worker completion from native subagent results and the root checkpoint, not plan records
+4. Report every criterion's status
+5. Report that the wave is ready for its durable checkpoint
+
+The owning execution workflow performs the completion mutation only after it commits the verified wave and retains the full checkpoint plus any next-wave briefs in the root transcript. Verification never marks native wave state completed itself.
+
+```
+SessionContextRead → complete current-wave worker briefs
+
+→ Success criteria from a worker brief:
+  1. POST /auth/login returns valid JWT
+  2. Invalid password returns 401
+  3. All tests pass
+
+→ Verification:
+  1. Ran: curl -X POST localhost:8080/auth/login -d '...'
+     Output: {"token": "eyJ..."} — VERIFIED
+  2. Ran: curl with wrong password
+     Output: 401 {"error": "Invalid credentials"} — VERIFIED
+  3. Ran: go test ./...
+     Output: 34/34 passed, exit 0 — VERIFIED
+
+→ All worker criteria verified. Wave is ready for the owning execution workflow's durable checkpoint.
+```
+
+**For epic completion:** Run `SessionPlanRead` first and confirm every wave step is completed. Then use `SessionContextRead` to reread the approved epic contract and verify every epic-level criterion. Worker completion evidence comes from checkpoints and native subagent results.
+<!-- /gambit-backend -->
 
 ---
 
@@ -211,6 +258,7 @@ Before claiming build succeeds:
 - [ ] Ran build command (not just linter)
 - [ ] Saw exit code 0
 
+<!-- gambit-backend:claude -->
 Before marking task complete:
 - [ ] Re-read success criteria from task
 - [ ] Ran verification for EACH criterion
@@ -222,6 +270,22 @@ Before marking epic complete:
 - [ ] Saw all subtasks completed
 - [ ] Ran verification for epic success criteria
 - [ ] THEN marked epic complete
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Before reporting a wave ready for its durable checkpoint:
+- [ ] Re-read every complete current-wave worker brief with `SessionContextRead`
+- [ ] Ran verification for EACH worker criterion
+- [ ] Confirmed individual worker completion from checkpoints/native subagent results
+- [ ] Saw evidence all pass
+- [ ] Reported readiness to the owning execution workflow without mutating native plan state
+
+Before reporting the epic ready for review:
+- [ ] Ran `SessionPlanRead`
+- [ ] Saw every wave step completed
+- [ ] Re-read the approved contract with `SessionContextRead`
+- [ ] Ran verification for epic success criteria
+- [ ] Reported epic readiness without mutating native plan state
+<!-- /gambit-backend -->
 
 **Can't check all boxes?** Return to the process.
 

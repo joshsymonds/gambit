@@ -8,7 +8,12 @@ user_invokable: true
 
 ## Overview
 
+<!-- gambit-backend:claude -->
 Audit test suites for real effectiveness, not vanity metrics. Identify tests that provide false confidence and missing corner cases. Create Tasks for improvements.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Audit test suites for real effectiveness, not vanity metrics. Identify tests that provide false confidence and missing corner cases. Present a complete improvement contract and worker briefs in the root transcript, with concise waves in the native plan.
+<!-- /gambit-backend -->
 
 **Core principle:** Tests must catch bugs, not inflate coverage metrics. Coverage measures execution, not assertion quality.
 
@@ -28,7 +33,12 @@ MEDIUM FREEDOM — Follow analysis phases exactly. RED/YELLOW/GREEN criteria are
 | 4 | Self-review all classifications | Validated categories |
 | 5 | Discover missing corner cases | Gap analysis |
 | 6 | Prioritize by business impact | Priority matrix |
+<!-- gambit-backend:claude -->
 | 7 | Create Tasks for improvements | Tracked improvement plan |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| 7 | Present improvement contract and worker briefs | Root-session implementation context |
+<!-- /gambit-backend -->
 
 **Iron Law:** Read production code BEFORE categorizing ANY test.
 
@@ -172,6 +182,7 @@ See [REFERENCE.md](REFERENCE.md) for the complete corner case tables with specif
 | P2 - Medium | Internal tools, admin features | Backlog |
 | P3 - Low | Utilities, non-critical paths | As time permits |
 
+<!-- gambit-backend:claude -->
 ### Phase 8: Create Tasks for Improvements
 
 Create epic Task for test quality improvement, then subtasks for each action group (remove RED tests, strengthen YELLOW tests, add missing corner cases).
@@ -184,6 +195,23 @@ Each subtask must be:
 Set dependencies so removal happens before additions.
 
 See [REFERENCE.md](REFERENCE.md) for epic and subtask templates.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+### Phase 8: Present Improvement Contracts and Worker Briefs
+
+Draft the complete test-quality epic contract and every full improvement worker brief. Group independent removals, assertion strengthening, and corner-case additions into waves.
+
+Each worker brief must be:
+- **Scoped:** one focused sitting (~15-45 min)
+- **Explicit:** File paths and line numbers specified
+- **Testable:** At least 3 success criteria
+
+For a fresh epic, obtain explicit user approval of the complete draft contract and every complete worker brief. Only after approval, present the full approved contract and briefs in the root transcript, then initialize the complete ordered plan with `SessionPlanWrite` and concise wave summaries.
+
+Existing-plan checkpoint updates do not require new approval. When this analysis belongs to an already approved epic in the same root session, retain every complete new brief in the durable checkpoint first, then use `SessionPlanWrite` to replace the complete plan while preserving every existing wave status. Put prerequisite removals in an earlier wave than additions. Full evaluation and fix specifications never belong in plan steps.
+
+See [REFERENCE.md](REFERENCE.md) for transcript contract, worker brief, and complete wave-list templates.
+<!-- /gambit-backend -->
 
 ## Output Format
 
@@ -208,7 +236,12 @@ Present results as a structured report. See [REFERENCE.md](REFERENCE.md) for the
 3. **Justify every GREEN** — name the production path, the bug, and the assertion
 4. **Justify every RED/YELLOW** — line-by-line with file references
 5. **Self-review before finalizing** — challenge every GREEN classification
+<!-- gambit-backend:claude -->
 6. **Create actionable Tasks** — don't just report, create tracked improvement plan
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+6. **Create actionable worker briefs and waves** — keep full fix specs in the root checkpoint and only concise wave state in the complete native plan
+<!-- /gambit-backend -->
 
 ### Common Rationalizations
 
@@ -236,7 +269,12 @@ Present results as a structured report. See [REFERENCE.md](REFERENCE.md) for the
 - Trace call paths to verify production code is exercised
 - Apply skeptical default (RED/YELLOW until proven GREEN)
 - Complete self-review checklist for all GREEN classifications
+<!-- gambit-backend:claude -->
 - Create actionable Tasks for improvements
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- Create actionable, complete worker briefs for improvements and present them in the root checkpoint
+<!-- /gambit-backend -->
 
 ## Verification Checklist
 
@@ -255,10 +293,19 @@ Present results as a structured report. See [REFERENCE.md](REFERENCE.md) for the
 - [ ] Corner cases identified (input, state, integration)
 - [ ] Priority assigned (P0/P1/P2/P3)
 
+<!-- gambit-backend:claude -->
 **Task Integration:**
 - [ ] Created epic for test quality improvement
 - [ ] Created subtasks for each category (remove, strengthen, add)
 - [ ] Set task dependencies
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**Session Plan Integration:**
+- [ ] Fresh epic: obtained explicit approval, then presented the complete approved contract and worker briefs in the root transcript
+- [ ] Existing plan: retained complete new worker briefs in the checkpoint without requesting new approval
+- [ ] Ordered prerequisite work into earlier waves
+- [ ] Replaced the complete plan with concise wave summaries only
+<!-- /gambit-backend -->
 
 ## Integration
 
@@ -268,13 +315,26 @@ Present results as a structured report. See [REFERENCE.md](REFERENCE.md) for the
 - When coverage is high but bugs slip through
 
 **Creates:**
+<!-- gambit-backend:claude -->
 - Tasks for removing RED tests
 - Tasks for strengthening YELLOW tests
 - Tasks for adding missing corner cases
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- Complete checkpoint worker briefs for removing RED tests
+- Complete checkpoint worker briefs for strengthening YELLOW tests
+- Complete checkpoint worker briefs for adding missing corner cases
+- One concise native plan step per ordered wave
+<!-- /gambit-backend -->
 
 **Workflow:**
 ```
+<!-- gambit-backend:claude -->
 gambit:testing-quality → Analyze → Create improvement Tasks
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+gambit:testing-quality → Analyze → fresh: approve then initialize / existing: checkpoint then update
+<!-- /gambit-backend -->
 gambit:executing-plans → Implement improvements with TDD
 gambit:verification → Verify improvements complete
 ```

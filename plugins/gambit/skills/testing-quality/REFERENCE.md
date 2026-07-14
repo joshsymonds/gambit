@@ -236,23 +236,23 @@ func TestUsername_RejectsEmptyString(t *testing.T) {
 | Empty password | Auth bypass | test_empty_password_rejected |
 | Unicode username | Encoding corruption | test_unicode_username_preserved |
 
-## Tasks Created
+## Worker Briefs Prepared
 
-| Task ID | Subject | Priority |
-|---------|---------|----------|
-| [id] | Remove tautological tests from auth | P0 |
-| [id] | Strengthen weak assertions in api | P1 |
-| [id] | Add corner case tests for auth | P0 |
+| Worker Brief | Subject | Priority |
+|--------------|---------|----------|
+| Removal brief | Remove tautological tests from auth | P0 |
+| Assertion brief | Strengthen weak assertions in api | P1 |
+| Corner-case brief | Add corner case tests for auth | P0 |
 ```
 
-## Task Templates
+## Transcript Contract and Worker Brief Templates
+
+Use these as drafts when creating a fresh test-quality epic. When adding work to an already approved epic, use them as complete worker briefs retained in the durable checkpoint.
 
 ### Epic Template
 
 ```
-GambitTaskCreate
-  subject: "Epic: Test Quality Improvement"
-  description: |
+Draft for approval as "Epic: Test Quality Improvement", or retain the already approved contract unchanged for an existing-plan checkpoint update:
     ## Goal
     Improve test effectiveness by removing tautological tests, strengthening weak tests,
     and adding missing corner case coverage.
@@ -273,17 +273,14 @@ GambitTaskCreate
     - Adding tests that verify mock behavior
     - Adding happy-path-only tests
     - Leaving tautological tests "for coverage"
-  activeForm: "Planning test quality improvement"
 ```
 
-### Subtask Templates
+### Worker Brief Templates
 
 **Remove RED tests:**
 
 ```
-GambitTaskCreate
-  subject: "Remove tautological tests from [module]"
-  description: |
+Draft or retain in the checkpoint as "Worker Brief: Remove tautological tests from [module]":
     ## Tests to Remove
     - [file:line] - [TestName] (tautological: [reason])
 
@@ -292,15 +289,12 @@ GambitTaskCreate
     - [ ] No new tautological tests introduced
     - [ ] Test suite still passes
     - [ ] Coverage may decrease (this is expected and good)
-  activeForm: "Removing tautological tests"
 ```
 
 **Add corner case tests:**
 
 ```
-GambitTaskCreate
-  subject: "Add corner case tests for [module]"
-  description: |
+Draft or retain in the checkpoint as "Worker Brief: Add corner case tests for [module]":
     ## Tests to Add
     - test_empty_X_rejected - prevents [bug]
     - test_unicode_X_preserved - prevents [bug]
@@ -315,7 +309,19 @@ GambitTaskCreate
     - [ ] All corner case tests written and passing
     - [ ] Each test documents the bug it catches
     - [ ] No tautological tests added
-  activeForm: "Adding corner case tests"
+```
+
+For a fresh epic, obtain explicit user approval of the complete draft contract and every complete worker brief. Only after approval, present the full approved contract and briefs in the root transcript, then initialize native wave state.
+
+Existing-plan checkpoint updates do not require new approval. Retain every complete new brief in the durable checkpoint before updating the existing plan. In either case, call `SessionPlanWrite` only with the complete ordered wave list. Put prerequisite removals before additions and keep parallel workers inside one wave step:
+
+```
+SessionPlanWrite
+  plan:
+    - step: "Wave 1: Remove confirmed tautological tests"
+      status: pending
+    - step: "Wave 2: Strengthen weak assertions and add missing corner cases"
+      status: pending
 ```
 
 ## Mutation Testing (Optional)

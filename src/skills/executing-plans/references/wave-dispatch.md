@@ -12,7 +12,12 @@ The epic's working tree is the integration base. For each task in the wave, fork
 
 ```bash
 BASE=$(git rev-parse HEAD)                    # run in the epic worktree
+<!-- gambit-backend:claude -->
 git worktree add --detach ../wave-<task-id> "$BASE"
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+git worktree add --detach ../wave-<worker-slug> "$BASE"
+<!-- /gambit-backend -->
 ```
 
 Detached HEAD, not a branch: a branch can be checked out in only one worktree at a time, and a detached fork leaves no branch to clean up afterward. Pass the worktree path to the worker as its Workspace; it works only there.

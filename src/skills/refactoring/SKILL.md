@@ -26,14 +26,24 @@ Violating the cycle is violating the skill. "I'll test at the end" means you're 
 | Step | Action | STOP If |
 |------|--------|---------|
 | 1 | Verify tests pass BEFORE starting | Any test fails |
+<!-- gambit-backend:claude -->
 | 2 | Create refactoring Task | - |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| 2 | Present complete refactoring workflow brief in root transcript | - |
+<!-- /gambit-backend -->
 | 3 | Make ONE small change | Doesn't compile |
 | 4 | Run tests immediately | Any test fails |
 | 5 | Commit with descriptive message | - |
 | 6 | Repeat 3-5 until complete | Tests fail → undo |
 | 7 | Final verification | - |
 | 8 | Mandatory review | Review fails |
+<!-- gambit-backend:claude -->
 | 9 | Close Task | - |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| 9 | Record checkpoint result and complete the wave | - |
+<!-- /gambit-backend -->
 
 **Core cycle:** Change → Test → Commit (repeat)
 
@@ -76,12 +86,22 @@ Failing tests mean you can't detect if refactoring breaks things.
 
 ---
 
+<!-- gambit-backend:claude -->
 ### Step 2: Create Refactoring Task
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+### Step 2: Present the Refactoring Workflow Brief
+<!-- /gambit-backend -->
 
 ```
+<!-- gambit-backend:claude -->
 TaskCreate
   subject: "Refactor: [specific goal]"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Present in the root transcript as "Workflow Brief: Refactor [specific goal]":
+<!-- /gambit-backend -->
     ## Goal
     [What structure change you're making]
 
@@ -98,10 +118,17 @@ TaskCreate
     - [ ] No behavior changes
     - [ ] Code is cleaner/simpler
     - [ ] Each commit is small and safe
+<!-- gambit-backend:claude -->
   activeForm: "Refactoring code"
+<!-- /gambit-backend -->
 ```
 
+<!-- gambit-backend:claude -->
 Then: `TaskUpdate taskId: "[id]" status: "in_progress"`
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Keep the complete workflow brief in the root transcript. If this refactoring is already a worker inside the current wave, do not create another plan step. Otherwise use `SessionPlanWrite` only as a complete-list replacement that preserves every existing step and marks one concise refactoring wave `in_progress`.
+<!-- /gambit-backend -->
 
 ---
 
@@ -225,22 +252,38 @@ Skill skill="gambit:review"
 
 Do not skip review for "simple" refactorings. Do not tell the user to run it manually — invoke it and follow its process immediately. Review validates the refactoring didn't introduce regressions, security issues, or quality problems.
 
+<!-- gambit-backend:claude -->
 ### Step 9: Close Task
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+### Step 9: Record Results and Close the Wave
+<!-- /gambit-backend -->
 
 After review passes:
 
 ```
+<!-- gambit-backend:claude -->
 TaskUpdate
   taskId: "[task-id]"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Present in the root checkpoint as the complete refactoring result:
+<!-- /gambit-backend -->
     ## Completed
     - [List of transformations made]
     - All tests pass (verified)
     - No behavior changes
     - N small transformations, each tested
     - Review: APPROVED
+<!-- gambit-backend:claude -->
   status: "completed"
+<!-- /gambit-backend -->
 ```
+<!-- gambit-backend:codex -->
+
+After the checkpoint result and review evidence are present, use `SessionPlanWrite` only to replace the complete ordered plan and mark the single refactoring wave completed. Individual transformations are not plan steps.
+<!-- /gambit-backend -->
 
 ---
 
@@ -303,7 +346,12 @@ All of these mean: **STOP. Return to the change→test→commit cycle.**
 Before marking refactoring complete:
 
 - [ ] Verified all tests passed BEFORE starting
+<!-- gambit-backend:claude -->
 - [ ] Created Task tracking the refactoring
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- [ ] Presented the complete refactoring workflow brief in the root transcript
+<!-- /gambit-backend -->
 - [ ] Made ONE small change at a time
 - [ ] Ran tests after EVERY change
 - [ ] Committed each safe transformation
@@ -313,10 +361,18 @@ Before marking refactoring complete:
 - [ ] Each commit in history is small and safe
 - [ ] Final verification: all tests pass, no warnings
 - [ ] `gambit:review` invoked and passed
+<!-- gambit-backend:claude -->
 - [ ] Task documents what was done and why
 - [ ] Task marked complete
 
 **Can't check all boxes?** Return to process and fix before closing Task.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- [ ] Root checkpoint documents what was done and why
+- [ ] Complete native plan marks the refactoring wave completed
+
+**Can't check all boxes?** Return to the process before completing the wave.
+<!-- /gambit-backend -->
 
 ---
 
@@ -354,7 +410,12 @@ Want to improve code structure
     ↓
 Step 1: Verify tests pass
     ↓
+<!-- gambit-backend:claude -->
 Step 2: Create Task
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Step 2: Present complete workflow brief
+<!-- /gambit-backend -->
     ↓
 Steps 3-6: Change → Test → Commit (repeat)
     ↓
@@ -362,5 +423,10 @@ Step 7: Final verification
     ↓
 Step 8: Mandatory review
     ↓
+<!-- gambit-backend:claude -->
 Step 9: Close Task
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Step 9: Record checkpoint and complete wave
+<!-- /gambit-backend -->
 ```

@@ -148,9 +148,7 @@ Each test name describes the bug it catches. If you can't describe the bug, the 
 ## Bad: Placeholder Text Left in Task
 
 ```
-GambitTaskUpdate
-  taskId: "task-3"
-  description: |
+BAD — draft a revised worker brief in the root transcript without verifying it:
     ## Goal
     Implement rate limiting for API endpoints.
 
@@ -175,9 +173,7 @@ Review: "Task updated. Moving on."
 ## Good: Replace Placeholders, Verify After Update
 
 ```
-GambitTaskUpdate
-  taskId: "task-3"
-  description: |
+Present in the root transcript as "Revised Worker Brief: Implement API rate limiting":
     ## Goal
     Implement token bucket rate limiting for API endpoints.
 
@@ -193,8 +189,9 @@ GambitTaskUpdate
     - [ ] Retry-After header shows seconds until bucket refill
     - [ ] X-Forwarded-For used when behind proxy
 
-# VERIFY: Read back the task
-GambitTaskGet taskId: "task-3"
+# VERIFY: reread the complete brief from this root transcript
+SessionContextRead
+# If its concise wave summary/order/status changed, replace the complete plan list.
 
 # Confirm: No placeholders, all steps specific, all criteria measurable
 ```

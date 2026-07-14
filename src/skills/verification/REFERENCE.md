@@ -54,9 +54,14 @@ Developer implements functions.
 
 Developer thinks: "I implemented everything, task complete"
 
+<!-- gambit-backend:claude -->
 TaskUpdate
   taskId: "task-id"
   status: "completed"
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Developer replaces the complete plan and marks the current wave completed.
+<!-- /gambit-backend -->
 
 [No verification commands run]
 ```
@@ -70,7 +75,12 @@ TaskUpdate
 ## Good: Verifying Each Criterion
 
 ```
+<!-- gambit-backend:claude -->
 TaskGet taskId: "task-id"
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+SessionContextRead → complete current-wave worker brief from this root transcript
+<!-- /gambit-backend -->
 
 Success criteria:
 - [ ] All functions fully implemented (no stubs, no TODOs)
@@ -96,10 +106,19 @@ Verification:
 
 All criteria verified.
 
+<!-- gambit-backend:claude -->
 TaskUpdate
   taskId: "task-id"
   status: "completed"
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Report: "Wave is ready for the owning execution workflow's durable checkpoint."
+<!-- /gambit-backend -->
 ```
+<!-- gambit-backend:codex -->
+
+Verification reports readiness only. The owning execution workflow commits the verified wave, retains the full checkpoint and next-wave briefs in the root transcript, and only then performs the native completion mutation.
+<!-- /gambit-backend -->
 
 ## Bad: Trusting Agent Reports
 

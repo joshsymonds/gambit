@@ -148,9 +148,14 @@ Each test name describes the bug it catches. If you can't describe the bug, the 
 ## Bad: Placeholder Text Left in Task
 
 ```
+<!-- gambit-backend:claude -->
 TaskUpdate
   taskId: "task-3"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+BAD — draft a revised worker brief in the root transcript without verifying it:
+<!-- /gambit-backend -->
     ## Goal
     Implement rate limiting for API endpoints.
 
@@ -175,9 +180,14 @@ Review: "Task updated. Moving on."
 ## Good: Replace Placeholders, Verify After Update
 
 ```
+<!-- gambit-backend:claude -->
 TaskUpdate
   taskId: "task-3"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Present in the root transcript as "Revised Worker Brief: Implement API rate limiting":
+<!-- /gambit-backend -->
     ## Goal
     Implement token bucket rate limiting for API endpoints.
 
@@ -193,8 +203,15 @@ TaskUpdate
     - [ ] Retry-After header shows seconds until bucket refill
     - [ ] X-Forwarded-For used when behind proxy
 
+<!-- gambit-backend:claude -->
 # VERIFY: Read back the task
 TaskGet taskId: "task-3"
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+# VERIFY: reread the complete brief from this root transcript
+SessionContextRead
+# If its concise wave summary/order/status changed, replace the complete plan list.
+<!-- /gambit-backend -->
 
 # Confirm: No placeholders, all steps specific, all criteria measurable
 ```

@@ -1,28 +1,94 @@
 # Codex Backend Operations
 
-Use these mappings whenever the skill names a Gambit operation. The skill's
-workflow and stop conditions remain authoritative; this file only translates
-platform mechanics.
+Use these mappings whenever a generated skill names a Gambit operation. The
+skill's workflow and stop conditions remain authoritative; this file defines
+how its conceptual task language maps onto Codex session state.
 
-## Durable task state
+## Ownership and source of truth
 
-When the skill directory contains `scripts/gambit_tasks.py`, resolve that path
-relative to the loaded skill and use it for every task operation. The script
-stores state under the repository's Git common directory, so state survives
-Codex threads and worktrees without dirtying the worktree.
+The root Codex task owns exactly one Gambit plan. That plan is the native plan
+attached to the root task, and native `update_plan` is its only mutation
+mechanism. Do not create another task store, plan file, service, environment
+namespace, or active-epic selector.
 
-- `GambitTaskList` → `python3 <skill-dir>/scripts/gambit_tasks.py list`
-- `GambitTaskGet taskId: "task-1"` → `python3 <skill-dir>/scripts/gambit_tasks.py get task-1`
-- `GambitTaskCreate` → write the full description to a temporary file, then run
-  `python3 <skill-dir>/scripts/gambit_tasks.py create --subject "..." --description-file <file> --active-form "..."`.
-- `GambitTaskUpdate` → `python3 <skill-dir>/scripts/gambit_tasks.py update <id>` with
-  `--status`, `--subject`, `--active-form`, `--description-file`, or repeated
-  `--add-blocked-by` / `--remove-blocked-by` arguments as required.
+The complete approved epic contract and full worker briefs live in the same
+root session's transcript and checkpoint messages. They never live in plan
+step text or a repository orchestration file. The native plan records only
+wave summaries and native statuses.
 
-Treat structured `GambitTaskCreate` and `GambitTaskUpdate` examples in a skill
-as specifications for these commands. Preserve multiline descriptions exactly
-through `--description-file`. The durable store is the source of truth;
-Codex's in-turn plan may mirror the active wave but must not replace it.
+Only the root orchestrator reads or writes this state. A worker thread receives
+a self-contained brief and must not discover, adopt, enumerate, or mutate the
+root plan.
+
+## Session operations
+
+- `SessionPlanRead` means inspect the current root session's native plan as exposed
+  in the session. It is read-only; it never scans Git, repository files,
+  worktrees, another session, or worker threads for orchestration state.
+- `SessionPlanWrite` means call native `update_plan` with the complete current
+  list of wave steps. Each call preserves completed waves, changes the current
+  wave status as needed, and adds or revises only wave summaries justified by
+  the approved contract or latest checkpoint.
+- `SessionContextRead` means reread the approved contract, worker briefs, and
+  latest checkpoint from the same root session's transcript. It never selects
+  an epic from repository state or another task's history.
+
+Apply these invariants to every `SessionPlanWrite`:
+
+- One plan step represents one Gambit wave.
+- A parallel wave is one in-progress step; its individual workers are native
+  subagent threads, not additional plan steps.
+- There is at most one active wave and therefore at most one `in_progress`
+  step.
+- Step text is a concise wave summary. Do not persist IDs, full task
+  descriptions, worker briefs, dependency edges, or an epic selector in it.
+- Order is the only plan representation of prerequisites: later work goes in a
+  later wave. Never construct dependency edges.
+
+Canonical skills are shared with Claude and may retain structured task
+examples after operation names are transformed. Treat those examples as
+conceptual input, not a storage schema:
+
+- An epic example supplies the contract to present for approval and retain in
+  the root transcript; it does not become an epic plan step.
+- A task example supplies a full worker brief to retain in the transcript or
+  latest checkpoint. Put only its concise wave summary in the plan.
+- Multiple independent task examples for the same cycle become workers inside
+  one wave step. Dependent work becomes a later wave step.
+- A create or update example rewrites the native wave list through
+  `SessionPlanWrite`; it never creates a persisted task record.
+
+## Resume, new tasks, and forks
+
+- Resuming the same root task continues its existing plan and same-session
+  contract/checkpoints.
+- `/new` starts a new root task with no Gambit plan or inherited contract.
+- `/fork` is copy-on-fork: the new root begins with the plan and transcript
+  context visible at the fork point, then its plan and checkpoints evolve
+  independently. Neither branch may mutate the other's state.
+
+Never infer ownership from the repository, branch, worktree, current directory,
+or a persisted identifier. The root task boundary is the ownership boundary.
+
+## Recovery and fail-closed behavior
+
+If native plan state is absent in an existing root task, reconstruct it only
+from that same root session's approved contract and latest checkpoint via
+`SessionContextRead`, then write the recovered wave list with
+`SessionPlanWrite`. If those messages do not contain enough information, ask
+the user rather than guessing.
+
+If `update_plan` is unavailable, fail closed: explain that native plan mutation
+is required and ask the user how to proceed. Never fall back to disk, Git,
+another service, a goal, or mental tracking. Legacy Git-local Gambit state is
+ignored and left untouched; there is no migration path.
+
+## Goals are separate
+
+A user-created goal may authorize a stop hook to invoke another execution
+cycle. It does not own or store Gambit task state, and Gambit never creates a
+goal automatically. The root session's native plan and transcript remain the
+only orchestration sources of truth.
 
 ## Skill invocation and user input
 
@@ -41,9 +107,10 @@ Codex's subagent controls:
   installed custom agent matches the named role.
 
 Dispatch independent agents concurrently. Keep dependent work sequential.
-When the skill specifies an agent contract, pass its path and require the
-agent to read it first. Codex agent profiles own concrete model selection; do
-not pass foreign model aliases from pseudocode.
+When a skill specifies an agent contract, pass its path and require the agent
+to read it first. Pass every worker its complete brief; never ask it to inspect
+the root plan. Codex agent profiles own concrete model selection, so do not
+pass foreign model aliases from pseudocode.
 
 ## Worktrees
 
@@ -54,7 +121,8 @@ not pass foreign model aliases from pseudocode.
 
 Never execute epic implementation on the default branch. For parallel write
 waves, give each worker an isolated worktree and integrate results serially as
-the skill directs.
+the skill directs. Worktrees isolate code changes; they do not own or recover
+orchestration state.
 
 ## Tool vocabulary
 

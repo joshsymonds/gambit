@@ -73,12 +73,22 @@ MEDIUM FREEDOM — Follow the 6-step process strictly. Independence verification
 
 **If < 3 independent domains: STOP.** Investigate sequentially instead.
 
+<!-- gambit-backend:claude -->
 **Create coordination Task:**
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**Present the complete coordination brief in the root transcript:**
+<!-- /gambit-backend -->
 
 ```
+<!-- gambit-backend:claude -->
 TaskCreate
   subject: "Parallel Investigation: [N] independent failures"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Present as "Coordination Brief: Parallel Investigation of [N] independent failures":
+<!-- /gambit-backend -->
     ## Independent Domains
     1. [Domain 1]: [files/tests]
     2. [Domain 2]: [files/tests]
@@ -99,10 +109,17 @@ TaskCreate
     - [ ] All agents returned
     - [ ] No conflicts found
     - [ ] Integration verified (full test suite)
+<!-- gambit-backend:claude -->
   activeForm: "Coordinating parallel investigation"
+<!-- /gambit-backend -->
 ```
 
+<!-- gambit-backend:claude -->
 Then: `TaskUpdate taskId: "[id]" status: "in_progress"`
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+All investigators are native subagent threads inside one parallel wave. Use `SessionPlanWrite` only as a complete-list replacement that preserves every existing step and marks one concise investigation wave `in_progress`; never create one plan step per investigator.
+<!-- /gambit-backend -->
 
 ---
 
@@ -218,15 +235,30 @@ Task
 ```
 
 **Decision tree:**
+<!-- gambit-backend:claude -->
 - All pass → mark coordination Task complete
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- All pass → record all investigator results in the root checkpoint, then replace the complete plan to mark the one investigation wave completed
+<!-- /gambit-backend -->
 - Failures → identify which agent's change caused regression
 
+<!-- gambit-backend:claude -->
 **Update coordination Task:**
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**Present the complete coordination result in the root checkpoint:**
+<!-- /gambit-backend -->
 
 ```
+<!-- gambit-backend:claude -->
 TaskUpdate
   taskId: "[coordination-task-id]"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Present as "Parallel Investigation Results":
+<!-- /gambit-backend -->
     ## Results
     - Agent 1: Fixed [X] in [files]
     - Agent 2: Fixed [Y] in [files]
@@ -237,8 +269,14 @@ TaskUpdate
 
     ## Integration
     All tests pass. Changes integrated successfully.
+<!-- gambit-backend:claude -->
   status: "completed"
+<!-- /gambit-backend -->
 ```
+<!-- gambit-backend:codex -->
+
+After checkpointing the full results, call `SessionPlanWrite` only with the complete ordered plan, preserving every other wave and marking the single parallel-investigation wave completed. Individual investigator status comes from native subagent results, not plan records.
+<!-- /gambit-backend -->
 
 ---
 
@@ -292,7 +330,12 @@ Before completing parallel agent work:
 - [ ] Resolved any conflicts manually
 - [ ] Ran full test suite
 - [ ] Documented which agents fixed what
+<!-- gambit-backend:claude -->
 - [ ] Coordination Task marked complete
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- [ ] Current wave recorded complete in the root native plan
+<!-- /gambit-backend -->
 
 **Can't check all boxes?** Return to process.
 

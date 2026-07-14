@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use after all tasks in an epic complete, after refactoring verifies, or before merging to main. Triggers when independent validation is needed that code meets requirements, has no security gaps, passes quality standards, and has no performance regressions. User phrases like "review this", "is this ready to merge", "validate the implementation".
+description: Use after every native wave in the current root session is complete, after refactoring verifies, or before merging to main. Triggers when independent validation is needed that code meets requirements, has no security gaps, passes quality standards, and has no performance regressions. User phrases like "review this", "is this ready to merge", "validate the implementation".
 ---
 
 <!-- Generated backend adapter: edit src/backends/codex/, not plugins/gambit/. -->
@@ -8,8 +8,11 @@ description: Use after all tasks in an epic complete, after refactoring verifies
 ## Codex Backend
 
 This skill is assembled for Codex. Before following the workflow, read
-`references/codex-backend.md` completely. Its operation mappings are binding;
-names such as `GambitTaskList` and `SpawnAgent` are backend operations, not
+`references/codex-backend.md` completely. Its operation mappings are binding:
+`SessionPlanRead` reads the root session's native wave plan, `SessionPlanWrite`
+mutates it only through `update_plan`, and `SessionContextRead` reads the same
+root transcript. One native plan step is one Gambit wave; parallel workers are
+subagent threads inside that single step. These are backend operations, not
 literal shell commands.
 
 # Review
@@ -21,8 +24,8 @@ Dispatch four specialized reviewer agents to independently audit completed work,
 The verification work is delegated to a **dedicated verifier sub-agent**, not done in the main context. Main context's job is dispatch + assembly; the verifier's job is ruthless kill-or-keep classification. This split follows Anthropic's `CitationAgent` pattern and avoids the synthesizer becoming context-starved from juggling four simultaneous roles (dispatch, verify, dedup, implement).
 
 Works in two modes:
-- **Epic review:** When an epic Task exists, conformance checks against epic requirements and success criteria
-- **Task review:** When reviewing standalone work (debugging, refactoring), conformance checks against the workflow Task's goal and success criteria
+- **Epic review:** When this root transcript contains an approved epic contract, conformance checks against its requirements and success criteria
+- **Workflow review:** For standalone work, conformance checks against the complete workflow brief and checkpoint in this root transcript
 
 **Core principle:** The implementing context is the worst reviewer of its own work. Delegate review to fresh agents.
 
@@ -36,25 +39,25 @@ LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approva
 
 | Step | Action | STOP If |
 |------|--------|---------|
-| **1. Detect Context** | Epic Task or workflow Task | Can't find any Task |
-| **2. Load Context** | Task + changed files list | Can't load task |
+| **1. Detect Context** | Approved epic contract or complete workflow brief in this root transcript | Same-session context is absent |
+| **2. Load Context** | Complete contract/brief + changed files list | Context is incomplete |
 | **3. Prepare Brief** | Requirements/goal + file list + base branch | Brief incomplete |
 | **4. Dispatch Reviewers** | 4 agents in parallel, each reading its own instructions by path | Any agent fails to run |
 | **5. Dedupe Candidates** | Merge reviewer outputs; dedupe on byte-identical `(file, line, verify_by)` tuples | — |
 | **6. Dispatch Verifier** | 1 verifier sub-agent with the deduped candidate list | Verifier fails to run |
 | **7. Assemble Findings** | Route verifier verdicts: confirmed → kept, gap → surfaced, refuted → dropped | — |
 | **8. Implement Improvements** | Implement ALL confirmed reviewer improvements | Tests fail after changes |
-| **9. Gate** | APPROVED or GAPS FOUND with verification counts | Confirmed gaps → fix tasks, STOP |
+| **9. Gate** | APPROVED or GAPS FOUND with verification counts | Confirmed gaps → complete fix briefs and a later wave, STOP |
 
 ## When to Use
 
-- All epic subtasks show "completed" (called automatically by `gambit:executing-plans` Step 5)
+- Every native wave step is completed (called automatically by `gambit:executing-plans` Step 5)
 - After `gambit:refactoring` completes changes (mandatory)
 - Before `gambit:finishing-branch`
 - Any time you want independent review of completed work
 
 **Don't use when:**
-- Tasks still in progress → use `gambit:executing-plans`
+- A native wave is pending or in progress → use `gambit:executing-plans`
 - Mid-implementation, per-task quality check → that's the `executing-plans` checkpoint quality gate's job (it reuses this skill's `quality` reviewer, scoped to one diff, when it escalates). This skill is the multi-dimension end-of-epic backstop, not the per-task gate.
 
 ## The Process
@@ -63,33 +66,27 @@ LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approva
 
 Determine what you're reviewing against:
 
-**Epic context** (default when epic exists):
+Use `SessionContextRead` in this root session to detect context:
+
+**Epic context** (default when a complete approved epic contract exists):
 ```
-GambitTaskList → find epic Task (subject starts with "Epic:")
-GambitTaskGet → epic (requirements, success criteria, anti-patterns)
-GambitTaskList → all subtasks (verify all completed)
+SessionContextRead → approved epic contract (requirements, success criteria, anti-patterns)
+SessionPlanRead → concise wave steps; verify every wave is completed
+SessionContextRead → latest checkpoint and native subagent results for individual worker completion
 ```
 
-**Task context** (refactoring or standalone work):
+**Workflow context** (refactoring or standalone work with no epic contract):
 ```
-GambitTaskList → find the workflow Task (most recent in-progress or just-completed Task)
-GambitTaskGet → task (goal, implementation steps, success criteria)
+SessionContextRead → complete workflow brief and checkpoint result (goal, implementation steps, success criteria)
 ```
 
-The review brief adapts based on which context is detected. If both exist (e.g., a refactor during an epic), prefer the epic context.
+The review brief adapts based on which same-session context exists. If both exist, prefer the epic context. Never search plan steps for an epic selector or individual worker record.
 
 ### Step 2: Load Context
 
-**For epic context:**
-```
-GambitTaskGet → epic (requirements, success criteria, anti-patterns)
-GambitTaskList → all subtasks (verify all completed)
-```
+**For epic context:** use `SessionContextRead` for the full approved contract and latest checkpoint, and `SessionPlanRead` only to verify every concise wave step is completed.
 
-**For task context:**
-```
-GambitTaskGet → workflow task (goal, success criteria)
-```
+**For workflow context:** use `SessionContextRead` for the complete workflow brief and checkpoint result.
 
 **Both contexts:**
 ```bash
@@ -102,12 +99,12 @@ git diff main...HEAD --stat         # Change summary
 Build a brief that each reviewer agent will receive. Include:
 
 **For epic context:**
-1. **Epic requirements** — full text from GambitTaskGet (requirements, success criteria, anti-patterns)
+1. **Epic requirements** — full text from the approved contract returned by `SessionContextRead` (requirements, success criteria, anti-patterns)
 2. **Changed files** — the `--name-only` output
 3. **Base branch** — what the diff is against
 
 **For task context:**
-1. **Task goal and success criteria** — full text from GambitTaskGet
+1. **Workflow goal and success criteria** — full text from the workflow brief returned by `SessionContextRead`
 2. **Changed files** — the `--name-only` output
 3. **Base branch** — what the diff is against
 4. **Context type indicator** — "This is a task-level review (debugging/refactoring), not an epic review. Evaluate against the task's stated goal and success criteria."
@@ -172,7 +169,7 @@ Route by verdict, using the Step 5 side-table to recover each finding's original
 
 - **confirmed** → keep in the final report as a finding. Preserve the reviewer's original body text and the verifier's `quoted_evidence` / `evidence_location`. Place the finding in the "Gaps" section if the side-table's `category` is `gap`, or the "Improvements to Implement" section if `improvement`.
 - **gap** → surface in a "🔍 Couldn't verify" section of the final report. NOT a confirmed finding — a coverage boundary. Include the verifier's `gap_reason` verbatim.
-- **refuted** → drop from the findings and the gate. But list each one **tersely in the "Refuted (dropped)" audit trail** (file:line + the reviewer's one-line claim + the verifier's quoted counter-evidence). This is the only window into the verifier's one documented failure mode — aggressive refutation suppressing a real bug. Do not act on refuted findings, create tasks for them, or let them block; the audit trail exists so you (and the user) can spot a bad refutation, not to re-litigate verdicts.
+- **refuted** → drop from the findings and the gate. But list each one **tersely in the "Refuted (dropped)" audit trail** (file:line + the reviewer's one-line claim + the verifier's quoted counter-evidence). This is the only window into the verifier's one documented failure mode — aggressive refutation suppressing a real bug. Do not act on refuted findings, author worker briefs for them, or let them block; the audit trail exists so you (and the user) can spot a bad refutation, not to re-litigate verdicts.
 
 Present the unified summary:
 
@@ -250,8 +247,8 @@ Invoke `gambit:finishing-branch` directly via Codex skill invocation. **Because 
 ### Issues by Reviewer (confirmed only)
 [Consolidated list with the verifier's `quoted_evidence` and `evidence_location`, plus the reviewer's original `Verify by` text recovered from the Step 5 side-table, attributed to the `reviewer` recorded there]
 
-### Recommended Fix Tasks
-- [Concrete task description for each confirmed gap]
+### Complete Fix Worker Briefs
+- [Complete self-contained worker brief for each confirmed gap]
 
 ### 🔍 Couldn't verify (for your awareness, not blocking)
 - [Area] — [verifier's specific gap_reason]
@@ -260,9 +257,9 @@ Invoke `gambit:finishing-branch` directly via Codex skill invocation. **Because 
 - `path:line` — [reviewer's one-line claim] → refuted: [verifier's quoted counter-evidence]
 ```
 
-Create fix tasks with `GambitTaskCreate` for each confirmed gap. Set dependencies. Then STOP — return to `gambit:executing-plans` to implement fixes (for epic context) or address fixes directly (for task context).
+Write a complete fix worker brief for every confirmed gap in the root checkpoint. Group independent fixes into one next wave and order dependent fixes in later waves. This is an existing-plan checkpoint update, so it does not require fresh epic approval. Use `SessionPlanWrite` only to replace the complete ordered plan with concise wave summaries, preserving completed waves. Then STOP — return to `gambit:executing-plans` for epic fixes or address the checkpointed workflow fixes directly.
 
-**Do NOT proceed to finishing-branch with confirmed gaps. Do NOT override verifier verdicts. Do NOT proceed with unimplemented confirmed improvements. Do NOT create fix tasks for refuted findings — they were disproved for a reason. Do NOT create fix tasks for gap-classified findings — a gap means the verifier hit a literal wall, not that a bug exists.**
+**Do NOT proceed to finishing-branch with confirmed gaps. Do NOT override verifier verdicts. Do NOT proceed with unimplemented confirmed improvements. Do NOT author fix worker briefs for refuted findings — they were disproved for a reason. Do NOT author fix worker briefs for gap-classified findings — a gap means the verifier hit a literal wall, not that a bug exists.**
 
 ---
 
@@ -290,9 +287,9 @@ SpawnAgent default: "Read <abs>/verifier.md + follow it" + [deduped candidate li
 ### Good: Task-Level Review After Refactoring
 
 ```
-# Context detection: no epic, found refactoring Task #5
-# GambitTaskGet #5 → goal: "Extract connection-pool setup into a reusable factory"
-# Brief includes task goal + success criteria + changed files
+# Context detection: no epic contract; SessionContextRead found a refactoring workflow brief
+# Goal: "Extract connection-pool setup into a reusable factory"
+# Brief includes workflow goal + success criteria + changed files
 # All four reviewers dispatched with task-level brief
 # Conformance checks the change addresses the stated goal
 # Security checks no new vulnerabilities introduced
@@ -324,8 +321,8 @@ SpawnAgent default: "[verifier.md] + [full reviewer reports with severity tags]"
 "Findings 2 and 5 look similar, collapse them"
 # Correct: byte-identical (path, line, verify_by) tuples only
 
-# WRONG: Creating fix tasks for gap-classified findings
-"The gap says we couldn't check LaunchDarkly — add a fix task to check it"
+# WRONG: Authoring fix worker briefs for gap-classified findings
+"The gap says we couldn't check LaunchDarkly — add a worker brief to check it"
 # Correct: gap is a tool-access boundary, not a bug
 
 # WRONG: Pasting reviewer file contents into the prompt (wastes ~18k tokens/review)
@@ -362,7 +359,7 @@ Read conformance.md → Agent → Read security.md → Agent → ...
 7. **Verifier sees no severity / no reasoning** — only `id`, `path`, `line_range`, `body`, `verify_by`; fresh context prevents anchoring
 8. **All confirmed improvements implemented** — confirmed improvements are work items, not suggestions to acknowledge and skip
 9. **Gap findings surface, not drop** — keep them in the report with the verifier's specific gap_reason so the user can investigate
-10. **Refuted findings drop** — don't create fix tasks for verdicts the verifier returned refuted
+10. **Refuted findings drop** — don't author fix worker briefs for verdicts the verifier returned refuted
 11. **Dedupe byte-identical, never semantic** — collapsing similar-looking findings silently drops true positives
 12. **Context detection is automatic** — epic if epic exists, task otherwise
 13. **Retain the id side-table** — stripping category/verify_by from verifier input (rule 7) means main context MUST keep an `id → {category, verify_by, reviewer}` side-table before dispatch; losing it breaks Steps 7–9 routing
@@ -398,15 +395,15 @@ Read conformance.md → Agent → Read security.md → Agent → ...
 - [ ] Findings assembled with verification counts (N confirmed / N refuted / N gaps)
 - [ ] ALL **confirmed** improvements implemented (or skipped with misunderstanding evidence)
 - [ ] Gap findings surfaced under "🔍 Couldn't verify" with specific gap_reason
-- [ ] Refuted findings dropped, not converted into fix tasks
+- [ ] Refuted findings dropped, not converted into fix worker briefs
 - [ ] Tests pass after implementing improvements
 - [ ] If APPROVED: invoked finishing-branch via Codex skill invocation
-- [ ] If GAPS: created fix tasks for confirmed gaps only (NOT gap-classified), STOPPED
+- [ ] If GAPS: presented complete fix worker briefs for confirmed gaps only (NOT gap-classified), updated existing wave state, and STOPPED
 
 ## Integration
 
 **Called by:**
-- `gambit:executing-plans` (Step 5, when all tasks complete)
+- `gambit:executing-plans` (Step 5, when every native wave is completed)
 - `gambit:refactoring` (mandatory, after final verification passes)
 - User via `$gambit:review`
 
@@ -424,7 +421,7 @@ Read conformance.md → Agent → Read security.md → Agent → ...
 
 **Call chain (epic context):**
 ```
-executing-plans (all tasks done) → review → finishing-branch
+executing-plans (all waves completed) → review → finishing-branch
                                       ↓
                                 (if gaps: STOP → fix → re-review)
 ```

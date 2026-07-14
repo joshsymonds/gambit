@@ -1,6 +1,11 @@
 ---
 name: task-refinement
+<!-- gambit-backend:claude -->
 description: Use when a task plan has just been created and needs review before execution, when brainstorming just handed off, when unsure whether a junior could execute without questions, or when you see placeholder text, vague success criteria, or missing edge cases. User phrases like "review these tasks", "are these ready?", "before we start", "catch any gaps". Do NOT use when implementation is already in progress or for creating plans from scratch.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+description: Use when worker briefs and a native wave plan have just been prepared and need review before execution, when brainstorming just handed off, when unsure whether a junior could execute without questions, or when you see placeholder text, vague success criteria, or missing edge cases. User phrases like "review these briefs", "are these ready?", "before we start", "catch any gaps". Do NOT use when implementation is already in progress or for creating plans from scratch.
+<!-- /gambit-backend -->
 user_invokable: true
 ---
 
@@ -8,6 +13,7 @@ user_invokable: true
 
 ## Overview
 
+<!-- gambit-backend:claude -->
 Review Tasks systematically. Find gaps, fix them, verify fixes. A task is ready when a junior engineer can execute it without asking questions.
 
 **Core principle:** Don't just identify problems — fix them. Update each Task, then read it back to verify.
@@ -19,12 +25,31 @@ Review Tasks systematically. Find gaps, fix them, verify fixes. A task is ready 
 ## Rigidity Level
 
 LOW FREEDOM — Apply all 8 categories to every task. No skipping. Update tasks with fixes, then verify no placeholders remain. Reject plans with critical gaps.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Review complete worker briefs systematically. Find gaps, fix them, present each revised brief in full, and reread it from the root transcript. A brief is ready when a junior engineer can execute it without asking questions.
+
+**Core principle:** Don't just identify problems — revise each worker brief, present it in full, then reread it with `SessionContextRead` to verify.
+
+**Iron Law:** NO worker brief passes review with vague criteria, missing file paths, or placeholder text. Every brief must be executable by a junior engineer without questions. No exceptions.
+
+**Announce at start:** "I'm using gambit:task-refinement to review and strengthen these worker briefs."
+
+## Rigidity Level
+
+LOW FREEDOM — Apply all 8 categories to every worker brief. No skipping. Present revised briefs in full, then verify no placeholders remain. Reject plans with critical gaps.
+<!-- /gambit-backend -->
 
 ## Quick Reference
 
 | Category | Key Check | Auto-Reject If |
 |----------|-----------|----------------|
+<!-- gambit-backend:claude -->
 | 1. Granularity | Scoped to one sitting (~15-45m)? | Any task without breakdown estimate |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| 1. Granularity | Scoped to one sitting (~15-45m)? | Any worker brief without breakdown estimate |
+<!-- /gambit-backend -->
 | 2. Implementability | Junior executes without questions? | Vague language, missing file paths |
 | 3. Success Criteria | Measurable, verifiable? | "Works correctly", "is implemented" |
 | 4. Dependencies | Correct blocking order? | Circular or missing dependencies |
@@ -36,16 +61,27 @@ LOW FREEDOM — Apply all 8 categories to every task. No skipping. Update tasks 
 ## When to Use
 
 - Before `gambit:executing-plans` starts implementation
+<!-- gambit-backend:claude -->
 - After `gambit:brainstorming` creates tasks
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- After `gambit:brainstorming` presents complete first-wave worker briefs
+<!-- /gambit-backend -->
 - When reviewing any plan for quality before execution
 
 **Don't use for:**
+<!-- gambit-backend:claude -->
 - Task already being implemented (too late)
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- A worker brief whose wave is already in progress (too late)
+<!-- /gambit-backend -->
 - Creating plans from scratch → `gambit:brainstorming`
 - Debugging → `gambit:debugging`
 
 ## The Process
 
+<!-- gambit-backend:claude -->
 ### 1. Load All Tasks
 
 ```
@@ -53,18 +89,46 @@ TaskList
 ```
 
 Identify the epic and all subtasks. Read each with `TaskGet`.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+### 1. Load the Contract, Wave Plan, and Worker Briefs
 
+Use `SessionPlanRead` to inspect only the root session's concise wave steps and statuses. Then use `SessionContextRead` to reread the complete approved epic contract and every full worker brief from the root transcript or latest checkpoint. Do not infer individual worker records from the plan.
+<!-- /gambit-backend -->
+
+<!-- gambit-backend:claude -->
 ### 2. Review Each Task (All 8 Categories)
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+### 2. Review Each Worker Brief (All 8 Categories)
+<!-- /gambit-backend -->
 
+<!-- gambit-backend:claude -->
 For each task, apply every category. No skipping — "straightforward" tasks hide the worst edge cases.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+For each worker brief, apply every category. No skipping — "straightforward" briefs hide the worst edge cases.
+<!-- /gambit-backend -->
 
 #### Category 1: Granularity
 
+<!-- gambit-backend:claude -->
 - Each task completable in one focused sitting (~15-45 min)?
 - Large tasks broken into subtasks with clear deliverables?
 - Each subtask independently completable?
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- Each worker brief completable in one focused sitting (~15-45 min)?
+- Large briefs split into focused briefs with clear deliverables?
+- Each resulting brief independently completable?
+<!-- /gambit-backend -->
 
+<!-- gambit-backend:claude -->
 **If too large:** Create subtasks with `TaskCreate`, link with `addBlockedBy`.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**If too large:** Split it into complete focused worker briefs in the root transcript. Use `SessionPlanWrite` only to replace the complete plan when the concise wave summary or ordering changes; represent prerequisites through later waves, never dependency edges.
+<!-- /gambit-backend -->
 
 #### Category 2: Implementability
 
@@ -77,7 +141,12 @@ For each task, apply every category. No skipping — "straightforward" tasks hid
 
 #### Category 3: Success Criteria
 
+<!-- gambit-backend:claude -->
 - Each task has 3+ specific, measurable criteria?
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- Each worker brief has 3+ specific, measurable criteria?
+<!-- /gambit-backend -->
 - All criteria verifiable with a command or code review?
 - No subjective criteria?
 
@@ -86,6 +155,7 @@ For each task, apply every category. No skipping — "straightforward" tasks hid
 - "Code is good quality" → "Lint clean, no TODOs, no panic/unwrap in production code"
 - "Tests pass" → "Run `npm test`, 0 failures, exit 0"
 
+<!-- gambit-backend:claude -->
 #### Category 4: Dependencies
 
 - `blockedBy` relationships correct?
@@ -93,23 +163,48 @@ For each task, apply every category. No skipping — "straightforward" tasks hid
 - Dependency graph logically ordered?
 
 Verify with `TaskList` output.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+#### Category 4: Wave Order
+
+- Prerequisite work appears in an earlier wave?
+- Every parallel wave is represented by one plan step?
+- At most one wave is in progress?
+
+Verify the concise wave list with `SessionPlanRead`; verify the complete worker briefs with `SessionContextRead`.
+<!-- /gambit-backend -->
 
 #### Category 5: Anti-patterns
 
+<!-- gambit-backend:claude -->
 - Task specifies what NOT to do?
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- Worker brief specifies what NOT to do?
+<!-- /gambit-backend -->
 - Includes: no TODOs without issue refs, no stub implementations, no swallowed errors?
 - Error handling requirements specified?
 
 #### Category 6: Edge Cases
 
+<!-- gambit-backend:claude -->
 **Ask for each task:**
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**Ask for each worker brief:**
+<!-- /gambit-backend -->
 - What happens with empty/nil/zero input?
 - What happens with malformed input?
 - What about Unicode, special characters, large inputs?
 - What about concurrent access?
 - What when dependencies fail?
 
+<!-- gambit-backend:claude -->
 **Add findings to task's Key Considerations section.** See [REFERENCE.md](REFERENCE.md) for edge case examples.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**Add findings to the complete worker brief's Key Considerations section, then present the revised brief in full.** See [REFERENCE.md](REFERENCE.md) for edge case examples.
+<!-- /gambit-backend -->
 
 #### Category 7: Red Flags (AUTO-REJECT)
 
@@ -135,14 +230,26 @@ See [REFERENCE.md](REFERENCE.md) for good/bad test examples.
 
 ---
 
+<!-- gambit-backend:claude -->
 ### 3. Update Each Task
 
 After reviewing, update each task with fixes:
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+### 3. Present Each Revised Worker Brief
+
+After reviewing, present each revised full worker brief in the root transcript. Never pass the full brief to `SessionPlanWrite`:
+<!-- /gambit-backend -->
 
 ```
+<!-- gambit-backend:claude -->
 TaskUpdate
   taskId: "[task-id]"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Present as "Revised Worker Brief: [worker subject]":
+<!-- /gambit-backend -->
     [Original content, preserved and strengthened]
 
     ## Key Considerations (ADDED BY REVIEW)
@@ -153,7 +260,12 @@ TaskUpdate
 
     ## Anti-patterns
     [Original anti-patterns]
+<!-- gambit-backend:claude -->
     - NEW: [Specific anti-pattern for this task's risks]
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+    - NEW: [Specific anti-pattern for this worker brief's risks]
+<!-- /gambit-backend -->
 ```
 
 **Rules for updates:**
@@ -166,12 +278,22 @@ TaskUpdate
 
 ### 4. Verify Updates (MANDATORY)
 
+<!-- gambit-backend:claude -->
 **After every TaskUpdate, read back with TaskGet and verify:**
 
 ```
 TaskGet
   taskId: "[task-id]"
 ```
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**After revising a brief, present the revised full worker brief in the root transcript. Use `SessionPlanWrite` only when its concise wave summary, order, or status changes; every such call replaces the complete ordered plan. Then use `SessionContextRead` to verify the full brief:**
+
+```
+SessionContextRead
+  read: "revised worker brief from this root transcript"
+```
+<!-- /gambit-backend -->
 
 Check:
 - All sections contain actual content (not placeholders)
@@ -191,9 +313,19 @@ Check:
 
 ### Overall: [APPROVE / NEEDS REVISION / REJECT]
 
+<!-- gambit-backend:claude -->
 ### Task-by-Task
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+### Worker Brief by Worker Brief
+<!-- /gambit-backend -->
 
+<!-- gambit-backend:claude -->
 #### [Task Name] ([task-id])
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+#### [Worker Brief]
+<!-- /gambit-backend -->
 **Status**: [Ready / Needs Revision / Rejected]
 **Issues Found**: [count]
 **Improvements Made**:
@@ -201,10 +333,21 @@ Check:
 **Edge Cases Added**:
 - [What failure modes now addressed]
 
+<!-- gambit-backend:claude -->
 [Repeat for each task]
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+[Repeat for each worker brief]
+<!-- /gambit-backend -->
 
 ### Summary
+<!-- gambit-backend:claude -->
 - Tasks updated: [list]
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- Worker briefs revised and presented in full: [list]
+- Concise wave summary/order/status changes: [list or none]
+<!-- /gambit-backend -->
 - Critical issues found: [count]
 - Recommendation: [approve/revise/reject with reasoning]
 ```
@@ -215,11 +358,26 @@ Check:
 
 ### Rules That Have No Exceptions
 
+<!-- gambit-backend:claude -->
 1. **Apply all 8 categories to every task** — no skipping any category
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+1. **Apply all 8 categories to every worker brief** — no skipping any category
+<!-- /gambit-backend -->
 2. **Reject plans with placeholder text** — "[detailed above]" = instant reject
+<!-- gambit-backend:claude -->
 3. **Verify after every update** — read back with TaskGet, check for placeholders
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+3. **Verify every revised brief** — present it in full, then reread it with `SessionContextRead`; update the complete wave list only for concise summary/order/status changes
+<!-- /gambit-backend -->
 4. **Strengthen vague criteria** — "works correctly" must become measurable commands
+<!-- gambit-backend:claude -->
 5. **Add edge cases to every task** — empty, unicode, concurrency, failure modes
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+5. **Add edge cases to every worker brief** — empty, unicode, concurrency, failure modes
+<!-- /gambit-backend -->
 6. **Reject tautological tests** — tests must catch specific bugs
 
 ### Common Excuses
@@ -228,7 +386,12 @@ All mean: **STOP. Apply the full checklist.**
 
 | Excuse | Reality |
 |--------|---------|
+<!-- gambit-backend:claude -->
 | "Task looks straightforward" | Edge cases hide in "straightforward" tasks |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| "Worker brief looks straightforward" | Edge cases hide in "straightforward" briefs |
+<!-- /gambit-backend -->
 | "Has 3 criteria, meets minimum" | Criteria must be MEASURABLE, not just 3+ items |
 | "Placeholder is just formatting" | Placeholder = incomplete specification |
 | "Can handle edge cases during implementation" | Must specify upfront to prevent rework |
@@ -239,16 +402,29 @@ All mean: **STOP. Apply the full checklist.**
 
 ## Verification Checklist
 
+<!-- gambit-backend:claude -->
 **Per task reviewed:**
 - [ ] Applied all 8 categories
 - [ ] Updated task with missing information
 - [ ] Verified update (no placeholders remain)
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**Per worker brief reviewed:**
+- [ ] Applied all 8 categories
+- [ ] Presented the complete revised brief with missing information
+- [ ] Reread the revised brief from the root transcript (no placeholders remain)
+<!-- /gambit-backend -->
 - [ ] Success criteria are measurable
 - [ ] Edge cases addressed
 - [ ] Test specifications are meaningful
 
 **Overall plan:**
+<!-- gambit-backend:claude -->
 - [ ] Reviewed ALL tasks (no exceptions)
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- [ ] Reviewed every worker brief (no exceptions)
+<!-- /gambit-backend -->
 - [ ] Presented structured results
 - [ ] Provided clear recommendation
 
@@ -275,7 +451,12 @@ Invoke executing-plans directly — it enters the epic worktree automatically:
 Skill skill="gambit:executing-plans"
 ```
 
+<!-- gambit-backend:claude -->
 Announce it in one line first ("Tasks refined and ready — starting execution.") so the transition is visible.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Announce it in one line first ("Worker briefs refined and ready — starting execution.") so the transition is visible.
+<!-- /gambit-backend -->
 
 ---
 
@@ -292,5 +473,10 @@ Announce it in one line first ("Tasks refined and ready — starting execution."
 ```
 gambit:brainstorming → gambit:task-refinement → gambit:executing-plans
                                 ↓
+<!-- gambit-backend:claude -->
                          (if gaps: revise tasks, re-review)
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+                         (if gaps: revise full worker briefs, re-review)
+<!-- /gambit-backend -->
 ```

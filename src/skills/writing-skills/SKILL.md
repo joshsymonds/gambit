@@ -106,6 +106,7 @@ Active voice, verb-first, gerund form for processes:
 
 ### Phase 0: Study Official Guidance
 
+<!-- gambit-backend:claude -->
 **BEFORE doing anything else**, read all three reference files:
 
 1. `references/anthropic-complete-guide.md` — Use case categories, 5 workflow patterns, success metrics, troubleshooting
@@ -113,6 +114,12 @@ Active voice, verb-first, gerund form for processes:
 3. `references/anthropic-skill-creator.md` — Skill anatomy, creation process, bundled resource types (scripts/, references/, assets/)
 
 Internalize these before writing.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**BEFORE doing anything else**, read `references/codex-skill-guidance.md` completely. It contains the Codex skill anatomy, discoverability rules, progressive-disclosure guidance, and validation workflow.
+
+Internalize it before writing. When targeting Anthropic's backend, also consult the bundled `references/anthropic-*.md` sources for that target's metadata and invocation rules.
+<!-- /gambit-backend -->
 
 ---
 
@@ -125,9 +132,14 @@ Internalize these before writing.
 3. What would success look like?
 
 ```
+<!-- gambit-backend:claude -->
 TaskCreate
   subject: "Eval: [skill-name] baseline test"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Present in the root transcript as "Evaluation Brief: [skill-name] baseline test":
+<!-- /gambit-backend -->
     ## Scenario
     [Situation requiring the skill]
 
@@ -140,8 +152,14 @@ TaskCreate
     ## Success Criteria
     - [ ] Claude [specific behavior]
     - [ ] Claude does NOT [failure behavior]
+<!-- gambit-backend:claude -->
   activeForm: "Creating evaluation"
+<!-- /gambit-backend -->
 ```
+<!-- gambit-backend:codex -->
+
+Keep the full evaluation brief in the root transcript. If this evaluation is not already part of the active wave, call `SessionPlanWrite` only as a complete-list replacement that preserves every existing step and adds one concise evaluation-wave summary.
+<!-- /gambit-backend -->
 
 ---
 
@@ -359,12 +377,22 @@ Should NOT trigger (run 3-5 queries):
 wc -l skills/[skill-name]/SKILL.md  # Should be <500
 ```
 
+<!-- gambit-backend:claude -->
 **Update Task and commit:**
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**Present complete evaluation results in the root checkpoint and update the wave:**
+<!-- /gambit-backend -->
 
 ```
+<!-- gambit-backend:claude -->
 TaskUpdate
   taskId: "[task-id]"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Present as "Evaluation Results: [skill-name]":
+<!-- /gambit-backend -->
     ## Results
     - Baseline: FAIL (expected)
     - Effectiveness: PASS
@@ -372,8 +400,14 @@ TaskUpdate
     - Multi-model: PASS
     - Triggering: PASS
     - Lines: [N] (<500)
+<!-- gambit-backend:claude -->
   status: "completed"
+<!-- /gambit-backend -->
 ```
+<!-- gambit-backend:codex -->
+
+After checkpointing the full results, use `SessionPlanWrite` only to replace the complete ordered plan and mark the single evaluation wave completed. Individual evaluation cases remain transcript results, not plan steps.
+<!-- /gambit-backend -->
 
 ---
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 """Render Gambit's canonical skills for Claude Code and Codex.
 
-The canonical prose lives under src/. Claude receives that prose unchanged.
-Codex receives a deterministic capability adapter plus mechanical vocabulary
-translation. Keep semantic backend behavior in src/backends/<backend>/ rather
-than forking whole skills.
+The canonical prose lives under src/. Explicit, narrowly scoped backend blocks
+select genuinely divergent semantics before Codex receives its deterministic
+capability adapter and mechanical vocabulary translation. Keep shared prose
+single-sourced rather than forking whole skills.
 """
 
 from __future__ import annotations
@@ -15,7 +15,6 @@ import filecmp
 import json
 import re
 import shutil
-import stat
 import sys
 import tempfile
 from pathlib import Path
@@ -36,16 +35,27 @@ OUTPUTS = {
 
 TEXT_SUFFIXES = {".md", ".txt", ".json", ".toml", ".yaml", ".yml", ".sh", ".py"}
 
+# Backend-specific source prose uses paired, line-oriented markers:
+#   <!-- gambit-backend:claude -->
+#   Claude-only prose
+#   <!-- /gambit-backend -->
+# Only ``claude`` and ``codex`` are valid. Blocks cannot nest. Selection runs
+# before any backend vocabulary transformation, and markers never reach output.
+BACKEND_BLOCK_START = re.compile(
+    r"^\s*<!-- gambit-backend:(claude|codex) -->\s*$"
+)
+BACKEND_BLOCK_END = re.compile(r"^\s*<!-- /gambit-backend -->\s*$")
+
 
 CODEX_REPLACEMENTS = [
     ("~/.claude/gambit/models.json", "~/.codex/agents/"),
-    ("native Claude Code Tasks", "Gambit's durable Codex task store"),
-    ("Claude Code Tasks", "Gambit's durable Codex task store"),
+    ("native Claude Code Tasks", "Codex's native per-root-session plan"),
+    ("Claude Code Tasks", "Codex's native per-root-session plan"),
     ("CLAUDE.md", "AGENTS.md"),
-    ("TaskCreate", "GambitTaskCreate"),
-    ("TaskUpdate", "GambitTaskUpdate"),
-    ("TaskList", "GambitTaskList"),
-    ("TaskGet", "GambitTaskGet"),
+    ("TaskCreate", "SessionPlanWrite"),
+    ("TaskUpdate", "SessionPlanWrite"),
+    ("TaskList", "SessionPlanRead"),
+    ("TaskGet", "SessionContextRead"),
     ("EnterWorktree", "GambitEnterWorktree"),
     ("ExitWorktree", "GambitExitWorktree"),
     ("AskUserQuestion", "GambitAskUser"),
@@ -63,18 +73,6 @@ CODEX_REPLACEMENTS = [
     ("contracts/", "codex-contracts/"),
 ]
 
-ANTHROPIC_GUIDANCE = """**BEFORE doing anything else**, read all three reference files:
-
-1. `references/anthropic-complete-guide.md` — Use case categories, 5 workflow patterns, success metrics, troubleshooting
-2. `references/anthropic-best-practices.md` — Conciseness, progressive disclosure patterns, anti-patterns, evaluation-driven development, Claude A/B iteration
-3. `references/anthropic-skill-creator.md` — Skill anatomy, creation process, bundled resource types (scripts/, references/, assets/)
-
-Internalize these before writing."""
-
-CODEX_GUIDANCE = """**BEFORE doing anything else**, read `references/codex-skill-guidance.md` completely. It contains the Codex skill anatomy, discoverability rules, progressive-disclosure guidance, and validation workflow.
-
-Internalize it before writing. When targeting Anthropic's backend, also consult the bundled `references/anthropic-*.md` sources for that target's metadata and invocation rules."""
-
 
 def read_text(path: Path) -> str | None:
     if path.suffix.lower() not in TEXT_SUFFIXES:
@@ -83,6 +81,36 @@ def read_text(path: Path) -> str | None:
         return path.read_text(encoding="utf-8")
     except UnicodeDecodeError:
         return None
+
+
+def select_backend_conditionals(text: str, backend: str) -> str:
+    """Select explicit backend prose blocks and reject malformed markers."""
+    if backend not in OUTPUTS:
+        raise ValueError(f"unknown backend: {backend}")
+
+    selected: list[str] = []
+    active_backend: str | None = None
+    for line_number, line in enumerate(text.splitlines(keepends=True), start=1):
+        marker = line.rstrip("\r\n")
+        start = BACKEND_BLOCK_START.fullmatch(marker)
+        if start:
+            if active_backend is not None:
+                raise ValueError(f"nested backend conditional at line {line_number}")
+            active_backend = start.group(1)
+            continue
+        if BACKEND_BLOCK_END.fullmatch(marker):
+            if active_backend is None:
+                raise ValueError(f"orphan backend conditional close at line {line_number}")
+            active_backend = None
+            continue
+        if "gambit-backend" in marker:
+            raise ValueError(f"malformed backend conditional at line {line_number}")
+        if active_backend is None or active_backend == backend:
+            selected.append(line)
+
+    if active_backend is not None:
+        raise ValueError(f"unclosed {active_backend} backend conditional")
+    return "".join(selected)
 
 
 def strip_codex_frontmatter_fields(text: str) -> str:
@@ -97,11 +125,6 @@ def strip_codex_frontmatter_fields(text: str) -> str:
 
 
 def codex_transform(text: str, relative: Path) -> str:
-    if relative.as_posix() == "writing-skills/SKILL.md":
-        # Replace the required target-specific guidance before translating
-        # product vocabulary within the executable skill prose.
-        text = text.replace(ANTHROPIC_GUIDANCE, CODEX_GUIDANCE)
-
     # Explicit invocation must be translated before the plain namespace text.
     text = re.sub(r"/gambit:([a-z0-9-]+)", r"$gambit:\1", text)
     text = re.sub(
@@ -239,8 +262,6 @@ def codex_transform(text: str, relative: Path) -> str:
 
 def copy_tree(source: Path, destination: Path, backend: str) -> None:
     shutil.copytree(source, destination)
-    if backend != "codex":
-        return
 
     for path in destination.rglob("*"):
         if not path.is_file():
@@ -249,7 +270,10 @@ def copy_tree(source: Path, destination: Path, backend: str) -> None:
         if text is None:
             continue
         relative = path.relative_to(destination)
-        path.write_text(codex_transform(text, relative), encoding="utf-8")
+        text = select_backend_conditionals(text, backend)
+        if backend == "codex":
+            text = codex_transform(text, relative)
+        path.write_text(text, encoding="utf-8")
 
 
 def parse_frontmatter(skill_md: Path) -> tuple[str, str, str]:
@@ -275,7 +299,6 @@ def yaml_quote(value: str) -> str:
 
 def add_codex_resources(skills_dir: Path) -> None:
     backend_reference = CODEX_BACKEND / "resources" / "codex-backend.md"
-    task_script = CODEX_BACKEND / "resources" / "gambit_tasks.py"
     skill_guidance = CODEX_BACKEND / "resources" / "codex-skill-guidance.md"
 
     for skill_dir in sorted(path for path in skills_dir.iterdir() if path.is_dir()):
@@ -285,14 +308,6 @@ def add_codex_resources(skills_dir: Path) -> None:
         references = skill_dir / "references"
         references.mkdir(exist_ok=True)
         shutil.copy2(backend_reference, references / "codex-backend.md")
-
-        rendered_text = skill_md.read_text(encoding="utf-8")
-        if "GambitTask" in rendered_text:
-            scripts = skill_dir / "scripts"
-            scripts.mkdir(exist_ok=True)
-            target = scripts / "gambit_tasks.py"
-            shutil.copy2(task_script, target)
-            target.chmod(target.stat().st_mode | stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH)
 
         if skill_dir.name == "writing-skills":
             shutil.copy2(skill_guidance, references / "codex-skill-guidance.md")

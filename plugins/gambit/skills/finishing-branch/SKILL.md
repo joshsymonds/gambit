@@ -1,6 +1,6 @@
 ---
 name: finishing-branch
-description: Use when all epic tasks show completed, when ready to integrate after review approval, when choosing between merge / PR / keep / discard for a branch, when tests need final verification before integration, or when a merge produced conflicts that require re-testing. User phrases like "ready to merge", "open a PR", "done with this branch", "ship it".
+description: Use when every native epic wave is completed, when ready to integrate after review approval, when choosing between merge / PR / keep / discard for a branch, when tests need final verification before integration, or when a merge produced conflicts that require re-testing. User phrases like "ready to merge", "open a PR", "done with this branch", "ship it".
 ---
 
 <!-- Generated backend adapter: edit src/backends/codex/, not plugins/gambit/. -->
@@ -8,8 +8,11 @@ description: Use when all epic tasks show completed, when ready to integrate aft
 ## Codex Backend
 
 This skill is assembled for Codex. Before following the workflow, read
-`references/codex-backend.md` completely. Its operation mappings are binding;
-names such as `GambitTaskList` and `SpawnAgent` are backend operations, not
+`references/codex-backend.md` completely. Its operation mappings are binding:
+`SessionPlanRead` reads the root session's native wave plan, `SessionPlanWrite`
+mutates it only through `update_plan`, and `SessionContextRead` reads the same
+root transcript. One native plan step is one Gambit wave; parallel workers are
+subagent threads inside that single step. These are backend operations, not
 literal shell commands.
 
 # Finishing a Branch
@@ -30,7 +33,7 @@ LOW FREEDOM — Follow the process exactly. Never skip test verification. Never 
 
 | Step | Action | STOP If |
 |------|--------|---------|
-| **1. Verify Tasks** | `GambitTaskList` — all must be "completed" | Any task incomplete |
+| **1. Verify Waves** | `SessionPlanRead` — every wave step must be `completed`; confirm worker completion from checkpoints/native subagent results | Any wave incomplete |
 | **2. Verify Tests** | Run full test suite (skip if review just ran it) | Any test fails |
 | **3. Base Branch** | Detect via git merge-base | Can't determine base |
 | **4. Present Options** | `GambitAskUser` with 4 choices | No response |
@@ -41,12 +44,12 @@ LOW FREEDOM — Follow the process exactly. Never skip test verification. Never 
 
 ## When to Use
 
-- All tasks for an epic show "completed"
+- Every native epic wave shows `completed`, with worker completion retained in root checkpoints
 - Implementation reviewed and ready to integrate
 - After `gambit:review` approves the implementation
 
 **Don't use when:**
-- Tasks still open → use `gambit:executing-plans`
+- Any native wave is pending or in progress → use `gambit:executing-plans`
 - Epic not yet reviewed → use `gambit:review` first
 - Tests failing → fix first
 - Work still in progress
@@ -54,21 +57,21 @@ LOW FREEDOM — Follow the process exactly. Never skip test verification. Never 
 
 ## The Process
 
-### Step 1: Verify All Tasks Complete
+### Step 1: Verify Every Wave Complete
 
-Run `GambitTaskList`. All tasks must show status="completed".
+Run `SessionPlanRead`. Every concise wave step must show `completed`.
 
-**If tasks still open — STOP:**
+**If a wave is still open — STOP:**
 
 ```
-Cannot finish: N tasks still open:
-- [task-id]: Task Name (status: in_progress)
-- [task-id]: Task Name (status: pending)
+Cannot finish: native plan still has open waves:
+- Current wave: [summary] (status: in_progress)
+- Later wave: [summary] (status: pending)
 
-Complete all tasks before finishing.
+Complete every wave before finishing.
 ```
 
-**If all complete:** Read the epic with `GambitTaskGet` and verify all success criteria are met.
+**If all waves are complete:** use `SessionContextRead` to confirm individual worker completion from the latest checkpoints/native subagent results and reread the full approved epic contract. Verify every epic success criterion. Plan steps never stand in for worker records or the contract.
 
 ---
 
@@ -100,7 +103,7 @@ If this fails, ask the user what base branch to use.
 ```
 GambitAskUser
   questions:
-    - question: "All tasks complete, tests passing. How should we integrate?"
+    - question: "All waves complete, tests passing. How should we integrate?"
       header: "Integration"
       options:
         - label: "Merge locally"
@@ -142,7 +145,7 @@ GambitAskUser
 #### Option 2: Create Pull Request
 
 1. `git push -u origin <feature-branch>`
-2. Read epic with `GambitTaskGet` for PR content
+2. Use `SessionContextRead` to reread the full approved epic contract and latest checkpoint for PR content
 3. Create PR:
 
 ```bash
@@ -150,8 +153,8 @@ gh pr create --title "feat: <epic-name>" --body "$(cat <<'EOF'
 ## Summary
 <2-3 bullets from epic requirements>
 
-## Tasks Completed
-<list from GambitTaskList>
+## Waves Completed
+<concise completed-wave list from SessionPlanRead, with worker outcomes summarized from checkpoints>
 
 ## Test Plan
 - [ ] All tests passing
@@ -224,7 +227,7 @@ Report cleanup results.
 ### Good: Full Merge Process
 
 ```
-Step 1: GambitTaskList → all 4 tasks completed
+Step 1: SessionPlanRead → all wave steps completed; checkpoints confirm every worker result
 Step 2: npm test → 127 tests passed
 Step 3: git merge-base HEAD main → abc123
 Step 4: [GambitAskUser with 4 options]
@@ -242,7 +245,7 @@ Done. Feature merged to main.
 ### Bad: Skip Tests + Cleanup PR Worktree
 
 ```
-Step 1: Tasks complete
+Step 1: Waves complete
 Step 2: SKIPPED             ← WRONG: tests might fail
 Step 4: User selects PR
 Step 5: git push, gh pr create
@@ -274,7 +277,7 @@ git worktree remove .claude/worktrees/experimental
 3. **Typed "discard" for Option 4** — exact text, no shortcuts
 4. **No worktree cleanup for PR or Keep** — user needs it for feedback/later work
 5. **Verify tests after merge** — merged result might have conflicts
-6. **All tasks complete first** — no "mostly done" exceptions
+6. **Every wave complete first** — no "mostly done" exceptions
 7. **Never push main** — not even as an option; user pushes manually
 8. **Fixed option set** — the 4 options are immutable; never add "merge and push" or other variants
 
@@ -286,11 +289,13 @@ git worktree remove .claude/worktrees/experimental
 | "User obviously wants to merge" | PRESENT ALL 4 OPTIONS — let them choose |
 | "User said discard" | GET TYPED CONFIRMATION — "discard" exactly |
 | "PR done, cleanup worktree" | KEEP IT — PR will need updates |
-| "Tasks are mostly done" | ALL must be complete — no exceptions |
+| "Waves are mostly done" | EVERY wave must be complete — no exceptions |
 
 ## Verification Checklist
 
-- [ ] All tasks show "completed" (`GambitTaskList`)
+- [ ] Every wave step shows `completed` (`SessionPlanRead`)
+- [ ] Individual worker completion confirmed from checkpoints/native subagent results
+- [ ] Full approved contract reread with `SessionContextRead`
 - [ ] Tests verified passing (ran them here OR review handed off with green-tests guarantee)
 - [ ] Base branch determined
 - [ ] Presented 4 options via `GambitAskUser`

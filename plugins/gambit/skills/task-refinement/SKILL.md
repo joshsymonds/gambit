@@ -1,6 +1,6 @@
 ---
 name: task-refinement
-description: Use when a task plan has just been created and needs review before execution, when brainstorming just handed off, when unsure whether a junior could execute without questions, or when you see placeholder text, vague success criteria, or missing edge cases. User phrases like "review these tasks", "are these ready?", "before we start", "catch any gaps". Do NOT use when implementation is already in progress or for creating plans from scratch.
+description: Use when worker briefs and a native wave plan have just been prepared and need review before execution, when brainstorming just handed off, when unsure whether a junior could execute without questions, or when you see placeholder text, vague success criteria, or missing edge cases. User phrases like "review these briefs", "are these ready?", "before we start", "catch any gaps". Do NOT use when implementation is already in progress or for creating plans from scratch.
 ---
 
 <!-- Generated backend adapter: edit src/backends/codex/, not plugins/gambit/. -->
@@ -8,31 +8,34 @@ description: Use when a task plan has just been created and needs review before 
 ## Codex Backend
 
 This skill is assembled for Codex. Before following the workflow, read
-`references/codex-backend.md` completely. Its operation mappings are binding;
-names such as `GambitTaskList` and `SpawnAgent` are backend operations, not
+`references/codex-backend.md` completely. Its operation mappings are binding:
+`SessionPlanRead` reads the root session's native wave plan, `SessionPlanWrite`
+mutates it only through `update_plan`, and `SessionContextRead` reads the same
+root transcript. One native plan step is one Gambit wave; parallel workers are
+subagent threads inside that single step. These are backend operations, not
 literal shell commands.
 
 # Task Refinement
 
 ## Overview
 
-Review Tasks systematically. Find gaps, fix them, verify fixes. A task is ready when a junior engineer can execute it without asking questions.
+Review complete worker briefs systematically. Find gaps, fix them, present each revised brief in full, and reread it from the root transcript. A brief is ready when a junior engineer can execute it without asking questions.
 
-**Core principle:** Don't just identify problems — fix them. Update each Task, then read it back to verify.
+**Core principle:** Don't just identify problems — revise each worker brief, present it in full, then reread it with `SessionContextRead` to verify.
 
-**Iron Law:** NO task passes review with vague criteria, missing file paths, or placeholder text. Every task must be executable by a junior engineer without questions. No exceptions.
+**Iron Law:** NO worker brief passes review with vague criteria, missing file paths, or placeholder text. Every brief must be executable by a junior engineer without questions. No exceptions.
 
-**Announce at start:** "I'm using gambit:task-refinement to review and strengthen these tasks."
+**Announce at start:** "I'm using gambit:task-refinement to review and strengthen these worker briefs."
 
 ## Rigidity Level
 
-LOW FREEDOM — Apply all 8 categories to every task. No skipping. Update tasks with fixes, then verify no placeholders remain. Reject plans with critical gaps.
+LOW FREEDOM — Apply all 8 categories to every worker brief. No skipping. Present revised briefs in full, then verify no placeholders remain. Reject plans with critical gaps.
 
 ## Quick Reference
 
 | Category | Key Check | Auto-Reject If |
 |----------|-----------|----------------|
-| 1. Granularity | Scoped to one sitting (~15-45m)? | Any task without breakdown estimate |
+| 1. Granularity | Scoped to one sitting (~15-45m)? | Any worker brief without breakdown estimate |
 | 2. Implementability | Junior executes without questions? | Vague language, missing file paths |
 | 3. Success Criteria | Measurable, verifiable? | "Works correctly", "is implemented" |
 | 4. Dependencies | Correct blocking order? | Circular or missing dependencies |
@@ -44,35 +47,31 @@ LOW FREEDOM — Apply all 8 categories to every task. No skipping. Update tasks 
 ## When to Use
 
 - Before `gambit:executing-plans` starts implementation
-- After `gambit:brainstorming` creates tasks
+- After `gambit:brainstorming` presents complete first-wave worker briefs
 - When reviewing any plan for quality before execution
 
 **Don't use for:**
-- Task already being implemented (too late)
+- A worker brief whose wave is already in progress (too late)
 - Creating plans from scratch → `gambit:brainstorming`
 - Debugging → `gambit:debugging`
 
 ## The Process
 
-### 1. Load All Tasks
+### 1. Load the Contract, Wave Plan, and Worker Briefs
 
-```
-GambitTaskList
-```
+Use `SessionPlanRead` to inspect only the root session's concise wave steps and statuses. Then use `SessionContextRead` to reread the complete approved epic contract and every full worker brief from the root transcript or latest checkpoint. Do not infer individual worker records from the plan.
 
-Identify the epic and all subtasks. Read each with `GambitTaskGet`.
+### 2. Review Each Worker Brief (All 8 Categories)
 
-### 2. Review Each Task (All 8 Categories)
-
-For each task, apply every category. No skipping — "straightforward" tasks hide the worst edge cases.
+For each worker brief, apply every category. No skipping — "straightforward" briefs hide the worst edge cases.
 
 #### Category 1: Granularity
 
-- Each task completable in one focused sitting (~15-45 min)?
-- Large tasks broken into subtasks with clear deliverables?
-- Each subtask independently completable?
+- Each worker brief completable in one focused sitting (~15-45 min)?
+- Large briefs split into focused briefs with clear deliverables?
+- Each resulting brief independently completable?
 
-**If too large:** Create subtasks with `GambitTaskCreate`, link with `addBlockedBy`.
+**If too large:** Split it into complete focused worker briefs in the root transcript. Use `SessionPlanWrite` only to replace the complete plan when the concise wave summary or ordering changes; represent prerequisites through later waves, never dependency edges.
 
 #### Category 2: Implementability
 
@@ -85,7 +84,7 @@ For each task, apply every category. No skipping — "straightforward" tasks hid
 
 #### Category 3: Success Criteria
 
-- Each task has 3+ specific, measurable criteria?
+- Each worker brief has 3+ specific, measurable criteria?
 - All criteria verifiable with a command or code review?
 - No subjective criteria?
 
@@ -94,30 +93,30 @@ For each task, apply every category. No skipping — "straightforward" tasks hid
 - "Code is good quality" → "Lint clean, no TODOs, no panic/unwrap in production code"
 - "Tests pass" → "Run `npm test`, 0 failures, exit 0"
 
-#### Category 4: Dependencies
+#### Category 4: Wave Order
 
-- `blockedBy` relationships correct?
-- No circular dependencies?
-- Dependency graph logically ordered?
+- Prerequisite work appears in an earlier wave?
+- Every parallel wave is represented by one plan step?
+- At most one wave is in progress?
 
-Verify with `GambitTaskList` output.
+Verify the concise wave list with `SessionPlanRead`; verify the complete worker briefs with `SessionContextRead`.
 
 #### Category 5: Anti-patterns
 
-- Task specifies what NOT to do?
+- Worker brief specifies what NOT to do?
 - Includes: no TODOs without issue refs, no stub implementations, no swallowed errors?
 - Error handling requirements specified?
 
 #### Category 6: Edge Cases
 
-**Ask for each task:**
+**Ask for each worker brief:**
 - What happens with empty/nil/zero input?
 - What happens with malformed input?
 - What about Unicode, special characters, large inputs?
 - What about concurrent access?
 - What when dependencies fail?
 
-**Add findings to task's Key Considerations section.** See [REFERENCE.md](REFERENCE.md) for edge case examples.
+**Add findings to the complete worker brief's Key Considerations section, then present the revised brief in full.** See [REFERENCE.md](REFERENCE.md) for edge case examples.
 
 #### Category 7: Red Flags (AUTO-REJECT)
 
@@ -143,14 +142,12 @@ See [REFERENCE.md](REFERENCE.md) for good/bad test examples.
 
 ---
 
-### 3. Update Each Task
+### 3. Present Each Revised Worker Brief
 
-After reviewing, update each task with fixes:
+After reviewing, present each revised full worker brief in the root transcript. Never pass the full brief to `SessionPlanWrite`:
 
 ```
-GambitTaskUpdate
-  taskId: "[task-id]"
-  description: |
+Present as "Revised Worker Brief: [worker subject]":
     [Original content, preserved and strengthened]
 
     ## Key Considerations (ADDED BY REVIEW)
@@ -161,7 +158,7 @@ GambitTaskUpdate
 
     ## Anti-patterns
     [Original anti-patterns]
-    - NEW: [Specific anti-pattern for this task's risks]
+    - NEW: [Specific anti-pattern for this worker brief's risks]
 ```
 
 **Rules for updates:**
@@ -174,11 +171,11 @@ GambitTaskUpdate
 
 ### 4. Verify Updates (MANDATORY)
 
-**After every GambitTaskUpdate, read back with GambitTaskGet and verify:**
+**After revising a brief, present the revised full worker brief in the root transcript. Use `SessionPlanWrite` only when its concise wave summary, order, or status changes; every such call replaces the complete ordered plan. Then use `SessionContextRead` to verify the full brief:**
 
 ```
-GambitTaskGet
-  taskId: "[task-id]"
+SessionContextRead
+  read: "revised worker brief from this root transcript"
 ```
 
 Check:
@@ -199,9 +196,9 @@ Check:
 
 ### Overall: [APPROVE / NEEDS REVISION / REJECT]
 
-### Task-by-Task
+### Worker Brief by Worker Brief
 
-#### [Task Name] ([task-id])
+#### [Worker Brief]
 **Status**: [Ready / Needs Revision / Rejected]
 **Issues Found**: [count]
 **Improvements Made**:
@@ -209,10 +206,11 @@ Check:
 **Edge Cases Added**:
 - [What failure modes now addressed]
 
-[Repeat for each task]
+[Repeat for each worker brief]
 
 ### Summary
-- Tasks updated: [list]
+- Worker briefs revised and presented in full: [list]
+- Concise wave summary/order/status changes: [list or none]
 - Critical issues found: [count]
 - Recommendation: [approve/revise/reject with reasoning]
 ```
@@ -223,11 +221,11 @@ Check:
 
 ### Rules That Have No Exceptions
 
-1. **Apply all 8 categories to every task** — no skipping any category
+1. **Apply all 8 categories to every worker brief** — no skipping any category
 2. **Reject plans with placeholder text** — "[detailed above]" = instant reject
-3. **Verify after every update** — read back with GambitTaskGet, check for placeholders
+3. **Verify every revised brief** — present it in full, then reread it with `SessionContextRead`; update the complete wave list only for concise summary/order/status changes
 4. **Strengthen vague criteria** — "works correctly" must become measurable commands
-5. **Add edge cases to every task** — empty, unicode, concurrency, failure modes
+5. **Add edge cases to every worker brief** — empty, unicode, concurrency, failure modes
 6. **Reject tautological tests** — tests must catch specific bugs
 
 ### Common Excuses
@@ -236,7 +234,7 @@ All mean: **STOP. Apply the full checklist.**
 
 | Excuse | Reality |
 |--------|---------|
-| "Task looks straightforward" | Edge cases hide in "straightforward" tasks |
+| "Worker brief looks straightforward" | Edge cases hide in "straightforward" briefs |
 | "Has 3 criteria, meets minimum" | Criteria must be MEASURABLE, not just 3+ items |
 | "Placeholder is just formatting" | Placeholder = incomplete specification |
 | "Can handle edge cases during implementation" | Must specify upfront to prevent rework |
@@ -247,16 +245,16 @@ All mean: **STOP. Apply the full checklist.**
 
 ## Verification Checklist
 
-**Per task reviewed:**
+**Per worker brief reviewed:**
 - [ ] Applied all 8 categories
-- [ ] Updated task with missing information
-- [ ] Verified update (no placeholders remain)
+- [ ] Presented the complete revised brief with missing information
+- [ ] Reread the revised brief from the root transcript (no placeholders remain)
 - [ ] Success criteria are measurable
 - [ ] Edge cases addressed
 - [ ] Test specifications are meaningful
 
 **Overall plan:**
-- [ ] Reviewed ALL tasks (no exceptions)
+- [ ] Reviewed every worker brief (no exceptions)
 - [ ] Presented structured results
 - [ ] Provided clear recommendation
 
@@ -283,7 +281,7 @@ Invoke executing-plans directly — it enters the epic worktree automatically:
 Invoke skill="$gambit:executing-plans"
 ```
 
-Announce it in one line first ("Tasks refined and ready — starting execution.") so the transition is visible.
+Announce it in one line first ("Worker briefs refined and ready — starting execution.") so the transition is visible.
 
 ---
 
@@ -300,5 +298,5 @@ Announce it in one line first ("Tasks refined and ready — starting execution."
 ```
 gambit:brainstorming → gambit:task-refinement → gambit:executing-plans
                                 ↓
-                         (if gaps: revise tasks, re-review)
+                         (if gaps: revise full worker briefs, re-review)
 ```

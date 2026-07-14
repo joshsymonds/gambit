@@ -1,6 +1,11 @@
 ---
 name: finishing-branch
+<!-- gambit-backend:claude -->
 description: Use when all epic tasks show completed, when ready to integrate after review approval, when choosing between merge / PR / keep / discard for a branch, when tests need final verification before integration, or when a merge produced conflicts that require re-testing. User phrases like "ready to merge", "open a PR", "done with this branch", "ship it".
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+description: Use when every native epic wave is completed, when ready to integrate after review approval, when choosing between merge / PR / keep / discard for a branch, when tests need final verification before integration, or when a merge produced conflicts that require re-testing. User phrases like "ready to merge", "open a PR", "done with this branch", "ship it".
+<!-- /gambit-backend -->
 user_invokable: true
 ---
 
@@ -22,7 +27,12 @@ LOW FREEDOM — Follow the process exactly. Never skip test verification. Never 
 
 | Step | Action | STOP If |
 |------|--------|---------|
+<!-- gambit-backend:claude -->
 | **1. Verify Tasks** | `TaskList` — all must be "completed" | Any task incomplete |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| **1. Verify Waves** | `SessionPlanRead` — every wave step must be `completed`; confirm worker completion from checkpoints/native subagent results | Any wave incomplete |
+<!-- /gambit-backend -->
 | **2. Verify Tests** | Run full test suite (skip if review just ran it) | Any test fails |
 | **3. Base Branch** | Detect via git merge-base | Can't determine base |
 | **4. Present Options** | `AskUserQuestion` with 4 choices | No response |
@@ -33,12 +43,22 @@ LOW FREEDOM — Follow the process exactly. Never skip test verification. Never 
 
 ## When to Use
 
+<!-- gambit-backend:claude -->
 - All tasks for an epic show "completed"
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- Every native epic wave shows `completed`, with worker completion retained in root checkpoints
+<!-- /gambit-backend -->
 - Implementation reviewed and ready to integrate
 - After `gambit:review` approves the implementation
 
 **Don't use when:**
+<!-- gambit-backend:claude -->
 - Tasks still open → use `gambit:executing-plans`
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- Any native wave is pending or in progress → use `gambit:executing-plans`
+<!-- /gambit-backend -->
 - Epic not yet reviewed → use `gambit:review` first
 - Tests failing → fix first
 - Work still in progress
@@ -46,6 +66,7 @@ LOW FREEDOM — Follow the process exactly. Never skip test verification. Never 
 
 ## The Process
 
+<!-- gambit-backend:claude -->
 ### Step 1: Verify All Tasks Complete
 
 Run `TaskList`. All tasks must show status="completed".
@@ -61,6 +82,24 @@ Complete all tasks before finishing.
 ```
 
 **If all complete:** Read the epic with `TaskGet` and verify all success criteria are met.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+### Step 1: Verify Every Wave Complete
+
+Run `SessionPlanRead`. Every concise wave step must show `completed`.
+
+**If a wave is still open — STOP:**
+
+```
+Cannot finish: native plan still has open waves:
+- Current wave: [summary] (status: in_progress)
+- Later wave: [summary] (status: pending)
+
+Complete every wave before finishing.
+```
+
+**If all waves are complete:** use `SessionContextRead` to confirm individual worker completion from the latest checkpoints/native subagent results and reread the full approved epic contract. Verify every epic success criterion. Plan steps never stand in for worker records or the contract.
+<!-- /gambit-backend -->
 
 ---
 
@@ -92,7 +131,12 @@ If this fails, ask the user what base branch to use.
 ```
 AskUserQuestion
   questions:
+<!-- gambit-backend:claude -->
     - question: "All tasks complete, tests passing. How should we integrate?"
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+    - question: "All waves complete, tests passing. How should we integrate?"
+<!-- /gambit-backend -->
       header: "Integration"
       options:
         - label: "Merge locally"
@@ -134,7 +178,12 @@ AskUserQuestion
 #### Option 2: Create Pull Request
 
 1. `git push -u origin <feature-branch>`
+<!-- gambit-backend:claude -->
 2. Read epic with `TaskGet` for PR content
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+2. Use `SessionContextRead` to reread the full approved epic contract and latest checkpoint for PR content
+<!-- /gambit-backend -->
 3. Create PR:
 
 ```bash
@@ -142,8 +191,14 @@ gh pr create --title "feat: <epic-name>" --body "$(cat <<'EOF'
 ## Summary
 <2-3 bullets from epic requirements>
 
+<!-- gambit-backend:claude -->
 ## Tasks Completed
 <list from TaskList>
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+## Waves Completed
+<concise completed-wave list from SessionPlanRead, with worker outcomes summarized from checkpoints>
+<!-- /gambit-backend -->
 
 ## Test Plan
 - [ ] All tests passing
@@ -216,7 +271,12 @@ Report cleanup results.
 ### Good: Full Merge Process
 
 ```
+<!-- gambit-backend:claude -->
 Step 1: TaskList → all 4 tasks completed
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Step 1: SessionPlanRead → all wave steps completed; checkpoints confirm every worker result
+<!-- /gambit-backend -->
 Step 2: npm test → 127 tests passed
 Step 3: git merge-base HEAD main → abc123
 Step 4: [AskUserQuestion with 4 options]
@@ -234,7 +294,12 @@ Done. Feature merged to main.
 ### Bad: Skip Tests + Cleanup PR Worktree
 
 ```
+<!-- gambit-backend:claude -->
 Step 1: Tasks complete
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Step 1: Waves complete
+<!-- /gambit-backend -->
 Step 2: SKIPPED             ← WRONG: tests might fail
 Step 4: User selects PR
 Step 5: git push, gh pr create
@@ -266,7 +331,12 @@ git worktree remove .claude/worktrees/experimental
 3. **Typed "discard" for Option 4** — exact text, no shortcuts
 4. **No worktree cleanup for PR or Keep** — user needs it for feedback/later work
 5. **Verify tests after merge** — merged result might have conflicts
+<!-- gambit-backend:claude -->
 6. **All tasks complete first** — no "mostly done" exceptions
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+6. **Every wave complete first** — no "mostly done" exceptions
+<!-- /gambit-backend -->
 7. **Never push main** — not even as an option; user pushes manually
 8. **Fixed option set** — the 4 options are immutable; never add "merge and push" or other variants
 
@@ -278,11 +348,23 @@ git worktree remove .claude/worktrees/experimental
 | "User obviously wants to merge" | PRESENT ALL 4 OPTIONS — let them choose |
 | "User said discard" | GET TYPED CONFIRMATION — "discard" exactly |
 | "PR done, cleanup worktree" | KEEP IT — PR will need updates |
+<!-- gambit-backend:claude -->
 | "Tasks are mostly done" | ALL must be complete — no exceptions |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| "Waves are mostly done" | EVERY wave must be complete — no exceptions |
+<!-- /gambit-backend -->
 
 ## Verification Checklist
 
+<!-- gambit-backend:claude -->
 - [ ] All tasks show "completed" (`TaskList`)
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- [ ] Every wave step shows `completed` (`SessionPlanRead`)
+- [ ] Individual worker completion confirmed from checkpoints/native subagent results
+- [ ] Full approved contract reread with `SessionContextRead`
+<!-- /gambit-backend -->
 - [ ] Tests verified passing (ran them here OR review handed off with green-tests guarantee)
 - [ ] Base branch determined
 - [ ] Presented 4 options via `AskUserQuestion`

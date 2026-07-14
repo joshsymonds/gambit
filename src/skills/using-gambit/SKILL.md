@@ -78,22 +78,43 @@ digraph skill_flow {
 **User describes a new idea or feature, no epic yet → gambit:brainstorming**
 
 ```
+<!-- gambit-backend:claude -->
 gambit:brainstorming
    Creates epic (immutable requirements) + first wave of pluckable tasks via Socratic questioning,
    scaled to how clear the idea already is — a crisp spec gets brief questioning,
    a rough idea gets more. Tasks are created iteratively during execution, never
    all upfront. Brainstorming asks (in prose): refine tasks first? → routes to
    executing-plans, which enters the epic worktree automatically.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+gambit:brainstorming
+   Presents the approved epic contract and complete first-wave worker briefs in the root transcript,
+   then initializes concise native wave state after explicit confirmation. Later briefs and waves
+   are authored iteratively from execution learnings, never all upfront. Brainstorming asks in prose:
+   refine first? → routes to executing-plans, which enters the epic worktree automatically.
+<!-- /gambit-backend -->
 ```
 
+<!-- gambit-backend:claude -->
 **If an epic and tasks already exist → gambit:executing-plans directly.**
 
 **There is no separate plan-writing skill.** "Break this into tasks", "make an implementation plan", "lay out the tasks and dependencies" all route to `gambit:brainstorming` (which creates the epic + first wave of pluckable tasks; the rest are created iteratively during execution). Do NOT look for or invoke `gambit:writing-plans` — it does not exist. Upfront full task graphs are deliberately not part of gambit.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**If an approved epic contract and native wave plan already exist in this root session → gambit:executing-plans directly.**
+
+**There is no separate plan-writing skill.** "Break this into tasks", "make an implementation plan", and "lay out tasks and dependencies" all route to `gambit:brainstorming`, which presents the contract and first-wave briefs before initializing concise wave state. Later briefs and waves are authored iteratively during execution. Do NOT look for or invoke `gambit:writing-plans` — it does not exist. Upfront full work graphs are deliberately not part of Gambit.
+<!-- /gambit-backend -->
 
 **The flow then continues automatically:**
 ```
 executing-plans (one wave → checkpoint → STOP → repeat)
+<!-- gambit-backend:claude -->
     ↓ all tasks done
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+    ↓ all waves complete
+<!-- /gambit-backend -->
 review (4-reviewer parallel code review)
     ↓ approved
 finishing-branch (verify → merge/PR/keep/discard)
@@ -124,9 +145,19 @@ These thoughts mean STOP — you're rationalizing:
 | "The skill is overkill for this" | Simple things become complex. Use it. |
 | "I'll just do this one thing first" | Check BEFORE doing anything. |
 | "This is almost done, no need" | If you haven't verified, you're not done. |
+<!-- gambit-backend:claude -->
 | "Too simple for Tasks" | Simple tasks finish fast. Track them anyway. |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| "Too simple for a plan" | Small waves finish fast. Keep their state in this root session. |
+<!-- /gambit-backend -->
 | "I know the pattern already" | Load the skill. Memory drifts, skills don't. |
+<!-- gambit-backend:claude -->
 | "Let me just fix this quickly" | Create a Task, follow the process. |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+| "Let me just fix this quickly" | Follow the matching workflow and keep wave state in the root session. |
+<!-- /gambit-backend -->
 | "This feels productive" | Undisciplined action wastes time. Skills prevent this. |
 | "I'll just spawn a quick general-purpose agent" | Use a contracted class from `contracts/README.md`. A contractless agent has no blast-radius limit or return protocol. |
 
@@ -135,10 +166,20 @@ These thoughts mean STOP — you're rationalizing:
 These apply across ALL gambit skills:
 
 1. **One wave then stop** — execute one wave (one task, or several independent tasks in parallel), checkpoint, STOP; a goal Stop-hook resumes without a human
+<!-- gambit-backend:claude -->
 2. **Tasks are source of truth** — Use `TaskCreate`, `TaskUpdate`, `TaskList`, `TaskGet`. Never track work mentally
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+2. **Session state is the source of truth** — Use `SessionPlanRead` and `SessionPlanWrite` for complete wave state, and `SessionContextRead` for the approved contract, worker briefs, and latest checkpoint. Never track work mentally
+<!-- /gambit-backend -->
 3. **Evidence over assertions** — Run verification commands and show output before claiming done
 4. **Small steps that stay green** — Tests pass between every change
+<!-- gambit-backend:claude -->
 5. **Immutable requirements** — Epic requirements don't change; Tasks adapt to reality
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+5. **Immutable requirements** — Epic requirements don't change; worker briefs and wave state adapt to reality
+<!-- /gambit-backend -->
 6. **Dispatch contracted agents** — When you spawn a subagent, use a named class from `contracts/README.md` (worker/scout/finder/verifier/test-runner) with its contract by path and explicit model tier. Never a bare `general-purpose` agent without a contract.
 
 ## User Instructions
@@ -151,8 +192,16 @@ Instructions say WHAT, not HOW. "Add X" or "Fix Y" doesn't mean skip workflows. 
 
 **Calls:** All other gambit skills based on task context
 
+<!-- gambit-backend:claude -->
 **Task tools used:**
 - `TaskCreate` — Create tasks with subject, description, activeForm
 - `TaskUpdate` — Set status (in_progress/completed), add blockers via `addBlockedBy`
 - `TaskList` — Find ready tasks (status=pending, blockedBy=[])
 - `TaskGet` — Read full task details and success criteria
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**Session operations used:**
+- `SessionPlanWrite` — Replace the complete native plan with one concise step per wave and at most one wave in progress
+- `SessionPlanRead` — Read the root session's wave steps and native statuses
+- `SessionContextRead` — Read the approved contract, complete worker briefs, and latest checkpoint from the same root transcript
+<!-- /gambit-backend -->

@@ -1,7 +1,7 @@
 {
   "name": "gambit",
   "version": "1.18.0",
-  "description": "Structured development workflows for Codex with durable tasks, TDD, review, and verification.",
+  "description": "Structured development workflows for Codex with native session plans, TDD, review, and verification.",
   "author": {
     "name": "Josh Symonds",
     "email": "josh@joshsymonds.com",
@@ -23,7 +23,7 @@
   "interface": {
     "displayName": "Gambit",
     "shortDescription": "Disciplined planning, TDD, review, and delivery workflows",
-    "longDescription": "Use Gambit to turn ideas and bugs into durable task plans, execute one verified wave at a time, review independently, and finish branches safely.",
+    "longDescription": "Use Gambit to turn ideas and bugs into root-session plans, execute one verified wave at a time, review independently, and finish branches safely.",
     "developerName": "Josh Symonds",
     "category": "Coding",
     "capabilities": [

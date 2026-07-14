@@ -1,4 +1,4 @@
 interface:
   display_name: "Finishing a Branch"
-  short_description: "Use when all epic tasks show completed, when ready to integrate after review approval, when choos..."
+  short_description: "Use when every native epic wave is completed, when ready to integrate after review approval, when..."
   default_prompt: "Use $gambit:finishing-branch for this task."

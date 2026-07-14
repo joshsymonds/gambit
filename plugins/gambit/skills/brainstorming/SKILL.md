@@ -8,15 +8,18 @@ description: Use when user has a new feature idea, rough concept, or unexplored 
 ## Codex Backend
 
 This skill is assembled for Codex. Before following the workflow, read
-`references/codex-backend.md` completely. Its operation mappings are binding;
-names such as `GambitTaskList` and `SpawnAgent` are backend operations, not
+`references/codex-backend.md` completely. Its operation mappings are binding:
+`SessionPlanRead` reads the root session's native wave plan, `SessionPlanWrite`
+mutates it only through `update_plan`, and `SessionContextRead` reads the same
+root transcript. One native plan step is one Gambit wave; parallel workers are
+subagent threads inside that single step. These are backend operations, not
 literal shell commands.
 
 # Brainstorming Ideas Into Designs
 
 ## Overview
 
-Turn rough ideas into validated designs stored as epic Tasks with immutable requirements. Tasks are created iteratively as you learn, not upfront.
+Turn rough ideas into validated designs captured as immutable epic contracts in the root transcript. Complete worker briefs are authored iteratively as you learn, not upfront.
 
 **Core principle:** Ask questions to understand, research before proposing, document decisions for future reference.
 
@@ -25,8 +28,8 @@ Turn rough ideas into validated designs stored as epic Tasks with immutable requ
 ## Rigidity Level
 
 HIGH FREEDOM - Adapt questioning to context. But always:
-- Create immutable epic before code
-- Create only the first wave — independently pluckable tasks, never the full tree
+- Present the immutable epic contract before code
+- Author only the first wave — complete independently pluckable worker briefs, never a full tree
 - Ask every question in prose with context and a recommendation — never the GambitAskUser tool
 - Apply task refinement before handoff
 
@@ -38,13 +41,13 @@ HIGH FREEDOM - Adapt questioning to context. But always:
 | 2 | Research codebase and patterns | Existing approaches |
 | 3 | Propose 2-3 approaches | Recommended option |
 | 4 | Present design (isolated units, YAGNI) | Validated architecture |
-| 5 | Create epic Task | Immutable requirements + anti-patterns |
-| 6 | Create first wave (pluckable tasks only) | Ready for execution |
+| 5 | Present draft epic contract | Immutable requirements + anti-patterns |
+| 6 | Author complete first-wave worker briefs | Ready for self-review |
 | 7 | Apply task refinement | Corner cases covered |
 | 8 | Confirm immutable requirements with user | Contract locked |
 | 9 | Ask next step, invoke skill | Chain continues automatically |
 
-**Key:** Epic = contract (immutable), Tasks = adaptive (created as you learn)
+**Key:** Epic = root-transcript contract (immutable), wave plan = adaptive (replaced as you learn)
 
 <HARD-GATE>
 Do NOT write any code, invoke any implementation skill, or take any implementation action until you have presented a design and the user has approved it. This applies to EVERY idea regardless of perceived simplicity. No exceptions.
@@ -134,9 +137,9 @@ Once approach is chosen, present in digestible sections. Ask "Does this look rig
 
 ---
 
-### 4. Create the Epic Task
+### 4. Present the Epic Contract
 
-After design is validated, create epic as immutable contract. See [TEMPLATES.md](TEMPLATES.md) for the full template with all sections.
+After design is validated, author the immutable contract and present it in full in the root transcript. See [TEMPLATES.md](TEMPLATES.md) for the complete template. The epic is not a native plan step.
 
 **Required epic sections:**
 
@@ -152,9 +155,7 @@ After design is validated, create epic as immutable contract. See [TEMPLATES.md]
 **The Quality Bar is fixed — write it verbatim, don't elicit it.** Every epic carries the same bar: the highest professional standard, the code a master engineer would ship — elegant, complete, built on a superb foundation. It is not a per-project preference and is never negotiated down. Copy it verbatim from [TEMPLATES.md](TEMPLATES.md) into the epic so the checkpoint gate and reviewers have it locally. It governs *craftsmanship, not scope* — how well the required work is built, never how much of it; project-specific prohibitions go in Anti-Patterns. It sits on top of the mechanical floor the worker contract enforces (no suppression, no weakened tests, no dead code).
 
 ```
-GambitTaskCreate
-  subject: "Epic: [Feature Name]"
-  description: |
+Present in the root transcript as "Epic: [Feature Name]":
     ## Requirements (IMMUTABLE)
     - Requirement 1: [concrete, testable]
 
@@ -176,7 +177,6 @@ GambitTaskCreate
     ### [Rejected Approach] - REJECTED
     REJECTED BECAUSE: [reason]
     DO NOT REVISIT UNLESS: [condition]
-  activeForm: "Planning [feature name]"
 ```
 
 **Anti-patterns prevent requirement erosion.** When implementation gets hard, there's pressure to water down requirements. Explicit forbidden patterns with reasoning prevent this.
@@ -185,14 +185,12 @@ GambitTaskCreate
 
 ### 5. Create the First Wave
 
-Author every task that is **independently pluckable from the current codebase**: its brief can be written entirely from code that exists right now — exact file set, cited anchors, testable criteria — with no placeholder for another task's output, and its file set is disjoint from the others'. Often that's one task; when the design genuinely starts in parallel pieces, it's several. Never a full tree — everything whose spec depends on what execution will teach stays unauthored, created by executing-plans as you learn. Don't manufacture disjointness by splitting one behavior across a file boundary.
+Author a complete worker brief for every worker that is **independently pluckable from the current codebase**: each brief must be writable entirely from code that exists right now — exact file set, cited anchors, testable criteria — with no placeholder for another worker's output, and its file set must be disjoint from the others'. Present every full first-wave worker brief in the root transcript. Often there is one worker; when the design genuinely starts in parallel pieces, there are several. Never author a full tree.
 
-**Do NOT set first-wave tasks as blocked by the epic.** The epic is a documentation container for immutable requirements, not a workflow prerequisite. The Task API's `blockedBy` means "cannot start until the blocker completes" — since the epic only completes after all subtasks do, marking a subtask as blocked by the epic creates a deadlock. Subtasks are only blocked by other subtasks.
+Do not encode dependency edges. The epic is a contract in the root transcript, not a plan step or prerequisite. Put all independent first-wave workers in one concise wave step; order work that cannot start yet as a later wave only after its brief can be written from execution learnings.
 
 ```
-GambitTaskCreate
-  subject: "Add [specific deliverable]"
-  description: |
+Present in the root transcript as "Worker Brief: Add [specific deliverable]":
     ## Goal
     [One clear outcome]
 
@@ -206,7 +204,6 @@ GambitTaskCreate
     - [ ] [specific measurable outcome]
     - [ ] Tests passing
     - [ ] Pre-commit hooks passing
-  activeForm: "Adding [deliverable]"
 ```
 
 **Why so few?** Later tasks reflect learnings from execution. Upfront task trees become brittle when assumptions change.
@@ -228,7 +225,7 @@ Before handoff, verify each first-wave task passes these checks:
 - Network/IO failures? Concurrent access?
 - Security implications? Boundary conditions?
 
-Update the task with any missing details before proceeding.
+Keep each revised complete worker brief in the root transcript while refining. Do not initialize native plan state during drafting or self-review.
 
 #### Epic + first-task self-review
 
@@ -242,15 +239,30 @@ Scan for:
 - **Internal consistency:** The first task's files, function names, and success criteria should match the epic's stated approach. Mismatches mean one of them is wrong.
 - **Quality Bar present:** Does the epic carry the fixed Quality Bar verbatim from [TEMPLATES.md](TEMPLATES.md), unweakened? It's the same standard on every epic — restore it if it's missing, paraphrased, or watered down.
 
-Fix what you find by updating the epic or first task with `GambitTaskUpdate`, then proceed. Do NOT present a plan that has items on this list.
+Fix what you find in the draft contract and complete worker briefs. Do not initialize native plan state during self-review. Do NOT present a plan that has items on this list.
 
 #### Confirm the contract with the user
 
-Epic requirements are IMMUTABLE once execution starts — so the user reviews them BEFORE handoff, not after. Present the epic's Requirements, Success Criteria, and Anti-Patterns for confirmation; the Quality Bar is gambit's fixed standard and applies to every epic, so note it rather than asking the user to set it:
+Epic requirements are IMMUTABLE once execution starts — so the user reviews them BEFORE handoff, not after. Present the complete draft contract for confirmation: Requirements, Success Criteria, Anti-Patterns, Quality Bar, Approach, and Approaches Considered. The Quality Bar is gambit's fixed standard, so note it rather than asking the user to set it:
 
 > "Here's the epic contract — these requirements lock once we start: [summary]. Good to lock, or change anything first?"
 
-If they request changes, update the epic and re-run the self-review. Only proceed to handoff once they confirm.
+If they request changes, present the revised full contract and re-run the self-review. Only proceed to handoff once they confirm.
+
+After explicit user confirmation:
+
+1. Present the full approved epic contract in the root transcript.
+2. Present every complete first-wave worker brief in the root transcript.
+3. Initialize the complete native wave plan. The epic and worker briefs are not plan steps; each step is only a concise wave summary.
+
+```
+SessionPlanWrite
+  plan:
+    - step: "Wave 1: Add [deliverable]"
+      status: pending
+```
+
+This is the first native plan write. There is no draft plan state before confirmation.
 
 ---
 
@@ -258,7 +270,7 @@ If they request changes, update the epic and re-run the self-review. Only procee
 
 **Offer next steps in prose (not GambitAskUser), then invoke the chosen skill directly.**
 
-> "Epic and first task are ready. I'd start executing now — gambit:executing-plans opens a fresh worktree for the epic automatically. Or I can tighten the task further first with gambit:task-refinement. Which do you want?"
+> "The approved epic contract and full first-wave worker briefs are in this root transcript. I'd start executing now — gambit:executing-plans opens a fresh worktree for the epic automatically. Or I can tighten the briefs further first with gambit:task-refinement. Which do you want?"
 
 **After user responds, invoke the chosen skill directly using Codex skill invocation.** Do not just tell the user to run it — load and follow the skill immediately.
 
@@ -267,47 +279,45 @@ If they request changes, update the epic and re-run the self-review. Only procee
 
 ## Examples
 
-### Bad: Full Task Tree Upfront
+### Bad: Epic and Workers as Plan Records
+
+Do not put an epic step followed by one step per worker into the native plan. That turns concise wave state into a brittle task tree, and later steps become wrong as execution teaches you more.
+
+### Good: Contract and Briefs in Transcript, Waves in Plan
 
 ```
-GambitTaskCreate "Epic: Add OAuth"
-GambitTaskCreate "Task 1: Configure OAuth"
-GambitTaskCreate "Task 2: Implement token exchange"
-GambitTaskCreate "Task 3: Add refresh logic"
-# Execute Task 1 → discover library handles refresh
-# Task 3 is now wrong. Task tree is brittle.
+# Root transcript contains the complete approved "Epic: Add OAuth" contract.
+# Root transcript contains complete briefs for both independent first-wave workers.
+
+SessionPlanWrite
+  plan:
+    - step: "Wave 1: Configure OAuth provider and validate middleware anchors"
+      status: pending
+
+# Execute the wave, checkpoint learnings, then author later worker briefs.
+# Replace the complete plan list only when the next concise wave is known.
 ```
 
-### Good: Iterative Task Creation
+### Bad: Contract Without Anti-Patterns
 
 ```
-GambitTaskCreate "Epic: Add OAuth" [immutable requirements + anti-patterns]
-GambitTaskCreate "Task 1: Configure OAuth provider"
-# Execute → learn library handles refresh automatically
-GambitTaskCreate "Task 2: Integrate with existing middleware"
-# Created AFTER learning from Task 1 — reflects reality
-```
-
-### Bad: Epic Without Anti-Patterns
-
-```
-GambitTaskCreate subject: "Epic: OAuth"
-  ## Requirements
-  - Users authenticate via Google OAuth2
-  - Tokens stored securely
+Present "Epic: OAuth" in the root transcript:
+    ## Requirements
+    - Users authenticate via Google OAuth2
+    - Tokens stored securely
 # "Tokens stored securely" is vague
 # No forbidden patterns → agent rationalizes localStorage when blocked
 ```
 
-### Good: Epic With Anti-Patterns
+### Good: Contract With Anti-Patterns
 
 ```
-GambitTaskCreate subject: "Epic: OAuth"
-  ## Requirements (IMMUTABLE)
-  - Tokens stored in httpOnly cookies with Secure flag
-  ## Anti-Patterns (FORBIDDEN)
-  - NO localStorage tokens (reason: XSS vulnerability)
-  - NO mocking OAuth in integration tests (reason: defeats purpose)
+Present "Epic: OAuth" in the root transcript:
+    ## Requirements (IMMUTABLE)
+    - Tokens stored in httpOnly cookies with Secure flag
+    ## Anti-Patterns (FORBIDDEN)
+    - NO localStorage tokens (reason: XSS vulnerability)
+    - NO mocking OAuth in integration tests (reason: defeats purpose)
 # Explicit reasoning prevents watering down under pressure
 ```
 
@@ -328,7 +338,7 @@ GambitTaskCreate subject: "Epic: OAuth"
 **Common rationalizations (all mean STOP, follow the process):**
 - "Requirements obvious" → Questions reveal hidden complexity
 - "I know this pattern" → Research might show a better way
-- "Can plan all tasks upfront" → Plans become brittle as you learn
+- "Can plan every worker upfront" → Worker briefs become brittle as you learn
 - "It's one project" → Independent subsystems are separate epics; decompose first
 - "They'll want this feature too" → YAGNI; propose minimal, let them ask for more
 

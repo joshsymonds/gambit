@@ -8,8 +8,11 @@ description: Use when restructuring code without changing its behavior — extra
 ## Codex Backend
 
 This skill is assembled for Codex. Before following the workflow, read
-`references/codex-backend.md` completely. Its operation mappings are binding;
-names such as `GambitTaskList` and `SpawnAgent` are backend operations, not
+`references/codex-backend.md` completely. Its operation mappings are binding:
+`SessionPlanRead` reads the root session's native wave plan, `SessionPlanWrite`
+mutates it only through `update_plan`, and `SessionContextRead` reads the same
+root transcript. One native plan step is one Gambit wave; parallel workers are
+subagent threads inside that single step. These are backend operations, not
 literal shell commands.
 
 # Safe Refactoring
@@ -35,14 +38,14 @@ Violating the cycle is violating the skill. "I'll test at the end" means you're 
 | Step | Action | STOP If |
 |------|--------|---------|
 | 1 | Verify tests pass BEFORE starting | Any test fails |
-| 2 | Create refactoring Task | - |
+| 2 | Present complete refactoring workflow brief in root transcript | - |
 | 3 | Make ONE small change | Doesn't compile |
 | 4 | Run tests immediately | Any test fails |
 | 5 | Commit with descriptive message | - |
 | 6 | Repeat 3-5 until complete | Tests fail → undo |
 | 7 | Final verification | - |
 | 8 | Mandatory review | Review fails |
-| 9 | Close Task | - |
+| 9 | Record checkpoint result and complete the wave | - |
 
 **Core cycle:** Change → Test → Commit (repeat)
 
@@ -84,12 +87,10 @@ Failing tests mean you can't detect if refactoring breaks things.
 
 ---
 
-### Step 2: Create Refactoring Task
+### Step 2: Present the Refactoring Workflow Brief
 
 ```
-GambitTaskCreate
-  subject: "Refactor: [specific goal]"
-  description: |
+Present in the root transcript as "Workflow Brief: Refactor [specific goal]":
     ## Goal
     [What structure change you're making]
 
@@ -106,10 +107,9 @@ GambitTaskCreate
     - [ ] No behavior changes
     - [ ] Code is cleaner/simpler
     - [ ] Each commit is small and safe
-  activeForm: "Refactoring code"
 ```
 
-Then: `GambitTaskUpdate taskId: "[id]" status: "in_progress"`
+Keep the complete workflow brief in the root transcript. If this refactoring is already a worker inside the current wave, do not create another plan step. Otherwise use `SessionPlanWrite` only as a complete-list replacement that preserves every existing step and marks one concise refactoring wave `in_progress`.
 
 ---
 
@@ -231,22 +231,21 @@ Invoke skill="$gambit:review"
 
 Do not skip review for "simple" refactorings. Do not tell the user to run it manually — invoke it and follow its process immediately. Review validates the refactoring didn't introduce regressions, security issues, or quality problems.
 
-### Step 9: Close Task
+### Step 9: Record Results and Close the Wave
 
 After review passes:
 
 ```
-GambitTaskUpdate
-  taskId: "[task-id]"
-  description: |
+Present in the root checkpoint as the complete refactoring result:
     ## Completed
     - [List of transformations made]
     - All tests pass (verified)
     - No behavior changes
     - N small transformations, each tested
     - Review: APPROVED
-  status: "completed"
 ```
+
+After the checkpoint result and review evidence are present, use `SessionPlanWrite` only to replace the complete ordered plan and mark the single refactoring wave completed. Individual transformations are not plan steps.
 
 ---
 
@@ -309,7 +308,7 @@ All of these mean: **STOP. Return to the change→test→commit cycle.**
 Before marking refactoring complete:
 
 - [ ] Verified all tests passed BEFORE starting
-- [ ] Created Task tracking the refactoring
+- [ ] Presented the complete refactoring workflow brief in the root transcript
 - [ ] Made ONE small change at a time
 - [ ] Ran tests after EVERY change
 - [ ] Committed each safe transformation
@@ -319,10 +318,10 @@ Before marking refactoring complete:
 - [ ] Each commit in history is small and safe
 - [ ] Final verification: all tests pass, no warnings
 - [ ] `gambit:review` invoked and passed
-- [ ] Task documents what was done and why
-- [ ] Task marked complete
+- [ ] Root checkpoint documents what was done and why
+- [ ] Complete native plan marks the refactoring wave completed
 
-**Can't check all boxes?** Return to process and fix before closing Task.
+**Can't check all boxes?** Return to the process before completing the wave.
 
 ---
 
@@ -360,7 +359,7 @@ Want to improve code structure
     ↓
 Step 1: Verify tests pass
     ↓
-Step 2: Create Task
+Step 2: Present complete workflow brief
     ↓
 Steps 3-6: Change → Test → Commit (repeat)
     ↓
@@ -368,5 +367,5 @@ Step 7: Final verification
     ↓
 Step 8: Mandatory review
     ↓
-Step 9: Close Task
+Step 9: Record checkpoint and complete wave
 ```

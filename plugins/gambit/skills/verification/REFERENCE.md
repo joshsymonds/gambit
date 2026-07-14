@@ -54,9 +54,7 @@ Developer implements functions.
 
 Developer thinks: "I implemented everything, task complete"
 
-GambitTaskUpdate
-  taskId: "task-id"
-  status: "completed"
+Developer replaces the complete plan and marks the current wave completed.
 
 [No verification commands run]
 ```
@@ -70,7 +68,7 @@ GambitTaskUpdate
 ## Good: Verifying Each Criterion
 
 ```
-GambitTaskGet taskId: "task-id"
+SessionContextRead → complete current-wave worker brief from this root transcript
 
 Success criteria:
 - [ ] All functions fully implemented (no stubs, no TODOs)
@@ -96,10 +94,10 @@ Verification:
 
 All criteria verified.
 
-GambitTaskUpdate
-  taskId: "task-id"
-  status: "completed"
+Report: "Wave is ready for the owning execution workflow's durable checkpoint."
 ```
+
+Verification reports readiness only. The owning execution workflow commits the verified wave, retains the full checkpoint and next-wave briefs in the root transcript, and only then performs the native completion mutation.
 
 ## Bad: Trusting Agent Reports
 

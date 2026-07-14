@@ -1,13 +1,25 @@
+<!-- gambit-backend:claude -->
 # Epic and Task Templates
 
 Full templates for creating epics and first tasks. SKILL.md has condensed versions — use these for complete output.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+# Epic Contract and Worker Brief Templates
+
+Full templates for drafting the epic contract and first-wave worker briefs before user review, then presenting the approved records in the root transcript. SKILL.md has condensed versions. Only concise wave summaries belong in the native plan.
+<!-- /gambit-backend -->
 
 ## Epic Template
 
 ```
+<!-- gambit-backend:claude -->
 TaskCreate
   subject: "Epic: [Feature Name]"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Draft for user review as "Epic: [Feature Name]":
+<!-- /gambit-backend -->
     ## Requirements (IMMUTABLE)
     [What MUST be true when complete — specific, testable]
     - Requirement 1: [concrete requirement]
@@ -76,7 +88,9 @@ TaskCreate
     ## Open Questions
     - [uncertainties to resolve during implementation]
     - [decisions deferred to execution phase]
+<!-- gambit-backend:claude -->
   activeForm: "Planning [feature name]"
+<!-- /gambit-backend -->
 ```
 
 ### Anti-Pattern Examples
@@ -89,12 +103,22 @@ TaskCreate
 - NO separate WebSocket port (reason: deployment complexity, firewall rules)
 ```
 
+<!-- gambit-backend:claude -->
 ## First Task Template
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+## First-Wave Worker Brief Template
+<!-- /gambit-backend -->
 
 ```
+<!-- gambit-backend:claude -->
 TaskCreate
   subject: "Add [specific deliverable]"
   description: |
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Draft for user review as "Worker Brief: Add [specific deliverable]":
+<!-- /gambit-backend -->
     ## Goal
     [What this task delivers — one clear outcome]
 
@@ -114,5 +138,18 @@ TaskCreate
     - [ ] [Specific, measurable outcome]
     - [ ] Tests passing
     - [ ] Pre-commit hooks passing
+<!-- gambit-backend:claude -->
   activeForm: "Adding [deliverable]"
+<!-- /gambit-backend -->
 ```
+<!-- gambit-backend:codex -->
+
+For a fresh epic, obtain explicit user approval of the complete draft contract and every complete first-wave worker brief. Only after approval, present the full approved contract and every complete first-wave brief in the root transcript, then initialize the complete ordered wave list. A parallel first wave is one step regardless of its worker count:
+
+```
+SessionPlanWrite
+  plan:
+    - step: "Wave 1: Add [concise deliverable summary]"
+      status: pending
+```
+<!-- /gambit-backend -->

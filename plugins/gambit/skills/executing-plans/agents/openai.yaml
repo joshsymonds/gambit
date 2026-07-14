@@ -1,4 +1,4 @@
 interface:
   display_name: "Executing Plans"
-  short_description: "Use when an epic Task exists and subtasks are ready to implement, when resuming work after a prev..."
+  short_description: "Use when an approved epic contract and native wave plan exist in the current root session, when r..."
   default_prompt: "Use $gambit:executing-plans for this task."

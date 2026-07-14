@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Gambit is a dual-backend plugin providing structured development workflows for Claude Code and Codex. Canonical sources are assembled into backend-native skill trees; Claude uses native Tasks and Codex uses Gambit's durable Git-local task store.
+Gambit is a dual-backend plugin providing structured development workflows for Claude Code and Codex. Canonical sources are assembled into backend-native skill trees; Claude uses native Tasks and Codex uses its native `update_plan` state scoped to the root session.
 
 **Installation:** `/plugin marketplace add joshsymonds/gambit && /plugin install gambit@gambit`
 
@@ -44,8 +44,12 @@ Claude builds use Claude Code's Task system:
 - `TaskList` — Find next ready task
 - **Tasks are source of truth** — never track work mentally
 
-Codex builds translate those operations to the generated `gambit_tasks.py`
-resource, which stores dependency-aware state under Git's common directory.
+Codex builds use native `update_plan` as the source of truth for root-session
+wave state, with one concise plan step per wave and at most one wave in
+progress. The root transcript carries the complete approved epic contract,
+complete worker briefs, and checkpoints; concise wave steps never duplicate
+those records. Legacy repository task files are ignored and untouched: there
+is no repository task store or migration.
 
 ### Orchestrator + Workers
 `executing-plans` runs as an **orchestrator**: it stays a coordinator (whatever model you launched the session with) and dispatches fresh generic `general-purpose` **workers** — one per task, and several in parallel when a cycle's ready tasks have pairwise-disjoint file sets (a **wave**) — rather than writing implementation code itself. The one exception is **aesthetic-judgment work** (visual design, layout, typography), which the orchestrator implements itself and verifies by screenshot. Parallel workers in a wave each run in their own detached-HEAD **worktree** forked off the epic's HEAD, so their tests and lints can't interfere; the orchestrator integrates the returned diffs serially (gate → apply → full suite → per-task commit) as the sole committer. Every worker reads the shared `contracts/worker.md` by path — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast **Stop Triggers**, and a **4-state return** (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`). The orchestrator routes on that status (verify / resolve / add context / escalate), never retries the same model on an unchanged task, and commits at the checkpoint — workers never commit. Each cycle ends in a checkpoint **STOP**; a **goal Stop-hook** re-invokes the skill for the next wave — the only sanctioned way to run without a human pause, never self-granted. At each checkpoint a passing test is necessary but not sufficient: the orchestrator runs a **quality gate** — it reads the worker's actual diff and judges it against the epic's **Quality Bar** (gambit's fixed maximal standard, carried verbatim in every epic), the epic's Anti-Patterns, and the worker quality policy, then emits a cited verdict before committing. It judges the diff itself in the common case, escalating to the `quality` finder (scoped to that one diff) only on doubt, a large/sensitive change, or a `DONE_WITH_CONCERNS` return.

@@ -1,13 +1,11 @@
-# Epic and Task Templates
+# Epic Contract and Worker Brief Templates
 
-Full templates for creating epics and first tasks. SKILL.md has condensed versions — use these for complete output.
+Full templates for drafting the epic contract and first-wave worker briefs before user review, then presenting the approved records in the root transcript. SKILL.md has condensed versions. Only concise wave summaries belong in the native plan.
 
 ## Epic Template
 
 ```
-GambitTaskCreate
-  subject: "Epic: [Feature Name]"
-  description: |
+Draft for user review as "Epic: [Feature Name]":
     ## Requirements (IMMUTABLE)
     [What MUST be true when complete — specific, testable]
     - Requirement 1: [concrete requirement]
@@ -76,7 +74,6 @@ GambitTaskCreate
     ## Open Questions
     - [uncertainties to resolve during implementation]
     - [decisions deferred to execution phase]
-  activeForm: "Planning [feature name]"
 ```
 
 ### Anti-Pattern Examples
@@ -89,12 +86,10 @@ GambitTaskCreate
 - NO separate WebSocket port (reason: deployment complexity, firewall rules)
 ```
 
-## First Task Template
+## First-Wave Worker Brief Template
 
 ```
-GambitTaskCreate
-  subject: "Add [specific deliverable]"
-  description: |
+Draft for user review as "Worker Brief: Add [specific deliverable]":
     ## Goal
     [What this task delivers — one clear outcome]
 
@@ -114,5 +109,13 @@ GambitTaskCreate
     - [ ] [Specific, measurable outcome]
     - [ ] Tests passing
     - [ ] Pre-commit hooks passing
-  activeForm: "Adding [deliverable]"
+```
+
+For a fresh epic, obtain explicit user approval of the complete draft contract and every complete first-wave worker brief. Only after approval, present the full approved contract and every complete first-wave brief in the root transcript, then initialize the complete ordered wave list. A parallel first wave is one step regardless of its worker count:
+
+```
+SessionPlanWrite
+  plan:
+    - step: "Wave 1: Add [concise deliverable summary]"
+      status: pending
 ```

@@ -8,8 +8,11 @@ description: Use when creating a new skill, modifying an existing skill, writing
 ## Codex Backend
 
 This skill is assembled for Codex. Before following the workflow, read
-`references/codex-backend.md` completely. Its operation mappings are binding;
-names such as `GambitTaskList` and `SpawnAgent` are backend operations, not
+`references/codex-backend.md` completely. Its operation mappings are binding:
+`SessionPlanRead` reads the root session's native wave plan, `SessionPlanWrite`
+mutates it only through `update_plan`, and `SessionContextRead` reads the same
+root transcript. One native plan step is one Gambit wave; parallel workers are
+subagent threads inside that single step. These are backend operations, not
 literal shell commands.
 
 # Writing Skills
@@ -130,9 +133,7 @@ Internalize it before writing. When targeting Anthropic's backend, also consult 
 3. What would success look like?
 
 ```
-GambitTaskCreate
-  subject: "Eval: [skill-name] baseline test"
-  description: |
+Present in the root transcript as "Evaluation Brief: [skill-name] baseline test":
     ## Scenario
     [Situation requiring the skill]
 
@@ -145,8 +146,9 @@ GambitTaskCreate
     ## Success Criteria
     - [ ] Codex [specific behavior]
     - [ ] Codex does NOT [failure behavior]
-  activeForm: "Creating evaluation"
 ```
+
+Keep the full evaluation brief in the root transcript. If this evaluation is not already part of the active wave, call `SessionPlanWrite` only as a complete-list replacement that preserves every existing step and adds one concise evaluation-wave summary.
 
 ---
 
@@ -347,12 +349,10 @@ Should NOT trigger (run 3-5 queries):
 wc -l skills/[skill-name]/SKILL.md  # Should be <500
 ```
 
-**Update Task and commit:**
+**Present complete evaluation results in the root checkpoint and update the wave:**
 
 ```
-GambitTaskUpdate
-  taskId: "[task-id]"
-  description: |
+Present as "Evaluation Results: [skill-name]":
     ## Results
     - Baseline: FAIL (expected)
     - Effectiveness: PASS
@@ -360,8 +360,9 @@ GambitTaskUpdate
     - Multi-model: PASS
     - Triggering: PASS
     - Lines: [N] (<500)
-  status: "completed"
 ```
+
+After checkpointing the full results, use `SessionPlanWrite` only to replace the complete ordered plan and mark the single evaluation wave completed. Individual evaluation cases remain transcript results, not plan steps.
 
 ---
 
