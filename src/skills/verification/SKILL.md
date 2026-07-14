@@ -1,6 +1,6 @@
 ---
 name: verification
-description: Use before any completion claim, success statement, or marking a task done. Triggers when about to say "Great!", "Perfect!", "Done", "All set", "Ready to commit", before creating a PR, before moving to the next task, or when code has changed since the last test run.
+description: Use this implementation mechanic to substantiate a completion or readiness claim only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
 ---
 
 # Verification Before Completion
@@ -10,8 +10,6 @@ description: Use before any completion claim, success statement, or marking a ta
 Claiming work is complete without verification is dishonesty, not efficiency.
 
 **Core principle:** Evidence before claims, always. Be adversarial about proof and closed about scope.
-
-**Announce at start:** "I'm using gambit:verification to confirm this with evidence."
 
 ## Rigidity Level
 

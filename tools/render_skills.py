@@ -54,6 +54,21 @@ PROFILE_AWARE_NOTE = (
     "Profile-aware: requires hide_spawn_agent_metadata = false."
 )
 
+CODEX_IMPLICIT_INVOCATION = {
+    "brainstorming": True,
+    "debugging": True,
+    "executing-plans": True,
+    "finishing-branch": True,
+    "refactoring": False,
+    "review": True,
+    "task-refinement": False,
+    "test-driven-development": False,
+    "testing-quality": False,
+    "using-gambit": False,
+    "verification": False,
+    "writing-skills": True,
+}
+
 
 CODEX_REPLACEMENTS = [
     ("~/.claude/gambit/models.json", "~/.codex/agents/"),
@@ -285,7 +300,19 @@ def transform_codex_spawn_agent_examples(text: str, relative: Path) -> str:
     return FENCED_CODE_BLOCK.sub(transform_fence, text)
 
 
+def is_anthropic_reference(relative: Path) -> bool:
+    return (
+        len(relative.parts) >= 3
+        and relative.parts[0] == "writing-skills"
+        and relative.parts[1] == "references"
+        and relative.name.startswith("anthropic-")
+    )
+
+
 def codex_transform(text: str, relative: Path) -> str:
+    if is_anthropic_reference(relative):
+        return text
+
     # Explicit invocation must be translated before the plain namespace text.
     text = re.sub(r"/gambit:([a-z0-9-]+)", r"$gambit:\1", text)
     text = re.sub(
@@ -297,19 +324,16 @@ def codex_transform(text: str, relative: Path) -> str:
     for old, new in CODEX_REPLACEMENTS:
         text = text.replace(old, new)
 
-    is_anthropic_reference = (
-        len(relative.parts) >= 3
-        and relative.parts[0] == "writing-skills"
-        and relative.parts[1] == "references"
-        and relative.name.startswith("anthropic-")
-    )
-    if not is_anthropic_reference:
-        text = re.sub(r"\bsubagent_type\b", "agent_type", text)
-        text = re.sub(r"\bgeneral-purpose\b", "default", text)
-        text = re.sub(r"\bExplore\b", "explorer", text)
-        text = text.replace("`model:`", "`agent profile:`")
-        text = text.replace(" model:", " agent_profile:")
-        text = text.replace(" model=", " agent_profile=")
+    text = re.sub(r"\bsubagent_type\b", "agent_type", text)
+    text = re.sub(r"\bgeneral-purpose\b", "default", text)
+    text = re.sub(r"\bExplore\b", "explorer", text)
+    text = text.replace("`model:`", "`agent profile:`")
+    text = text.replace(" model:", " agent_profile:")
+    text = text.replace(" model=", " agent_profile=")
+
+    if relative.suffix.lower() == ".md":
+        text = re.sub(r"(?m)^Task$", "SpawnAgent", text)
+        text = re.sub(r"(?m)^Task (prompt\d+)$", r"SpawnAgent \1", text)
 
     if relative.name == "SKILL.md":
         text = strip_codex_frontmatter_fields(text)
@@ -320,8 +344,6 @@ def codex_transform(text: str, relative: Path) -> str:
         text = re.sub(r"\bAgent call\b", "SpawnAgent call", text)
         text = text.replace("Read tool", "Codex file-reading capability")
         text = text.replace("multiple Task() calls", "multiple SpawnAgent calls")
-        text = re.sub(r"(?m)^Task$", "SpawnAgent", text)
-        text = re.sub(r"(?m)^Task (prompt\d+)$", r"SpawnAgent \1", text)
         text = text.replace('default `"opus"`', "the default escalation profile")
         text = text.replace('model: "haiku"  # or "sonnet", "opus"', 'role: "worker"  # select an installed Codex agent profile when needed')
 
@@ -408,8 +430,6 @@ def codex_transform(text: str, relative: Path) -> str:
                 flags=re.DOTALL,
             )
 
-        text = transform_codex_spawn_agent_examples(text, relative)
-
         marker = "\n---\n"
         frontmatter_end = text.find(marker, 4)
         if frontmatter_end < 0:
@@ -419,6 +439,9 @@ def codex_transform(text: str, relative: Path) -> str:
             encoding="utf-8"
         ).rstrip()
         text = text[:insertion] + "\n" + preamble + "\n" + text[insertion:]
+
+    if relative.suffix.lower() == ".md":
+        text = transform_codex_spawn_agent_examples(text, relative)
 
     return text
 
@@ -460,6 +483,13 @@ def yaml_quote(value: str) -> str:
     return json.dumps(value, ensure_ascii=False)
 
 
+def codex_allows_implicit_invocation(skill_name: str) -> bool:
+    try:
+        return CODEX_IMPLICIT_INVOCATION[skill_name]
+    except KeyError as error:
+        raise ValueError(f"unknown Gambit skill: {skill_name}") from error
+
+
 def add_codex_resources(skills_dir: Path) -> None:
     backend_reference = CODEX_BACKEND / "resources" / "codex-backend.md"
     skill_guidance = CODEX_BACKEND / "resources" / "codex-skill-guidance.md"
@@ -480,11 +510,14 @@ def add_codex_resources(skills_dir: Path) -> None:
         agents.mkdir(exist_ok=True)
         short = description if len(description) <= 100 else description[:97].rstrip() + "..."
         default_prompt = f"Use $gambit:{name} for this task."
+        allow_implicit = str(codex_allows_implicit_invocation(name)).lower()
         (agents / "openai.yaml").write_text(
             "interface:\n"
             f"  display_name: {yaml_quote(title)}\n"
             f"  short_description: {yaml_quote(short)}\n"
-            f"  default_prompt: {yaml_quote(default_prompt)}\n",
+            f"  default_prompt: {yaml_quote(default_prompt)}\n"
+            "policy:\n"
+            f"  allow_implicit_invocation: {allow_implicit}\n",
             encoding="utf-8",
         )
 

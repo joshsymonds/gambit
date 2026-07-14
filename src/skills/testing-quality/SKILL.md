@@ -1,6 +1,6 @@
 ---
 name: testing-quality
-description: Use when bugs keep slipping through despite high test coverage, when suspecting tests are giving false confidence, before a major refactor that will depend on the existing test suite, or when coverage metrics don't match incident rates. User phrases like "do these tests actually catch bugs?", "is this suite any good?", "why didn't the tests catch this?".
+description: Use this implementation mechanic to audit an existing test suite only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
 user_invokable: true
 ---
 
@@ -16,8 +16,6 @@ Audit test suites for real effectiveness, not vanity metrics. Identify tests tha
 <!-- /gambit-backend -->
 
 **Core principle:** Tests must catch bugs, not inflate coverage metrics. Coverage measures execution, not assertion quality.
-
-**Announce at start:** "I'm using gambit:testing-quality to audit these tests with SRE-level scrutiny."
 
 ## Rigidity Level
 

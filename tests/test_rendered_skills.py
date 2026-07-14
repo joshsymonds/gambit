@@ -15,6 +15,33 @@ CODEX_PLUGIN = ROOT / "plugins" / "gambit"
 CLAUDE_SKILLS = ROOT / "skills"
 CLAUDE_CONTRACTS = ROOT / "contracts"
 TEXT_SUFFIXES = {".md", ".txt", ".json", ".toml", ".yaml", ".yml", ".sh", ".py"}
+CODE_FENCE = re.compile(
+    r"^[ \t]*```[^\n]*\n(.*?)^[ \t]*```[ \t]*$",
+    re.MULTILINE | re.DOTALL,
+)
+SPAWN_AGENT_START = re.compile(r"(?m)^[ \t]*SpawnAgent(?:\s|$)")
+LEGACY_AGENT_DISPATCH = re.compile(
+    r"(?m)^[ \t]*(?:(?:Task|Agent)(?:"
+    r"[ \t]+[A-Za-z_][A-Za-z0-9_]*[ \t]*=|"
+    r"[ \t]*\(|[ \t]*$)|Task[ \t]+prompt\d+(?:[ \t]|$)"
+    r")"
+)
+FORBIDDEN_SPAWN_AGENT_FIELDS = (
+    "role",
+    "description",
+    "prompt",
+    "agent_profile",
+    "items",
+    "fork_context",
+    "model",
+    "effort",
+    "reasoning_effort",
+    "service_tier",
+)
+CONCRETE_AGENT_MODELS = re.compile(
+    r"(?i)\b(?:gpt-[a-z0-9.-]+|o[1-9](?:-[a-z0-9.-]+)?|"
+    r"codex-mini|haiku|sonnet|opus)\b"
+)
 
 
 def rendered_text_files(root: Path) -> list[Path]:
@@ -23,6 +50,69 @@ def rendered_text_files(root: Path) -> list[Path]:
         for path in root.rglob("*")
         if path.is_file() and path.suffix.lower() in TEXT_SUFFIXES
     )
+
+
+def dispatch_field(name: str) -> re.Pattern[str]:
+    return re.compile(rf'(?m)(?:^|\s){name}\s*(?:=|:)\s*"([^"]*)"')
+
+
+def dispatch_field_name(name: str) -> re.Pattern[str]:
+    return re.compile(rf"(?m)(?:^|[ \t]){name}[ \t]*(?:=|:)")
+
+
+def validated_codex_dispatch_examples(
+    test_case: unittest.TestCase,
+    text: str,
+    artifact: Path | str,
+) -> list[str]:
+    examples: list[str] = []
+    for fence in CODE_FENCE.finditer(text):
+        block = fence.group(1)
+        test_case.assertIsNone(
+            LEGACY_AGENT_DISPATCH.search(block),
+            f"legacy agent dispatch in {artifact}:\n{block}",
+        )
+        starts = list(SPAWN_AGENT_START.finditer(block))
+        for index, start in enumerate(starts):
+            end = (
+                starts[index + 1].start()
+                if index + 1 < len(starts)
+                else len(block)
+            )
+            example = block[start.start() : end]
+            examples.append(example)
+
+            task_name = dispatch_field("task_name").search(example)
+            message = re.search(
+                r'(?m)(?:^|\s)message\s*(?:=|:)\s*(?:"|\|)',
+                example,
+            )
+            fork_turns = dispatch_field("fork_turns").search(example)
+            test_case.assertIsNotNone(task_name, example)
+            test_case.assertRegex(
+                task_name.group(1),
+                r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+            )
+            test_case.assertIsNotNone(message, example)
+            test_case.assertIsNotNone(fork_turns, example)
+            test_case.assertEqual(fork_turns.group(1), "none", example)
+
+            for forbidden in FORBIDDEN_SPAWN_AGENT_FIELDS:
+                test_case.assertIsNone(
+                    dispatch_field_name(forbidden).search(example),
+                    example,
+                )
+            test_case.assertIsNone(CONCRETE_AGENT_MODELS.search(example), example)
+
+            agent_type = dispatch_field("agent_type").search(example)
+            if agent_type is not None:
+                test_case.assertRegex(
+                    example,
+                    r"(?i)profile-aware[^\n]*hide_spawn_agent_metadata",
+                )
+                test_case.assertNotEqual(fork_turns.group(1), "all")
+
+    return examples
 
 
 class RenderedSkillsTest(unittest.TestCase):
@@ -63,33 +153,30 @@ class RenderedSkillsTest(unittest.TestCase):
         self.assertTrue((skill / "references" / "codex-skill-guidance.md").exists())
 
     def test_codex_dispatch_examples_use_spawn_agent_schema(self) -> None:
-        fenced_code = re.compile(
-            r"^[ \t]*```[^\n]*\n(.*?)^[ \t]*```[ \t]*$",
-            re.MULTILINE | re.DOTALL,
-        )
-        spawn_start = re.compile(r"(?m)^[ \t]*SpawnAgent(?:\s|$)")
-        def field(name: str) -> re.Pattern[str]:
-            return re.compile(
-                rf"(?m)(?:^|\s){name}\s*(?:=|:)\s*\"([^\"]*)\""
-            )
+        invalid_fences = {
+            "legacy Task fields": (
+                '```text\nTask agent_type="default" description="x" prompt="y"\n```\n'
+            ),
+            "legacy Agent fields": (
+                '```text\nAgent description="x" prompt="y"\n```\n'
+            ),
+            "bare effort field": (
+                '```text\nSpawnAgent task_name="x" message="y" '
+                'fork_turns="none" effort="high"\n```\n'
+            ),
+        }
+        for label, text in invalid_fences.items():
+            with self.subTest(synthetic=label):
+                with self.assertRaises(AssertionError):
+                    validated_codex_dispatch_examples(self, text, label)
 
-        def field_name(name: str) -> re.Pattern[str]:
-            return re.compile(rf"(?m)(?:^|[ \t]){name}[ \t]*(?:=|:)")
-
-        forbidden_fields = (
-            "role",
-            "description",
-            "prompt",
-            "agent_profile",
-            "items",
-            "fork_context",
-            "model",
-            "reasoning_effort",
-            "service_tier",
+        portable = (
+            '```text\nSpawnAgent task_name="x" message="y" '
+            'fork_turns="none"\n```\n'
         )
-        concrete_models = re.compile(
-            r"(?i)\b(?:gpt-[a-z0-9.-]+|o[1-9](?:-[a-z0-9.-]+)?|"
-            r"codex-mini|haiku|sonnet|opus)\b"
+        self.assertEqual(
+            1,
+            len(validated_codex_dispatch_examples(self, portable, "portable V2")),
         )
 
         with tempfile.TemporaryDirectory() as temporary:
@@ -97,18 +184,35 @@ class RenderedSkillsTest(unittest.TestCase):
                 "codex", Path(temporary)
             )
             examples: list[tuple[Path, str]] = []
-            for artifact in rendered_text_files(skills_root):
+            for artifact in (
+                rendered_text_files(skills_root)
+                + rendered_text_files(contracts_root)
+            ):
+                relative = (
+                    artifact.relative_to(skills_root)
+                    if artifact.is_relative_to(skills_root)
+                    else artifact.relative_to(contracts_root)
+                )
+                is_anthropic_reference = (
+                    len(relative.parts) >= 3
+                    and relative.parts[0] == "writing-skills"
+                    and relative.parts[1] == "references"
+                    and relative.name.startswith("anthropic-")
+                )
+                if is_anthropic_reference:
+                    canonical = ROOT / "src" / "skills" / relative
+                    self.assertEqual(canonical.read_bytes(), artifact.read_bytes())
+                    continue
+
                 text = artifact.read_text(encoding="utf-8")
-                for fence in fenced_code.finditer(text):
-                    block = fence.group(1)
-                    starts = list(spawn_start.finditer(block))
-                    for index, start in enumerate(starts):
-                        end = (
-                            starts[index + 1].start()
-                            if index + 1 < len(starts)
-                            else len(block)
-                        )
-                        examples.append((artifact, block[start.start() : end]))
+                examples.extend(
+                    (artifact, example)
+                    for example in validated_codex_dispatch_examples(
+                        self,
+                        text,
+                        artifact,
+                    )
+                )
 
             self.assertTrue(
                 examples, "rendered Codex skills contain no SpawnAgent examples"
@@ -117,36 +221,10 @@ class RenderedSkillsTest(unittest.TestCase):
             profile_aware_classes: set[str] = set()
             for artifact, example in examples:
                 with self.subTest(artifact=artifact, example=example.splitlines()[0]):
-                    task_name = field("task_name").search(example)
-                    message = re.search(
-                        r"(?m)(?:^|\s)message\s*(?:=|:)\s*(?:\"|\|)",
-                        example,
-                    )
-                    fork_turns = field("fork_turns").search(example)
-                    self.assertIsNotNone(task_name, example)
-                    self.assertRegex(
-                        task_name.group(1),
-                        r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
-                    )
-                    self.assertIsNotNone(message, example)
-                    self.assertIsNotNone(fork_turns, example)
-                    self.assertEqual(fork_turns.group(1), "none", example)
-
-                    for forbidden in forbidden_fields:
-                        self.assertIsNone(
-                            field_name(forbidden).search(example), example
-                        )
-                    self.assertIsNone(concrete_models.search(example), example)
-
-                    agent_type = field("agent_type").search(example)
+                    agent_type = dispatch_field("agent_type").search(example)
                     if agent_type is None:
                         portable_examples += 1
                     else:
-                        self.assertRegex(
-                            example,
-                            r"(?i)profile-aware[^\n]*hide_spawn_agent_metadata",
-                        )
-                        self.assertNotEqual(fork_turns.group(1), "all")
                         profile_aware_classes.add(agent_type.group(1))
 
             self.assertGreater(portable_examples, 0)
