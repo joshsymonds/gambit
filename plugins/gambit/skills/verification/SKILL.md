@@ -21,7 +21,7 @@ literal shell commands.
 
 Claiming work is complete without verification is dishonesty, not efficiency.
 
-**Core principle:** Evidence before claims, always.
+**Core principle:** Evidence before claims, always. Be adversarial about proof and closed about scope.
 
 **Announce at start:** "I'm using gambit:verification to confirm this with evidence."
 
@@ -41,6 +41,7 @@ Violating the letter of the rules is violating the spirit of the rules.
 | **Linter clean** | Linter output: 0 errors | Partial check, extrapolation |
 | **Regression test works** | Red-green cycle verified | Test passes once |
 | **Task complete** | Check ALL success criteria individually | "Implemented the feature" |
+| **Review closure** | Open ledger IDs + original criteria/gates | A fresh audit or new criteria |
 | **Wave ready for checkpoint** | Every worker result and criterion is verified and readiness is reported to the owning workflow | Individual worker reports alone |
 | **All waves done** | `SessionPlanRead` shows every wave step completed | "All work is done" |
 | **Agent completed** | VCS diff shows changes | Agent reports "success" |
@@ -56,6 +57,8 @@ If you haven't run the verification command in THIS message, you cannot claim it
 - Previous runs don't count (you changed code since then)
 - Agent reports don't count (verify independently)
 - Mental confidence doesn't count (run it)
+
+**Verification is non-generative.** Freeze the claims before checking them: approved requirements, recorded success criteria, open review-ledger IDs, and named project gates. Try hard to disprove those claims. Do not invent additional requirements, style work, process audits, or review findings while verifying. Report newly noticed observations separately as non-blocking; route any requested scope expansion back to the owning workflow.
 
 ## Red Flags — STOP
 
@@ -95,6 +98,8 @@ If you catch yourself doing ANY of the following, you are about to claim complet
 ### 1. Identify What Proves the Claim
 
 Before making any completion claim, ask: "What command proves this?"
+
+Write down the complete claim set first. A failed declared claim blocks completion; an observation outside that set does not silently become a claim.
 
 | Claim Type | Verification |
 |------------|-------------|
@@ -195,6 +200,7 @@ SessionContextRead → complete current-wave worker briefs
 3. **Agent results verified independently** → Check VCS diff, don't trust reports
 4. **No hedging language as evidence** → "Should", "probably", "seems to" are not verification
 5. **Full command, not partial** → Run the complete test suite, not just one file
+6. **Closed claim set** → Verification challenges declared claims; it never expands requirements or a review ledger
 
 ### Common Excuses
 
@@ -210,10 +216,15 @@ All of these mean: **STOP. Run verification.**
 | "Partial check is enough" | Partial proves nothing |
 | "I already verified earlier" | You changed code since then |
 | "Different words so rule doesn't apply" | Spirit over letter |
+| "While verifying, I noticed another improvement" | Report it separately. Do not turn verification into a new review |
 
 ---
 
 ## Verification Checklist
+
+Before any completion claim:
+- [ ] Froze the complete claim set from approved criteria, open ledger IDs, and named gates
+- [ ] Kept newly noticed observations outside that set non-blocking
 
 Before claiming tests pass:
 - [ ] Ran full test command (not partial)

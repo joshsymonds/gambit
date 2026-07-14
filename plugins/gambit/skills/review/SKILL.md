@@ -19,35 +19,35 @@ literal shell commands.
 
 ## Overview
 
-Dispatch four specialized reviewer agents to independently audit completed work, then dispatch a dedicated verifier sub-agent to kill-or-keep each finding, then synthesize surviving findings into a gate decision. Reviewers and verifier run in fresh context — they haven't seen the implementation process and have no sunk cost bias.
+Dispatch four specialized reviewer agents to independently audit completed work once, then dispatch a dedicated verifier sub-agent to kill-or-keep each finding and freeze the survivors into a review ledger. Remediation closes that ledger; it does not restart an open-ended audit.
 
 The verification work is delegated to a **dedicated verifier sub-agent**, not done in the main context. Main context's job is dispatch + assembly; the verifier's job is ruthless kill-or-keep classification. This split follows Anthropic's `CitationAgent` pattern and avoids the synthesizer becoming context-starved from juggling four simultaneous roles (dispatch, verify, dedup, implement).
 
-Works in two modes:
+Works in epic or standalone workflow context; either context has an initial-audit phase and a bounded closure phase:
 - **Epic review:** When this root transcript contains an approved epic contract, conformance checks against its requirements and success criteria
 - **Workflow review:** For standalone work, conformance checks against the complete workflow brief and checkpoint in this root transcript
 
-**Core principle:** The implementing context is the worst reviewer of its own work. Delegate review to fresh agents.
+**Core principle:** Review is adversarial and broad once; closure is adversarial and narrow until the frozen findings are resolved.
 
 **Announce at start:** "I'm using gambit:review to validate this implementation before finishing."
 
 ## Rigidity Level
 
-LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approval if any reviewer finds gaps. No skipping reviewers for "simple" changes.
+LOW FREEDOM — Dispatch all four reviewers for the initial audit. Freeze its scope and confirmed-finding ledger. Never run a fresh audit to close that ledger unless the user explicitly expands requirements or implementation scope.
 
 ## Quick Reference
 
 | Step | Action | STOP If |
 |------|--------|---------|
-| **1. Detect Context** | Approved epic contract or complete workflow brief in this root transcript | Same-session context is absent |
+| **1. Detect Context** | Approved contract/brief + any open review ledger in this root transcript | Same-session context is absent |
 | **2. Load Context** | Complete contract/brief + changed files list | Context is incomplete |
-| **3. Prepare Brief** | Requirements/goal + file list + base branch | Brief incomplete |
-| **4. Dispatch Reviewers** | 4 agents in parallel, each reading its own instructions by path | Any agent fails to run |
-| **5. Dedupe Candidates** | Merge reviewer outputs; dedupe on byte-identical `(file, line, verify_by)` tuples | — |
+| **3. Freeze Boundary** | Requirements + base revision + review snapshot + changed hunks | Boundary incomplete |
+| **4. Dispatch Reviewers** | Initial audit only: 4 agents in parallel, each reading instructions by path | Any agent fails to run |
+| **5. Scope + Dedupe** | Reject out-of-boundary candidates; byte-identical dedupe only | — |
 | **6. Dispatch Verifier** | 1 verifier sub-agent with the deduped candidate list | Verifier fails to run |
-| **7. Assemble Findings** | Route verifier verdicts: confirmed → kept, gap → surfaced, refuted → dropped | — |
-| **8. Implement Improvements** | Implement ALL confirmed reviewer improvements | Tests fail after changes |
-| **9. Gate** | APPROVED or GAPS FOUND with verification counts | Confirmed gaps → complete fix briefs and a later wave, STOP |
+| **7. Freeze Ledger** | Confirmed findings become the complete, immutable blocker set | — |
+| **8. Remediate / Close** | Fix ledger items; re-verify only open IDs + original gates | Evidence fails |
+| **9. Gate** | APPROVED or OPEN LEDGER with verification counts | Ledger remains open → fix briefs and a later wave, STOP |
 
 ## When to Use
 
@@ -64,7 +64,12 @@ LOW FREEDOM — Dispatch all four reviewers. Synthesize all findings. No approva
 
 ### Step 1: Detect Context
 
-Determine what you're reviewing against:
+First detect an open **Review Closure Ledger** in the current workflow state. A ledger is open when a prior review recorded confirmed finding IDs and has not recorded terminal closure for all of them.
+
+- **Open ledger found → closure mode.** Skip Steps 3–5 and all four finders. Load the frozen boundary and only the still-open ledger entries, then continue at Step 6 with `mode: closure`.
+- **No open ledger → initial mode.** Determine what you're reviewing against below and run the full audit.
+
+An old APPROVED report is not an open ledger. A ledger is invalidated only when the user explicitly changes requirements or authorizes implementation outside the recorded remediation boundary; then record why and begin a new initial review. Incidental scope creep is not a reason to restart review — remove it or return it to the worker.
 
 Use `SessionContextRead` in this root session to detect context:
 
@@ -80,7 +85,7 @@ SessionContextRead → latest checkpoint and native subagent results for individ
 SessionContextRead → complete workflow brief and checkpoint result (goal, implementation steps, success criteria)
 ```
 
-The review brief adapts based on which same-session context exists. If both exist, prefer the epic context. Never search plan steps for an epic selector or individual worker record.
+The review brief adapts based on which same-session context exists. If both exist, prefer the epic context. Detect an open ledger from the prior review checkpoint in this root transcript; plan steps never carry it. Never search plan steps for an epic selector or individual worker record.
 
 ### Step 2: Load Context
 
@@ -88,13 +93,17 @@ The review brief adapts based on which same-session context exists. If both exis
 
 **For workflow context:** use `SessionContextRead` for the complete workflow brief and checkpoint result.
 
-**Both contexts:**
+**Initial mode, both contexts:** freeze exact revisions before dispatch:
 ```bash
-git diff main...HEAD --name-only    # Changed files
-git diff main...HEAD --stat         # Change summary
+git merge-base main HEAD            # review_base
+git rev-parse HEAD                  # review_snapshot
+git diff <review_base>..<review_snapshot> --name-only
+git diff --unified=0 <review_base>..<review_snapshot>  # frozen changed hunks
 ```
 
-### Step 3: Prepare Review Brief
+If tracked or untracked implementation changes are absent from `review_snapshot`, STOP. The audited snapshot must contain everything intended for merge.
+
+### Step 3: Freeze Boundary and Prepare Brief
 
 Build a brief that each reviewer agent will receive. Include:
 
@@ -108,6 +117,15 @@ Build a brief that each reviewer agent will receive. Include:
 2. **Changed files** — the `--name-only` output
 3. **Base branch** — what the diff is against
 4. **Context type indicator** — "This is a task-level review (debugging/refactoring), not an epic review. Evaluate against the task's stated goal and success criteria."
+
+**Both contexts also include a frozen Review Boundary:**
+
+- `review_base` and `review_snapshot`
+- exact changed files and zero-context changed hunks between those revisions
+- explicit requirements/success criteria from the approved contract or workflow brief
+- this rule: every finding must anchor to a line changed in that frozen diff, including missing-test/docs/config findings via the changed line that creates the obligation
+
+Commit history, checkpoint formatting, transcript/process compliance, unchanged code, and "while I was reading" observations are outside the gate unless an explicit approved requirement names them. Report such observations separately; they cannot become candidates, ledger entries, fix work, or reasons to restart review.
 
 Do NOT include your opinions, implementation notes, or rationale. The reviewers should form their own conclusions from the code.
 
@@ -135,31 +153,33 @@ Each reviewer will:
 
 **Critical:** Reviewers are strictly advisory. They must NOT run tests, execute commands, or edit files. All tests are already passing by the time review runs — their job is code analysis only. They DO have access to `WebFetch` and `WebSearch` and should use them to validate edge cases, check API documentation, verify security patterns, or confirm language-specific behavior when they aren't confident from code reading alone.
 
-### Step 5: Dedupe Candidate Findings
+### Step 5: Scope-Filter and Dedupe Candidate Findings
 
 Collect the four reviewer reports into one candidate list. Each finding carries a `**Verify by:**` line; assign each finding an opaque `id` (any stable string — reviewer name + sequence works).
+
+**Apply the frozen boundary mechanically before verification.** A candidate is eligible only when its cited anchor intersects a changed hunk in `review_base..review_snapshot`, or an explicit requirement directly names the non-code artifact it cites. Put rejected items in a non-blocking `Out of scope` audit trail with the failed boundary check. Do not send them to the verifier and do not create work from them.
 
 **Dedupe on byte-identical `(path, line_range, Verify by:)` tuples only. Do NOT dedupe on semantic similarity.**
 
 Semantic dedup ("these two findings sound alike, collapse them") silently drops true positives — different reviewers flagging the same line with *different* verify_by steps have different investigation paths, and losing one loses coverage. Only collapse when all three fields match byte-for-byte. The verifier handles near-duplicates downstream.
 
-**Before dispatching to the verifier, build a side-table keyed by `id`** recording each finding's `category` (gap or improvement), `verify_by` (original reviewer text), and `reviewer` (which of the four emitted it). The verifier never sees this side-table — it's the main context's private state. You need it back in Step 7 to route confirmed verdicts to the Gaps vs. Improvements sections, in Step 8 to identify which confirmed items are implementable improvements, and in Step 9 to render `Verify by` text in the GAPS FOUND template. Losing this mapping breaks all three steps.
+**Before dispatching to the verifier, build a side-table keyed by `id`** recording each finding's `category` (gap or improvement), `verify_by` (original reviewer text), and `reviewer` (which of the four emitted it). The verifier never sees this side-table. Retain it to route verdicts, build complete ledger entries, and author any fix briefs; losing it breaks closure.
 
-The deduped list goes to the verifier in Step 6.
+The deduped list and frozen boundary go to the verifier in Step 6.
 
 ### Step 6: Dispatch Verifier Sub-Agent
 
 Dispatch ONE `verifier` agent. Use an installed `verifier` profile when available, otherwise use `default` with the verifier contract. Pass the path rather than reading `verifier.md` into this context. The candidate list IS passed inline (it's dynamic):
 
 ```
-SpawnAgent role="verifier" description="Verify candidates" prompt="Read <abs>/reviewers/verifier.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Candidate Findings\n\n[deduped list with ids]"
+SpawnAgent role="verifier" description="Verify candidates" prompt="Read <abs>/reviewers/verifier.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\nmode: initial\nreview_base: [revision]\nreview_snapshot: [revision]\n\n## Candidate Findings\n\n[deduped list with ids]"
 ```
 
-**Do NOT include reviewer severity, category (Gap vs. Improvement), or reasoning chain in the candidate list.** The verifier receives only: `id`, `path`, `line_range`, `body`, `verify_by`. Fresh context prevents the verifier anchoring on the reviewer's confidence. The stripped `category`, original `verify_by`, and `reviewer` are retained by main context in the Step 5 side-table — they're restored via `id` lookup after the verifier returns.
+**Do NOT include reviewer severity, category (Gap vs. Improvement), or reasoning chain in the candidate list.** The verifier receives the mode, frozen revisions, and only `id`, `path`, `line_range`, `body`, `verify_by` per candidate. Fresh context prevents anchoring. Retain stripped fields in the Step 5 side-table.
 
 **Do NOT verify findings in the main context.** Main context's job is dispatch + assembly. The verifier is the single source of truth for classification.
 
-Skip the verifier dispatch only if the candidate list is empty — in which case all reviewers returned APPROVED, and the overall verdict is APPROVED with zero findings.
+Skip the verifier dispatch only if the candidate list is empty. Continue to Step 9 with an empty ledger; original criteria and the full project gate still require fresh evidence before APPROVED.
 
 ### Step 7: Assemble Findings From Verifier Output
 
@@ -171,198 +191,70 @@ Route by verdict, using the Step 5 side-table to recover each finding's original
 - **gap** → surface in a "🔍 Couldn't verify" section of the final report. NOT a confirmed finding — a coverage boundary. Include the verifier's `gap_reason` verbatim.
 - **refuted** → drop from the findings and the gate. But list each one **tersely in the "Refuted (dropped)" audit trail** (file:line + the reviewer's one-line claim + the verifier's quoted counter-evidence). This is the only window into the verifier's one documented failure mode — aggressive refutation suppressing a real bug. Do not act on refuted findings, author worker briefs for them, or let them block; the audit trail exists so you (and the user) can spot a bad refutation, not to re-litigate verdicts.
 
-Present the unified summary:
+After the initial verdicts, create a **Review Closure Ledger** containing every confirmed finding and no others:
 
-```markdown
-## Review: [Epic/Task Name]
-
-### Verification Summary
-- Candidates sent to verifier: [N]
-- Confirmed (kept): [X]
-- Refuted (dropped): [Y]
-- Gaps (surfaced, not blocking): [Z]
-
-(If [Y] is consistently ~0 across reviews, the verifier is rubber-stamping — reconsider whether it earns its slot. If [Y] is meaningful and the counter-evidence below holds up, it's filtering real noise.)
-
-### Conformance / Security / Quality / Performance Review
-[Per-reviewer sections with only CONFIRMED findings, each carrying evidence]
-
-### Gaps (confirmed blocking issues, if any)
-[Consolidated blocking findings]
-
-### Improvements to Implement (confirmed)
-[Consolidated non-blocking improvements — one entry per unique issue, credit all reviewers who flagged it]
-
-### 🔍 Couldn't verify (for your awareness, not blocking)
-- [Area the reviewer wanted to check] — [verifier's specific gap_reason: tool + error, missing credential, inaccessible system]
-
-### Refuted (dropped — audit trail, not blocking)
-- `path:line` — [reviewer's one-line claim] → refuted: [verifier's quoted counter-evidence]
-
-### Overall Verdict: APPROVED / GAPS FOUND
+```yaml
+review_base: <revision>
+review_snapshot: <revision>
+requirements: <approved contract/brief identity>
+open:
+  - id: <stable id>
+    category: <gap|improvement>
+    path: <path>
+    line_range: <range in review_snapshot>
+    body: <original claim>
+    verify_by: <original check>
+    evidence: <verifier quote + location>
 ```
 
-**Conflict resolution is gone** — the verifier already picked. Do not override verifier verdicts. If a refuted finding looks correct to you, that's a calibration signal about reviewer or verifier prompts, not a reason to un-drop.
+The ledger is immutable: closure may change only an entry's status from open to resolved. Refuted, gap-classified, and boundary-rejected candidates stay in non-blocking audit trails and never enter later work. Preserve the complete ledger in the review checkpoint; fix work must reference its IDs.
 
-**Gap vs. dropped:** Gaps are literal walls the verifier ran into — tool failures, missing credentials, inaccessible systems. Not "evidence was ambiguous" (that's refuted). If the gap section is populated with prose like "couldn't confirm" or "plausible but hard to verify," those entries are badly-classified and should be refuted instead — treat them as calibration signal and drop.
+### Step 8: Remediate and Close the Ledger
 
-### Step 8: Implement Improvements
+In initial mode, implement every confirmed improvement. Confirmed gaps become fix work through the owning workflow. A suggestion may be skipped only with code evidence that the reviewer misunderstood it; record that as a verifier-calibration issue, not a new finding.
 
-Collect ALL items categorized as **Improvements** that the verifier returned `confirmed` for. These are non-blocking findings that reviewers determined should be fixed before merge, and that the verifier independently proved hold. Gap-classified findings are surfaced to the user but not auto-implemented — the user decides whether to investigate.
+After any remediation, enter closure mode. **Do not dispatch the four finders again.** Dispatch the verifier with only open ledger entries:
 
-**You MUST implement every improvement.** Do not list them and move on. Do not defer them to a follow-up. Do not describe them as "non-blocking suggestions" and skip them. Reviewer improvements are work items, not commentary.
+```
+SpawnAgent role="verifier" description="Close review ledger" prompt="Read <abs>/reviewers/verifier.md and follow it exactly.\n\nmode: closure\nreview_base: [revision]\nreview_snapshot: [original reviewed revision]\ncurrent_revision: [current HEAD]\n\n## Open Ledger Findings\n\n[original candidate fields for open IDs only]"
+```
 
-For each improvement:
-1. Read the relevant code at the file:line the reviewer cited
-2. Implement the change the reviewer described
-3. Move to the next improvement
+Interpret closure verdicts against the original claim:
 
-After implementing all improvements, run the project's test suite to verify nothing broke.
+- `refuted` → the original claim no longer holds; mark that ID resolved.
+- `confirmed` → the defect remains; keep that same ID open.
+- `gap` → resolution lacks evidence; keep that same ID open with the literal wall.
 
-**The only valid reason to skip an improvement** is if the reviewer fundamentally misunderstood the code — their suggestion is incoherent or would break correctness. If skipping, you MUST document:
-- What the reviewer suggested
-- What they misunderstood (with evidence from the code)
-- Why implementing it would be incorrect
+Then invoke `gambit:verification` to run each ledger item's targeted check, the original success criteria, and the full project gate. Verification may fail these declared claims but may not invent new ones. Check `review_snapshot..current_revision` for remediation scope: unrelated edits return to the worker for removal; they do not expand the ledger.
 
-"Low priority," "not blocking," or "can be done later" are NOT valid reasons to skip.
+Newly noticed issues from the frozen snapshot, process/history concerns, and unrelated observations are non-blocking `Outside frozen review boundary` notes. They cannot reopen an ID or create one. Only explicit user-approved requirement or implementation-scope expansion invalidates the ledger and authorizes a new initial audit.
 
 ### Step 9: Gate Decision
 
-The gate evaluates **confirmed** findings only. Refuted findings are dropped; gap-classified findings are surfaced to the user but don't block.
+**APPROVED** requires either zero confirmed findings in initial mode, or every ledger ID resolved in closure mode, plus green original criteria and full project gate. This is the terminal condition; proceed directly to `gambit:finishing-branch` and pass the fresh test evidence.
 
-**If APPROVED (no confirmed gaps remain and all confirmed improvements are implemented):**
+If entries remain open, report only those IDs with their evidence and complete fix briefs. Preserve the same ledger:
 
-Announce: "Review passed. [N] candidates verified — [X] confirmed, [Y] refuted, [Z] gaps. All confirmed improvements implemented. Tests green (ran in Step 8 after improvements, or already green since review began and no code changed). Proceeding to finishing-branch."
+Write complete fix worker briefs for the open IDs only in the root checkpoint. Update the existing native wave plan with concise fix-wave summaries, preserving completed waves, then STOP and return to `gambit:executing-plans` (or the owning standalone workflow). The ledger remains in the transcript, never in plan text.
 
-Invoke `gambit:finishing-branch` directly via Codex skill invocation. **Because tests are known-green at this handoff, finishing-branch will skip its own test run (its Step 2).** State this explicitly in your handoff announcement so finishing-branch knows tests were just verified.
-
-**If GAPS FOUND (any confirmed gap remains):**
-
-```markdown
-## Gaps Found — Cannot Proceed
-
-### Verification Summary
-[X] confirmed / [Y] refuted / [Z] gaps
-
-### Issues by Reviewer (confirmed only)
-[Consolidated list with the verifier's `quoted_evidence` and `evidence_location`, plus the reviewer's original `Verify by` text recovered from the Step 5 side-table, attributed to the `reviewer` recorded there]
-
-### Complete Fix Worker Briefs
-- [Complete self-contained worker brief for each confirmed gap]
-
-### 🔍 Couldn't verify (for your awareness, not blocking)
-- [Area] — [verifier's specific gap_reason]
-
-### Refuted (dropped — audit trail, not blocking)
-- `path:line` — [reviewer's one-line claim] → refuted: [verifier's quoted counter-evidence]
-```
-
-Write a complete fix worker brief for every confirmed gap in the root checkpoint. Group independent fixes into one next wave and order dependent fixes in later waves. This is an existing-plan checkpoint update, so it does not require fresh epic approval. Use `SessionPlanWrite` only to replace the complete ordered plan with concise wave summaries, preserving completed waves. Then STOP — return to `gambit:executing-plans` for epic fixes or address the checkpointed workflow fixes directly.
-
-**Do NOT proceed to finishing-branch with confirmed gaps. Do NOT override verifier verdicts. Do NOT proceed with unimplemented confirmed improvements. Do NOT author fix worker briefs for refuted findings — they were disproved for a reason. Do NOT author fix worker briefs for gap-classified findings — a gap means the verifier hit a literal wall, not that a bug exists.**
-
----
-
-## Examples
-
-### Good: Two-Stage Dispatch (reviewers → verifier)
-
-```
-# Stage 1: Resolve reviewers/ path once (no file reads). ONE message, four SpawnAgent calls, parallel
-# (each at the finder tier per codex-contracts/models.md — model omitted here for brevity):
-SpawnAgent default: "Read <abs>/conformance.md + follow it" + [brief]  (parallel)
-SpawnAgent default: "Read <abs>/security.md + follow it"    + [brief]  (parallel)
-SpawnAgent default: "Read <abs>/quality.md + follow it"     + [brief]  (parallel)
-SpawnAgent default: "Read <abs>/performance.md + follow it" + [brief]  (parallel)
-
-# All four read their own instructions in their own context and return findings.
-# Dedupe on byte-identical tuples.
-
-# Stage 2: ONE more SpawnAgent call, sequential — verifier reads its own file too:
-SpawnAgent default: "Read <abs>/verifier.md + follow it" + [deduped candidate list]
-
-# Verifier returns confirmed/refuted/gap per candidate. Assemble final verdict.
-```
-
-### Good: Task-Level Review After Refactoring
-
-```
-# Context detection: no epic contract; SessionContextRead found a refactoring workflow brief
-# Goal: "Extract connection-pool setup into a reusable factory"
-# Brief includes workflow goal + success criteria + changed files
-# All four reviewers dispatched with task-level brief
-# Conformance checks the change addresses the stated goal
-# Security checks no new vulnerabilities introduced
-# Quality checks the code quality of the change
-# Performance checks the change doesn't regress performance
-```
-
-### Bad: Sequential, Skipped, or Ignored
-
-```
-# WRONG: Only dispatching two reviewers
-"Security isn't relevant for this config change"
-
-# WRONG: Reviewing or verifying in main context instead of dispatching
-"Let me just quickly check the architecture myself..."
-"I'll verify these findings inline instead of spawning another agent..."
-
-# WRONG: Skipping the verifier
-"The findings look good, let's just implement them"
-
-# WRONG: Overriding a verifier verdict
-"The verifier refuted this but I think it's real"
-
-# WRONG: Feeding the verifier reviewer severity/reasoning
-SpawnAgent default: "[verifier.md] + [full reviewer reports with severity tags]"
-# Correct: strip to id/path/line/body/verify_by only
-
-# WRONG: Semantic dedup before the verifier
-"Findings 2 and 5 look similar, collapse them"
-# Correct: byte-identical (path, line, verify_by) tuples only
-
-# WRONG: Authoring fix worker briefs for gap-classified findings
-"The gap says we couldn't check LaunchDarkly — add a worker brief to check it"
-# Correct: gap is a tool-access boundary, not a bug
-
-# WRONG: Pasting reviewer file contents into the prompt (wastes ~18k tokens/review)
-SpawnAgent default: "[full conformance.md contents] + brief"
-# Correct: pass the path — "Read <abs>/conformance.md and follow it" + brief
-
-# WRONG: Inventing instructions from memory instead of pointing at the file
-"I'll just tell the agent to check for security issues..."
-# Correct: the agent reads the real reviewer file by path
-
-# WRONG: Reading a reviewer file before each dispatch (serializes the agents)
-Read conformance.md → Agent → Read security.md → Agent → ...
-# Correct: no reads; four SpawnAgent calls in one message, each pointed at its file
-
-# WRONG: Listing improvements without implementing them
-"Non-blocking suggestions: consider extracting a helper..."
-"None of these block the commit. Ready to commit."
-
-# WRONG: Deferring improvements to follow-up work
-"These are good ideas for a future PR."
-
-# WRONG: Skipping review for "small" debugging fixes
-"This was just a one-line fix, no need for four reviewers"
-```
+Never create work from refuted, gap-classified-in-initial-mode, boundary-rejected, or newly noticed closure observations. Never replace closure with another full review merely because the verifier or tests found an open ledger item.
 
 ## Critical Rules
 
-1. **All four reviewers dispatched** — no skipping for "simple" changes
+1. **All four reviewers dispatched once** — no skipping in initial mode; never dispatch them in closure mode
 2. **Parallel dispatch, by path** — one message, four SpawnAgent calls, each pointed at its reviewer file by path. Never read reviewer/verifier files into main context or paste their contents into prompts: the read-before-each-dispatch is what serializes the agents and wastes ~18k tokens/review
 3. **No self-review** — main context prepares brief and assembles, does NOT review or verify code
 4. **Verifier is the single source of truth for classification** — do NOT override confirmed/refuted/gap verdicts; do NOT verify in the main context
-5. **Any confirmed gap blocks** — one confirmed gap = GAPS FOUND overall
+5. **Any open ledger entry blocks** — closure must refute every original claim with evidence
 6. **Brief is neutral** — don't include opinions or justifications in what you send reviewers
 7. **Verifier sees no severity / no reasoning** — only `id`, `path`, `line_range`, `body`, `verify_by`; fresh context prevents anchoring
-8. **All confirmed improvements implemented** — confirmed improvements are work items, not suggestions to acknowledge and skip
+8. **All confirmed findings freeze** — the initial confirmed set is the complete ledger; later observations cannot join it
 9. **Gap findings surface, not drop** — keep them in the report with the verifier's specific gap_reason so the user can investigate
 10. **Refuted findings drop** — don't author fix worker briefs for verdicts the verifier returned refuted
 11. **Dedupe byte-identical, never semantic** — collapsing similar-looking findings silently drops true positives
 12. **Context detection is automatic** — epic if epic exists, task otherwise
-13. **Retain the id side-table** — stripping category/verify_by from verifier input (rule 7) means main context MUST keep an `id → {category, verify_by, reviewer}` side-table before dispatch; losing it breaks Steps 7–9 routing
+13. **Retain the ledger** — preserve its boundary and full finding fields across fix waves; plan summaries are not storage
+14. **Closure is terminal** — all IDs resolved + original gates green means APPROVED, not another audit
 
 **Common rationalizations:**
 
@@ -371,34 +263,29 @@ Read conformance.md → Agent → Read security.md → Agent → ...
 | "I already reviewed during implementation" | You're biased — that's why agents exist |
 | "Security isn't relevant here" | Every project has an attack surface |
 | "Performance review is overkill" | Dispatch it anyway — it's parallel, costs nothing |
-| "The reviewer is being too strict" | The verifier handles this — trust the verdict |
-| "I can review faster myself" | Speed isn't the goal — unbiased review is |
 | "These are non-blocking suggestions" | Improvements are work items — implement them |
-| "Good ideas for a future PR" | No. Implement now, before this merge |
-| "None of these block the commit" | Improvements don't block the verdict, but they block the merge |
 | "It's just a small debugging fix" | Small fixes can introduce regressions. Review anyway |
 | "The verifier refuted this but I think it's real" | Refuted is refuted. If you disagree, that's a prompt-calibration signal, not a gate-override |
-| "This gap looks like a real bug to me" | A gap means the verifier hit a literal wall, not that a bug exists. If you suspect a bug, re-run review after fixing the tool-access issue the verifier cited |
-| "I'll just skip the verifier for this small change" | The verifier is where the quality comes from. Main context cannot verify without anchoring |
+| "A fresh review is safer after fixes" | It reopens the search space. Close the frozen ledger instead |
+| "We missed this in round one" | Report it outside the frozen boundary; it cannot become closure work |
+| "The checkpoint/commits aren't ideal" | Process artifacts do not block without an explicit approved requirement |
 
 ## Verification Checklist
 
-- [ ] Context detected (epic or task)
-- [ ] Task/epic loaded, requirements/goal identified
-- [ ] Review brief prepared (requirements/goal + changed files, no opinions)
-- [ ] All four reviewers dispatched in single message
+- [ ] Context and open-ledger state detected before dispatch
+- [ ] Initial boundary freezes requirements, revisions, files, and changed hunks
+- [ ] All four reviewers dispatched once, in one message, for initial mode only
 - [ ] All four reviewer reports collected with `Verify by:` on every finding
-- [ ] Candidate list deduped on byte-identical `(path, line, verify_by)` tuples
+- [ ] Out-of-boundary candidates rejected; eligible candidates byte-identical deduped
 - [ ] Side-table keyed by `id` built before verifier dispatch (category + verify_by + reviewer)
 - [ ] Verifier sub-agent dispatched with candidate list (no severity, no reasoning chain)
 - [ ] Verifier returned one verdict per candidate (confirmed / refuted / gap) with quoted evidence
-- [ ] Findings assembled with verification counts (N confirmed / N refuted / N gaps)
-- [ ] ALL **confirmed** improvements implemented (or skipped with misunderstanding evidence)
-- [ ] Gap findings surfaced under "🔍 Couldn't verify" with specific gap_reason
-- [ ] Refuted findings dropped, not converted into fix worker briefs
-- [ ] Tests pass after implementing improvements
+- [ ] Confirmed findings frozen into the complete Review Closure Ledger
+- [ ] Closure dispatched only the verifier with open ledger IDs
+- [ ] Every original criterion, targeted fix check, and full project gate freshly passes
+- [ ] Outside-boundary observations reported without creating work
 - [ ] If APPROVED: invoked finishing-branch via Codex skill invocation
-- [ ] If GAPS: presented complete fix worker briefs for confirmed gaps only (NOT gap-classified), updated existing wave state, and STOPPED
+- [ ] If OPEN: presented complete fix briefs for open ledger IDs only, updated wave state, and STOPPED
 
 ## Integration
 
@@ -416,19 +303,19 @@ Read conformance.md → Agent → Read security.md → Agent → ...
 - `reviewers/quality.md` — language idioms, linter circumvention, test quality
 - `reviewers/performance.md` — scaling, N+1, resource management
 
-**Dispatches one verification agent (sequential, after reviewers, read-only) at the verifier tier (`codex-contracts/models.md`), also by path:**
-- `reviewers/verifier.md` — kill-or-keep each candidate finding with evidence, three-verdict enum (confirmed/refuted/gap)
+**Dispatches one verification agent at the verifier tier (`codex-contracts/models.md`), also by path:**
+- `reviewers/verifier.md` — initial kill-or-keep classification; later bounded closure of the frozen ledger
 
 **Call chain (epic context):**
 ```
 executing-plans (all waves completed) → review → finishing-branch
                                       ↓
-                                (if gaps: STOP → fix → re-review)
+                           (if ledger open: STOP → fix → close ledger)
 ```
 
 **Call chain (task context):**
 ```
 refactoring (changes verified) → review → finishing-branch
                                     ↓
-                              (if gaps: STOP → fix → re-review)
+                         (if ledger open: STOP → fix → close ledger)
 ```
