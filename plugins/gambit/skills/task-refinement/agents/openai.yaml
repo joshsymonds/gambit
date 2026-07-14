@@ -1,4 +1,6 @@
 interface:
   display_name: "Task Refinement"
-  short_description: "Use when worker briefs and a native wave plan have just been prepared and need review before exec..."
+  short_description: "Use this implementation mechanic to refine prepared work briefs only when explicitly invoked by n..."
   default_prompt: "Use $gambit:task-refinement for this task."
+policy:
+  allow_implicit_invocation: false

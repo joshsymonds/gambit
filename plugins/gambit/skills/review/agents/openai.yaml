@@ -2,3 +2,5 @@ interface:
   display_name: "Review"
   short_description: "Use after every native wave in the current root session is complete, after refactoring verifies,..."
   default_prompt: "Use $gambit:review for this task."
+policy:
+  allow_implicit_invocation: true

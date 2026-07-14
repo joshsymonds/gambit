@@ -2,3 +2,5 @@ interface:
   display_name: "Using Gambit"
   short_description: "Use only when the user explicitly asks Gambit to route a concrete software task and has not alrea..."
   default_prompt: "Use $gambit:using-gambit for this task."
+policy:
+  allow_implicit_invocation: false

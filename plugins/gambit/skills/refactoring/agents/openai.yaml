@@ -1,4 +1,6 @@
 interface:
   display_name: "Safe Refactoring"
-  short_description: "Use when restructuring code without changing its behavior — extracting duplicated functions, rena..."
+  short_description: "Use this implementation mechanic to restructure covered code without changing behavior only when..."
   default_prompt: "Use $gambit:refactoring for this task."
+policy:
+  allow_implicit_invocation: false

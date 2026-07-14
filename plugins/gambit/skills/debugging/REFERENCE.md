@@ -133,11 +133,11 @@ Use Read and Grep to trace through the code directly:
 Dispatch an explorer agent to map the system:
 
 ```
-Task
-  agent_type: "explorer"          # the read-only scout class
-  agent_profile: "<scout tier — default cheap-or-standard; codex-contracts/models.md>"   # resolve <abs> via Glob **/codex-contracts/scout.md
-  description: "Map data flow for [feature]"
-  prompt: |
+SpawnAgent
+  agent_type: "explorer"  # Profile-aware: requires hide_spawn_agent_metadata = false.          # the read-only scout class
+  task_name: "map_data_flow_for_feature"
+  fork_turns: "none"
+  message: |
     Read <abs>/codex-contracts/scout.md first (your binding scout contract), then trace the request flow for [operation]:
     1. Where does the request enter? (handler/controller)
     2. What services process it?

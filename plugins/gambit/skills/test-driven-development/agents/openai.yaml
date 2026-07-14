@@ -1,4 +1,6 @@
 interface:
   display_name: "Test-Driven Development"
-  short_description: "Use when writing any new function, implementing a feature, fixing a reported bug, or adding behav..."
+  short_description: "Use this implementation mechanic for new behavior or bug fixes requiring test coverage only when..."
   default_prompt: "Use $gambit:test-driven-development for this task."
+policy:
+  allow_implicit_invocation: false

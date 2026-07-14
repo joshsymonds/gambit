@@ -2,3 +2,5 @@ interface:
   display_name: "Debugging — Root Cause Investigation"
   short_description: "Use when a test is failing, when a bug is reported, when behavior is unexpected or intermittent,..."
   default_prompt: "Use $gambit:debugging for this task."
+policy:
+  allow_implicit_invocation: true

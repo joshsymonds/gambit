@@ -1,6 +1,6 @@
 ---
 name: test-driven-development
-description: Use when writing any new function, implementing a feature, fixing a reported bug, or adding behavior that should have test coverage. Especially when tempted to code first and test later, under time pressure, after sunk cost on existing untested code, or when thinking "this is too simple to test".
+description: Use this implementation mechanic for new behavior or bug fixes requiring test coverage only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
 ---
 
 # Test-Driven Development
@@ -10,8 +10,6 @@ description: Use when writing any new function, implementing a feature, fixing a
 Write the test first. Watch it fail. Write minimal code to pass. Refactor. Commit.
 
 **Core principle:** If you didn't watch the test fail, you don't know if it tests the right thing.
-
-**Announce at start:** "I'm using gambit:test-driven-development to implement this with RED-GREEN-REFACTOR."
 
 ## Rigidity Level
 

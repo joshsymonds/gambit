@@ -2,3 +2,5 @@ interface:
   display_name: "Writing Skills"
   short_description: "Use when creating a new skill, modifying an existing skill, writing or rewriting a SKILL.md file,..."
   default_prompt: "Use $gambit:writing-skills for this task."
+policy:
+  allow_implicit_invocation: true

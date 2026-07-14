@@ -1,6 +1,6 @@
 ---
 name: task-refinement
-description: Use when worker briefs and a native wave plan have just been prepared and need review before execution, when brainstorming just handed off, when unsure whether a junior could execute without questions, or when you see placeholder text, vague success criteria, or missing edge cases. User phrases like "review these briefs", "are these ready?", "before we start", "catch any gaps". Do NOT use when implementation is already in progress or for creating plans from scratch.
+description: Use this implementation mechanic to refine prepared work briefs only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
 ---
 
 <!-- Generated backend adapter: edit src/backends/codex/, not plugins/gambit/. -->
@@ -24,8 +24,6 @@ Review complete worker briefs systematically. Find gaps, fix them, present each 
 **Core principle:** Don't just identify problems — revise each worker brief, present it in full, then reread it with `SessionContextRead` to verify.
 
 **Iron Law:** NO worker brief passes review with vague criteria, missing file paths, or placeholder text. Every brief must be executable by a junior engineer without questions. No exceptions.
-
-**Announce at start:** "I'm using gambit:task-refinement to review and strengthen these worker briefs."
 
 ## Rigidity Level
 

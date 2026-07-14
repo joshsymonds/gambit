@@ -1,6 +1,6 @@
 ---
 name: refactoring
-description: Use when restructuring code without changing its behavior — extracting duplicated functions, renaming for clarity, reorganizing modules, splitting a file, simplifying a tangled signature. User phrases like "clean this up", "extract this", "rename X", "reorganize". Do NOT use for bug fixes, feature additions, or code that lacks existing test coverage.
+description: Use this implementation mechanic to restructure covered code without changing behavior only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
 ---
 
 # Safe Refactoring
@@ -12,8 +12,6 @@ Refactoring changes code structure without changing behavior. Tests must stay gr
 **Core principle:** Change → Test → Commit. Repeat until complete. Tests green at every step.
 
 **Iron Law:** NO changes without passing tests BEFORE and AFTER. Tests fail? STOP. Undo. Make a smaller change. "I'll test at the end" = you're not refactoring. No exceptions.
-
-**Announce at start:** "I'm using gambit:refactoring to restructure this code safely."
 
 ## Rigidity Level
 
