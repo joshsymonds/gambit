@@ -42,6 +42,32 @@ class WorkflowRoutingTest(unittest.TestCase):
         codex_skills, _ = render_skills.render_backend("codex", temporary_root)
         cls.codex_skills = codex_skills
         cls.rendered_skill_roots = (claude_skills, codex_skills)
+        cls.active_skill_roots = (
+            ROOT / "src" / "skills",
+            ROOT / "skills",
+            ROOT / "plugins" / "gambit" / "skills",
+            *cls.rendered_skill_roots,
+        )
+        cls.contract_catalogs = (
+            ROOT / "src" / "contracts" / "README.md",
+            ROOT / "contracts" / "README.md",
+            ROOT / "plugins" / "gambit" / "codex-contracts" / "README.md",
+        )
+        cls.claude_debugging_texts = tuple(
+            (skill_root / "debugging" / "SKILL.md").read_text(encoding="utf-8")
+            for skill_root in (
+                ROOT / "src" / "skills",
+                ROOT / "skills",
+                claude_skills,
+            )
+        )
+        cls.codex_debugging_texts = tuple(
+            (skill_root / "debugging" / "SKILL.md").read_text(encoding="utf-8")
+            for skill_root in (
+                ROOT / "plugins" / "gambit" / "skills",
+                codex_skills,
+            )
+        )
         cls.skill_roots = (
             ROOT / "src" / "skills",
             claude_skills,
@@ -157,13 +183,49 @@ class WorkflowRoutingTest(unittest.TestCase):
                     self.assertNotIn("Announce at start", body)
                     self.assertNotIn(f"I'm using gambit:{mechanic}", body)
 
-    def test_parallel_agents_is_absent_from_source_and_rendered_catalogs(self) -> None:
-        for skill_root in self.skill_roots:
-            self.assertFalse(skill_root.joinpath("parallel-agents").exists())
-            self.assertNotIn(
-                "parallel-agents",
-                {path.name for path in skill_root.iterdir() if path.is_dir()},
-            )
+    def test_debugging_uses_the_contracted_native_scout_dispatch(self) -> None:
+        for text in self.claude_debugging_texts:
+            investigation = text.split("### 2. Investigate Root Cause", 1)[1]
+            investigation = investigation.split("**Find a working neighbor", 1)[0]
+            with self.subTest(backend="claude"):
+                self.assertIn("**/contracts/scout.md", investigation)
+                self.assertIn('subagent_type: "Explore"', investigation)
+                self.assertIn("`model:` at the scout tier", investigation)
+                self.assertIn("Read `contracts/scout.md` first", investigation)
+
+        for text in self.codex_debugging_texts:
+            investigation = text.split("### 2. Investigate Root Cause", 1)[1]
+            investigation = investigation.split("**Find a working neighbor", 1)[0]
+            with self.subTest(backend="codex"):
+                self.assertIn("**/codex-contracts/scout.md", investigation)
+                self.assertIn(
+                    "dispatch the `scout` role using `explorer`",
+                    investigation,
+                )
+                self.assertIn("Read `codex-contracts/scout.md` first", investigation)
+
+    def test_retired_parallel_workflow_is_absent_from_active_surfaces(self) -> None:
+        retired_identifiers = ("parallel-agents", "parallel_agents")
+        for skill_root in self.active_skill_roots:
+            for identifier in retired_identifiers:
+                with self.subTest(skill_root=skill_root, directory=identifier):
+                    self.assertFalse(skill_root.joinpath(identifier).exists())
+            for artifact in sorted(skill_root.rglob("*")):
+                if (
+                    not artifact.is_file()
+                    or artifact.suffix.lower() not in render_skills.TEXT_SUFFIXES
+                ):
+                    continue
+                text = artifact.read_text(encoding="utf-8").casefold()
+                for identifier in retired_identifiers:
+                    with self.subTest(artifact=artifact, identifier=identifier):
+                        self.assertNotIn(identifier, text)
+
+        for catalog in self.contract_catalogs:
+            text = catalog.read_text(encoding="utf-8").casefold()
+            for identifier in retired_identifiers:
+                with self.subTest(catalog=catalog, identifier=identifier):
+                    self.assertNotIn(identifier, text)
 
 
 if __name__ == "__main__":

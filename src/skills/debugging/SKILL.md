@@ -55,7 +55,7 @@ MEDIUM FREEDOM — Follow the investigation sequence; adapt the techniques to th
 
 **Evidence before hypothesis. Use tools, not guessing.**
 
-- **Search for context** — `WebSearch` for error messages; dispatch an `Explore` agent for codebase investigation (how is this called? what data flows here? what changed?)
+- **Search for context** — `WebSearch` for error messages. For bounded codebase investigation, Glob `**/contracts/scout.md`, dispatch `subagent_type: "Explore"` with `model:` at the scout tier (default cheap-or-standard; `contracts/models.md`), and prompt it to Read `contracts/scout.md` first, then ask the question. The scout returns `file:line` evidence or `NOT FOUND`.
 - **Find a working neighbor and compare** — most codebases contain a near-neighbor of the broken path (another caller of the same function, another feature using the same library). Comparing working-vs-broken is faster than pure tracing and catches "configured differently" bugs. List **every** difference, not just the ones that seem relevant — "that can't matter" is how real bugs hide. Read the working reference *completely*.
 - **Trace data flow backward** — find where the bad value *originates*, not where it crashes. A null check at the crash site is a symptom fix; finding *why* the value is null and preventing it at the source is a root-cause fix. Full technique: [references/root-cause-tracing.md](references/root-cause-tracing.md).
 - **Form a hypothesis with evidence** — "I think X is the root cause because Y." Evidence = stack trace showing the call path, log output showing state, code showing missing validation, or test output showing the failure mode. **No evidence? STOP.** Keep investigating.
@@ -159,13 +159,12 @@ All mean: **STOP. Return to steps 1–2.**
 ## Integration
 
 **This skill calls:**
-- `Explore` / `general-purpose` agents for codebase investigation
+- Contracted scout agents through the active backend's native dispatch for bounded independent codebase investigation
 - `WebSearch` for error-message research
 - `gambit:brainstorming` (terminal — designs and executes the fix from the root cause)
 
 **Called by:**
 - A bug discovered during development, a failing test, a user-reported bug
-- `gambit:parallel-agents` (investigates each isolated failure)
 
 **Workflow:**
 ```

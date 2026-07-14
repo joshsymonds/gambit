@@ -13,7 +13,7 @@ class's tier (see [models.md](models.md)).
 
 | Class | Contract | Default tier | Use it when |
 |-------|----------|-------------|-------------|
-| **worker** | [worker.md](worker.md) | standard | implementing a task's code (executing-plans; parallel-agents fix-workers) |
+| **worker** | [worker.md](worker.md) | standard | implementing a task's code for executing-plans |
 | **scout** | [scout.md](scout.md) | cheap-or-standard | read-only investigation — find code/patterns/answers and return evidence (brainstorming, executing-plans, debugging) |
 | **finder** | `skills/review/reviewers/{conformance,security,quality,performance}.md` | most-capable | reviewing changed code for issues — all four at end-of-epic review; the `quality` finder alone, scoped to one diff, as the `executing-plans` checkpoint gate's escalation reviewer |
 | **verifier** | `skills/review/reviewers/verifier.md` | most-capable | kill-or-keep verifying candidate findings |
