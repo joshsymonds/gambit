@@ -106,6 +106,11 @@ def validated_codex_dispatch_examples(
 
             agent_type = dispatch_field("agent_type").search(example)
             if agent_type is not None:
+                test_case.assertIn(
+                    agent_type.group(1),
+                    render_skills.CODEX_AGENT_CLASSES,
+                    example,
+                )
                 test_case.assertRegex(
                     example,
                     r"(?i)profile-aware[^\n]*hide_spawn_agent_metadata",
@@ -151,6 +156,108 @@ class RenderedSkillsTest(unittest.TestCase):
         self.assertIn("read `references/codex-skill-guidance.md` completely", text)
         self.assertNotIn("read all three reference files", text)
         self.assertTrue((skill / "references" / "codex-skill-guidance.md").exists())
+
+    def test_codex_executable_skills_do_not_name_concrete_models(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            temporary_root = Path(temporary)
+            claude_skills, _ = render_skills.render_backend(
+                "claude", temporary_root
+            )
+            codex_skills, _ = render_skills.render_backend("codex", temporary_root)
+
+            for skill_md in sorted(codex_skills.glob("*/SKILL.md")):
+                text = skill_md.read_text(encoding="utf-8")
+                self.assertIsNone(
+                    CONCRETE_AGENT_MODELS.search(text),
+                    f"concrete model leaked into {skill_md}",
+                )
+
+            claude_writing = (
+                claude_skills / "writing-skills" / "SKILL.md"
+            ).read_text(encoding="utf-8")
+            for model in ("Haiku", "Sonnet", "Opus"):
+                self.assertIn(model, claude_writing)
+
+    def test_worktree_prose_is_backend_native(self) -> None:
+        with tempfile.TemporaryDirectory() as temporary:
+            temporary_root = Path(temporary)
+            claude_skills, _ = render_skills.render_backend(
+                "claude", temporary_root
+            )
+            codex_skills, _ = render_skills.render_backend("codex", temporary_root)
+
+            claude_executing = (
+                claude_skills / "executing-plans" / "SKILL.md"
+            ).read_text(encoding="utf-8")
+            claude_finishing = (
+                claude_skills / "finishing-branch" / "SKILL.md"
+            ).read_text(encoding="utf-8")
+            codex_executing = (
+                codex_skills / "executing-plans" / "SKILL.md"
+            ).read_text(encoding="utf-8")
+            codex_finishing = (
+                codex_skills / "finishing-branch" / "SKILL.md"
+            ).read_text(encoding="utf-8")
+
+            for claude_semantic in (
+                "EnterWorktree name:",
+                ".claude/worktrees/",
+                "worktree.baseRef",
+            ):
+                self.assertIn(claude_semantic, claude_executing)
+            for claude_semantic in (
+                'ExitWorktree action: "remove"',
+                "git worktree remove .claude/worktrees/experimental",
+            ):
+                self.assertIn(claude_semantic, claude_finishing)
+
+            for skill, text, git_semantic in (
+                (
+                    "executing-plans",
+                    codex_executing,
+                    "git worktree add <dir>/<epic-slug> -b <branch> <base-ref>",
+                ),
+                (
+                    "finishing-branch",
+                    codex_finishing,
+                    "git worktree remove .worktrees/experimental",
+                ),
+            ):
+                with self.subTest(skill=skill):
+                    self.assertNotIn(".claude/worktrees/", text)
+                    self.assertNotIn("worktree.baseRef", text)
+                    self.assertIn(git_semantic, text)
+
+    def test_retired_prompt_shorthand_is_rejected(self) -> None:
+        fence = "```"
+        for legacy in ("Task prompt1", "SpawnAgent prompt1"):
+            text = f"{fence}text\n{legacy}\n{fence}\n"
+            with self.subTest(legacy=legacy), self.assertRaisesRegex(
+                ValueError, "retired prompt shorthand"
+            ):
+                render_skills.transform_codex_spawn_agent_examples(
+                    text, Path("synthetic/SKILL.md")
+                )
+
+    def test_codex_agent_classes_reject_unknown_values(self) -> None:
+        invalid_native = (
+            '```text\nSpawnAgent task_name="x" message="y" '
+            'fork_turns="none" agent_type="not_configured" '
+            '# Profile-aware: requires hide_spawn_agent_metadata = false.\n```\n'
+        )
+        with self.assertRaises(AssertionError):
+            validated_codex_dispatch_examples(
+                self, invalid_native, "unknown native class"
+            )
+
+        for invalid_role in ("not_configured", "default"):
+            with self.subTest(role=invalid_role), self.assertRaisesRegex(
+                ValueError, "unknown Codex agent class"
+            ):
+                render_skills.transform_spawn_agent_call(
+                    f'SpawnAgent role="{invalid_role}" description="x" prompt="y"',
+                    "synthetic",
+                )
 
     def test_codex_dispatch_examples_use_spawn_agent_schema(self) -> None:
         invalid_fences = {

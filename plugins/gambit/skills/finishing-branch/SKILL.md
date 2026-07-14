@@ -215,7 +215,7 @@ git worktree list
 ```
 
 - Session is inside a worktree created by `GambitEnterWorktree` this session → `GambitExitWorktree action: "remove"` (for Discard, pass `discard_changes: true` only after the typed confirmation)
-- Worktree exists from an earlier session or repo tooling (`.claude/worktrees/`, `.worktrees/`) → return to the base branch, then `git worktree remove <path>`
+- Worktree exists from an earlier session or repository tooling (for example, `.worktrees/`) → return to the base branch, then `git worktree remove <path>`
 - No worktree → skip (branch may not have used one)
 
 Report cleanup results.
@@ -267,7 +267,7 @@ git log --oneline main..HEAD
 User: "discard"
 
 git checkout main && git branch -D feature-experimental
-git worktree remove .claude/worktrees/experimental
+git worktree remove .worktrees/experimental
 ```
 
 ## Critical Rules
@@ -318,4 +318,4 @@ git worktree remove .claude/worktrees/experimental
 - `git` commands (merge, branch, worktree)
 
 **Pairs with:**
-- The epic worktree (native `.claude/worktrees/` via `GambitExitWorktree`, or repo-managed) — cleaned up here on merge/discard
+- The epic worktree (created through the repository convention or standard Git worktree tooling) — cleaned up here on merge/discard

@@ -259,7 +259,12 @@ git worktree list
 ```
 
 - Session is inside a worktree created by `EnterWorktree` this session → `ExitWorktree action: "remove"` (for Discard, pass `discard_changes: true` only after the typed confirmation)
+<!-- gambit-backend:claude -->
 - Worktree exists from an earlier session or repo tooling (`.claude/worktrees/`, `.worktrees/`) → return to the base branch, then `git worktree remove <path>`
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- Worktree exists from an earlier session or repository tooling (for example, `.worktrees/`) → return to the base branch, then `git worktree remove <path>`
+<!-- /gambit-backend -->
 - No worktree → skip (branch may not have used one)
 
 Report cleanup results.
@@ -321,7 +326,12 @@ git log --oneline main..HEAD
 User: "discard"
 
 git checkout main && git branch -D feature-experimental
+<!-- gambit-backend:claude -->
 git worktree remove .claude/worktrees/experimental
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+git worktree remove .worktrees/experimental
+<!-- /gambit-backend -->
 ```
 
 ## Critical Rules
@@ -387,4 +397,9 @@ git worktree remove .claude/worktrees/experimental
 - `git` commands (merge, branch, worktree)
 
 **Pairs with:**
+<!-- gambit-backend:claude -->
 - The epic worktree (native `.claude/worktrees/` via `ExitWorktree`, or repo-managed) — cleaned up here on merge/discard
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- The epic worktree (created through the repository convention or standard Git worktree tooling) — cleaned up here on merge/discard
+<!-- /gambit-backend -->

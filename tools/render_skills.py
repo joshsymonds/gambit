@@ -50,8 +50,22 @@ FENCED_CODE_BLOCK = re.compile(
     re.MULTILINE | re.DOTALL,
 )
 SPAWN_AGENT_START = re.compile(r"(?m)^[ \t]*SpawnAgent(?:\s|$)")
+RETIRED_PROMPT_SHORTHAND = re.compile(
+    r"(?m)^[ \t]*(?:Task|SpawnAgent)[ \t]+prompt\d+(?:[ \t]|$)"
+)
 PROFILE_AWARE_NOTE = (
     "Profile-aware: requires hide_spawn_agent_metadata = false."
+)
+CODEX_AGENT_CLASSES = frozenset(
+    {
+        "worker",
+        "scout",
+        "finder",
+        "verifier",
+        "explorer",
+        "test-runner",
+        "escalation",
+    }
 )
 
 CODEX_IMPLICIT_INVOCATION = {
@@ -156,20 +170,6 @@ def codex_task_name(description: str, fallback: str) -> str:
 
 
 def transform_spawn_agent_call(call: str, fallback: str) -> str:
-    shorthand = re.match(
-        r'(?m)^(?P<indent>[ \t]*)SpawnAgent\s+prompt(?P<number>\d+)'
-        r'(?P<comment>[ \t]*//[^\n]*)?',
-        call,
-    )
-    if shorthand:
-        replacement = (
-            f'{shorthand.group("indent")}SpawnAgent '
-            f'task_name="prompt_{shorthand.group("number")}" '
-            f'message="[prompt {shorthand.group("number")}]" '
-            f'fork_turns="none"{shorthand.group("comment") or ""}'
-        )
-        return call[: shorthand.start()] + replacement + call[shorthand.end() :]
-
     description = re.search(
         r'(?m)(?:^|[ \t])description[ \t]*(?:=|:)[ \t]*"([^"]*)"',
         call,
@@ -185,6 +185,14 @@ def transform_spawn_agent_call(call: str, fallback: str) -> str:
     selected_class = (
         role.group(1) if role else (agent_type.group(1) if agent_type else None)
     )
+    invalid_role = role is not None and role.group(1) not in CODEX_AGENT_CLASSES
+    invalid_agent_type = (
+        agent_type is not None
+        and agent_type.group(1) != "default"
+        and agent_type.group(1) not in CODEX_AGENT_CLASSES
+    )
+    if invalid_role or invalid_agent_type:
+        raise ValueError(f"unknown Codex agent class: {selected_class!r}")
     task_name = codex_task_name(
         description.group(1) if description else "",
         codex_task_name(selected_class or "", fallback),
@@ -275,11 +283,12 @@ def transform_codex_spawn_agent_examples(text: str, relative: Path) -> str:
 
     def transform_fence(match: re.Match[str]) -> str:
         nonlocal dispatch_number
-        body = re.sub(
-            r"(?m)^([ \t]*)Task prompt(\d+)([ \t]*//[^\n]*)?",
-            r"\1SpawnAgent prompt\2\3",
-            match.group("body"),
-        )
+        body = match.group("body")
+        shorthand = RETIRED_PROMPT_SHORTHAND.search(body)
+        if shorthand:
+            raise ValueError(
+                f"retired prompt shorthand in {relative}: {shorthand.group(0).strip()}"
+            )
         starts = list(SPAWN_AGENT_START.finditer(body))
         if not starts:
             return match.group(0)
@@ -333,7 +342,6 @@ def codex_transform(text: str, relative: Path) -> str:
 
     if relative.suffix.lower() == ".md":
         text = re.sub(r"(?m)^Task$", "SpawnAgent", text)
-        text = re.sub(r"(?m)^Task (prompt\d+)$", r"SpawnAgent \1", text)
 
     if relative.name == "SKILL.md":
         text = strip_codex_frontmatter_fields(text)
@@ -428,6 +436,22 @@ def codex_transform(text: str, relative: Path) -> str:
                 'Test with every Codex agent profile the skill may use. At minimum, pressure-test the weakest/fastest eligible profile and the demanding default profile. Dispatch through the role named in the evaluation and record the actual profile in the results.\n\n---\n\n### Phase 6:',
                 text,
                 flags=re.DOTALL,
+            )
+            text = text.replace(
+                "4. Multi-model (Haiku, Sonnet, Opus)",
+                "4. Agent-profile coverage",
+            )
+            text = text.replace(
+                "5. **Test with target models** → Haiku, Sonnet, Opus if using all",
+                "5. **Test with target profiles** → fastest eligible and demanding default profiles",
+            )
+            text = text.replace(
+                '| "Works on Opus so it\'s fine" | Haiku needs more guidance |',
+                '| "Works on one profile so it\'s fine" | Faster profiles may need more guidance |',
+            )
+            text = text.replace(
+                "- [ ] Multi-model tests pass (Haiku, Sonnet, Opus)",
+                "- [ ] Agent-profile tests pass for every eligible target profile",
             )
 
         marker = "\n---\n"

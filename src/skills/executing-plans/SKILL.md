@@ -154,11 +154,21 @@ On a **fresh start** (Step 0 found all wave steps pending):
 <!-- /gambit-backend -->
 
 1. **Repo convention first.** If the repo provides its own worktree setup (an existing `.worktrees/` or `worktrees/` directory, a CLAUDE.md worktree preference, or project tooling like a `just worktree` target), follow it: `git worktree add <dir>/<epic-slug> -b <branch>` and work there.
+<!-- gambit-backend:claude -->
 2. **Otherwise use the native facility:** `EnterWorktree name: "<epic-slug>"` — creates the worktree under `.claude/worktrees/` on a new branch and switches the session into it. The base ref follows the `worktree.baseRef` setting (`fresh` = origin default branch; `head` = current HEAD).
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+2. **Otherwise use standard Git:** choose the base revision from the approved epic context, then run `git worktree add <dir>/<epic-slug> -b <branch> <base-ref>` and enter that path. Do not assume a backend-owned worktree directory or hook setting.
+<!-- /gambit-backend -->
 
 Then prepare it: run the project's dependency setup (match the tooling — `npm install`, `cargo build`, `direnv allow`/devenv, etc.), and run the test suite once to pin the baseline. Report baseline failures before dispatching any wave — you can't distinguish new breakage from inherited breakage without this.
 
+<!-- gambit-backend:claude -->
 On **resume**: if the session is already in the epic's worktree, continue. In a fresh session, re-enter it — `EnterWorktree path: "<worktree path>"` for a native one (it must appear in `git worktree list`), or switch to a repo-managed one directly. Never dispatch a wave from main.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+On **resume**: if the session is already in the epic's worktree, continue. Otherwise locate the existing path with `git worktree list` and enter it directly; if it no longer exists, recreate it through the repository convention or `git worktree add`. Never dispatch a wave from main.
+<!-- /gambit-backend -->
 
 The transient per-worker worktrees of a ≥2 wave (`references/wave-dispatch.md`) fork off THIS worktree's HEAD — they are orchestrator-managed and separate from the epic workspace.
 

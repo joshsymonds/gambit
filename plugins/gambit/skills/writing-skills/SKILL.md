@@ -327,7 +327,7 @@ The response tells you which kind of fix is needed:
 1. Baseline (fail without skill)
 2. Effectiveness (pass with skill)
 3. Pressure tests (combined 3+ pressures from taxonomy)
-4. Multi-model (Haiku, Sonnet, Opus)
+4. Agent-profile coverage
 5. Triggering tests (see below)
 6. Bulletproof signals present (above)
 
@@ -402,7 +402,7 @@ What bad skills look like — avoid these regardless of skill type:
 2. **Test before writing** → Baseline failure must be confirmed
 3. **Test after writing** → Skill must make test pass
 4. **Pressure test discipline skills** → Time, sunk cost, authority
-5. **Test with target models** → Haiku, Sonnet, Opus if using all
+5. **Test with target profiles** → fastest eligible and demanding default profiles
 6. **Respect 500-line limit** → Split if over, use progressive disclosure
 
 ### Common Excuses
@@ -413,7 +413,7 @@ What bad skills look like — avoid these regardless of skill type:
 | "I'll test after writing" | You'll rationalize it works |
 | "Pressure tests are overkill" | Production faces more pressure |
 | "Just a small change" | Small changes create loopholes |
-| "Works on Opus so it's fine" | Haiku needs more guidance |
+| "Works on one profile so it's fine" | Faster profiles may need more guidance |
 | "I already know the best practices" | Read the references anyway |
 
 ---
@@ -425,7 +425,7 @@ What bad skills look like — avoid these regardless of skill type:
 - [ ] Baseline test confirms failure without skill
 - [ ] Skill makes test pass
 - [ ] Pressure tests pass (time, sunk cost, authority)
-- [ ] Multi-model tests pass (Haiku, Sonnet, Opus)
+- [ ] Agent-profile tests pass for every eligible target profile
 - [ ] Triggering tests pass (activates correctly, doesn't over-trigger)
 - [ ] Description has trigger keywords, third person, all "when to use" info
 - [ ] Under 500 lines (or split with progressive disclosure)
