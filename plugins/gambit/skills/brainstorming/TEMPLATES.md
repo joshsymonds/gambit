@@ -93,6 +93,24 @@ Draft for user review as "Worker Brief: Add [specific deliverable]":
     ## Goal
     [What this task delivers — one clear outcome]
 
+    ## Files owned
+    [Exact repository-relative path allowlist. List every tracked or untracked text or binary
+    artifact, deletion, symlink, and executable-mode change this worker may deliver. No globs or
+    directories.]
+    - exact/path/to/source.ext
+    - exact/path/to/test.ext
+
+    ## Hidden shared surfaces
+    [Name implicit collision surfaces checked while forming the wave: lockfiles/manifests,
+    generated code or indexes, migration sequences, registries/barrels, route tables, snapshot
+    directories. Write `None` only after checking. Any surface this task will edit must also appear
+    in Files owned; overlapping ownership moves the task to another wave.]
+
+    ## Neighbors
+    [For a parallel wave, give every concurrent worker's subject and exact Files owned allowlist;
+    all are off-limits. For a single-task wave, write `None (single-task wave)`.]
+    - [neighbor subject] — exact allowlist: [path/a, path/b] (off-limits)
+
     ## Implementation
 
     1. Study existing code
@@ -109,6 +127,8 @@ Draft for user review as "Worker Brief: Add [specific deliverable]":
     - [ ] [Specific, measurable outcome]
     - [ ] Tests passing
     - [ ] Pre-commit hooks passing
+
+    Test command: [exact argv/command for this task]
 ```
 
 For a fresh epic, obtain explicit user approval of the complete draft contract and every complete first-wave worker brief. Only after approval, present the full approved contract and every complete first-wave brief in the root transcript, then initialize the complete ordered wave list. A parallel first wave is one step regardless of its worker count:

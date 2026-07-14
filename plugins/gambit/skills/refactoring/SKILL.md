@@ -73,9 +73,10 @@ Violating the cycle is violating the skill. "I'll test at the end" means you're 
 
 ```
 SpawnAgent
-  role: "test-runner"
-  description: "Run test suite"
-  prompt: "Run: [test command for this project]. Report pass/fail counts and any failures. Make no edits."
+  agent_type: "test-runner"  # Profile-aware: requires hide_spawn_agent_metadata = false.
+  task_name: "run_test_suite"
+  fork_turns: "none"
+  message: "Run: [test command for this project]. Report pass/fail counts and any failures. Make no edits."
 ```
 
 **ALL tests must pass.**
@@ -140,9 +141,10 @@ After EVERY small change:
 
 ```
 SpawnAgent
-  role: "test-runner"
-  description: "Run test suite"
-  prompt: "Run: [test command for this project]. Report pass/fail counts and any failures. Make no edits."
+  agent_type: "test-runner"  # Profile-aware: requires hide_spawn_agent_metadata = false.
+  task_name: "run_test_suite"
+  fork_turns: "none"
+  message: "Run: [test command for this project]. Report pass/fail counts and any failures. Make no edits."
 ```
 
 **ALL tests must still pass.**
@@ -203,9 +205,10 @@ After all transformations complete:
 
 ```
 SpawnAgent
-  role: "test-runner"
-  description: "Run full test suite and linter"
-  prompt: "Run: [test command] && [lint command]. Report all results. Make no edits."
+  agent_type: "test-runner"  # Profile-aware: requires hide_spawn_agent_metadata = false.
+  task_name: "run_full_test_suite_and_linter"
+  fork_turns: "none"
+  message: "Run: [test command] && [lint command]. Report all results. Make no edits."
 ```
 
 **Checklist:**

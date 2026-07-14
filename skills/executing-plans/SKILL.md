@@ -114,7 +114,7 @@ The transient per-worker worktrees of a ≥2 wave (`references/wave-dispatch.md`
 The ready work is a **wave** — one or more ready tasks whose file sets are **pairwise disjoint** and that have **no semantic dependency** on each other (a task needing another's output belongs in a later wave). One cycle dispatches one wave. The orchestrator does not write implementation code in the main context — it dispatches a fresh `general-purpose` worker per task and stays a coordinator: it plans, verifies, integrates, and checkpoints while a cheaper, faster model does the mechanical work. Every worker is governed by the shared **`contracts/worker.md`** — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast Stop Triggers, and a 4-state return.
 
 - **Single-task wave** → dispatch one worker; it works directly in the epic's working tree.
-- **Wave of ≥2** → run each worker in its OWN isolated worktree so their tests, lints, and builds cannot interfere; brief each with a `## Neighbors` section; integrate the returned diffs serially. Never let two workers edit the same working tree. Full mechanics: **`references/wave-dispatch.md`** — read it whenever a wave has ≥2 tasks.
+- **Wave of ≥2** → run each worker in its OWN isolated worktree so their tests, lints, and builds cannot interfere; give every brief exact `## Files owned`, `## Hidden shared surfaces`, and `## Neighbors` allowlists; then use `scripts/integrate_wave.py` for commit-based atomic integration and one combined full-suite gate. Never let two workers edit the same working tree. Full mechanics: **`references/wave-dispatch.md`** — read it whenever a wave has ≥2 tasks.
 
 **Resolve the contract path once.** Glob `**/contracts/worker.md` at the start of the epic to get its absolute path and pass that path to the worker — **do NOT Read `worker.md` into your own context**, and **do NOT hardcode or reuse a stale absolute path from an earlier session** (plugin store paths change; re-Glob). The worker reads it in its fresh context (exactly as the `review` skill passes `reviewers/*.md` by path); reading it yourself loads ~1.4k tokens into the long-lived orchestrator context on every epic, for nothing. The worker re-reads it on every dispatch, including retries — keep `worker.md` lean.
 
@@ -128,11 +128,17 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
      ## Task
      <constructed from the task's Goal + Implementation + Success Criteria, exact values verbatim — never paste session history>
 
+     ## Files owned
+     <exact repository-relative path allowlist, including every new/untracked/binary artifact, deletion, mode change, and symlink>
+
+     ## Hidden shared surfaces
+     <lockfiles, generated indexes, registries, snapshots, and other implicit collision surfaces checked; `None` only after checking>
+
      ## Context
      <where this task fits + any cross-task interfaces/decisions the brief can't know>
 
-     ## Neighbors        # ONLY in a wave of ≥2 — omit for a single-task wave
-     <for each concurrent task: its subject + the exact files it owns; these are off-limits to you>
+     ## Neighbors
+     <for each concurrent task: its subject + exact Files owned allowlist, all off-limits; or `None (single-task wave)`>
 
      Test command: <the task's test command>.
      Workspace: <the worker's own worktree path> on branch <branch>; baseline is <the wave's fork-point SHA — the prior task's commit for a single-task wave, or the shared wave-start HEAD for a ≥2 wave>."
@@ -140,14 +146,22 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
    Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 
 3. **Route on the worker's returned status** (the contract defines four). **Never retry the same model on the same unchanged task** — something must change:
-   - **DONE** → verify yourself with FRESH evidence (run the full test command now; don't trust the self-report), then run the **Checkpoint quality gate** (below) before proceeding.
+   - **DONE** → single-task wave: verify with FRESH evidence by running its full test command. Wave of ≥2: confirm the worker's isolated RED/GREEN evidence and rerun only a missing worker-scoped check; the final full-suite gate belongs to the combined manifest and runs exactly once. Then run the **Checkpoint quality gate** (below) on that worker's complete change set before proceeding.
    - **DONE_WITH_CONCERNS** → read the concern. Correctness or scope → resolve it (refine + re-dispatch, or fix directly) before accepting; treat it as an escalation trigger in the quality gate (below). Benign observation → note it and verify as DONE. **A "bigger behavior change than the brief implied" flag usually means the brief was wrong, not the worker** — re-read the requirement the worker cites and fix the brief, don't wave the flag through because the worker followed instructions literally. A worker's scope-surprise is often your spec catching itself.
    - **NEEDS_CONTEXT** → supply the missing values/decisions and re-dispatch with them added.
    - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch at the `escalation` tier (default `"opus"`); task too large → decompose into a new task (`TaskCreate`); the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
 
-**One of the four statuses is the ONLY signal that advances a task — silence is not one of them.** A worker that has not returned DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED is still working, even when it looks otherwise. A worker spends a long opening stretch reading, grepping, and reasoning before it writes a single byte — so a **flat `git status`, an unchanged diff across several checks, and an unanswered status ping are indistinguishable from a dead worker but are not one.** Worker↔orchestrator messaging also lags: a worker deep in work often does not read its inbox for a while, and its replies can arrive minutes after you'd expect (sometimes crossing your own next message). **Do not presume a silent worker is dead, and above all do not spawn a replacement on silence alone** — re-dispatching a still-live worker onto its own task and tree manufactures a file collision (two workers editing the same files), the single most expensive and recurrent orchestration mistake. If you genuinely must probe, send **one** status ping framed as informational ("not a stand-down — where are you?") and wait a full cycle; only a returned BLOCKED/failure, or a process you have confirmed dead by other means, justifies re-dispatch. When a collision does happen anyway, workers detect it (`## Neighbors` / blast-radius) and stand down cleanly — so before integrating a tree two workers may have touched, confirm it has been **stable across a couple of checks** (no files changing under you) and re-run the full gate, rather than reading a half-written state. Patience here is not idleness; it is the cheapest thing you will do all epic.
+**One of the four statuses is the ONLY signal that advances a task — silence is not one of them.** A worker that has not returned DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED is still working, even when it looks otherwise. A worker spends a long opening stretch reading, grepping, and reasoning before it writes a single byte — so a **flat `git status`, an unchanged diff across several checks, and an unanswered status ping are indistinguishable from a dead worker but are not one.** Worker↔orchestrator messaging also lags: a worker deep in work often does not read its inbox for a while, and its replies can arrive minutes after you'd expect (sometimes crossing your own next message). **Do not presume a silent worker is dead, and above all do not spawn a replacement on silence alone** — re-dispatching a still-live worker onto its own task and tree manufactures a file collision (two workers editing the same files), the single most expensive and recurrent orchestration mistake. If you genuinely must probe, send **one** status ping framed as informational ("not a stand-down — where are you?") and wait a full cycle; only a returned BLOCKED/failure, or a process you have confirmed dead by other means, justifies re-dispatch. When a collision does happen anyway, workers detect it (`## Neighbors` / blast-radius) and stand down cleanly — so before integrating a tree two workers may have touched, confirm it has been **stable across a couple of checks** (no files changing under you) and rerun its worker-scoped verification. Invoke the manifest's combined full gate only after every tree is stable and accepted. Patience here is not idleness; it is the cheapest thing you will do all epic.
 
-4. **Integrate the wave serially — you are the sole committer.** Workers edit; you verify and commit. Single-task wave → gate the diff, then commit at the checkpoint (Step 4a). Wave of ≥2 → take each worker's diff in turn: gate it, apply it to the epic's tree, run the FULL suite, commit that task's files — one worker at a time, never two unverified diffs at once (`references/wave-dispatch.md`). Workers never commit, even in their own worktrees. While a wave runs, scout and brief the next wave rather than idling.
+4. **Integrate the wave atomically — you are the sole committer.** Workers edit; you judge each complete diff before integration. Single-task wave → gate the diff, run its full command, then commit at the checkpoint (Step 4a). Wave of ≥2 → after every per-worker quality verdict is clean, create the ordered JSON manifest and run `scripts/integrate_wave.py` as specified in `references/wave-dispatch.md`. Workers never commit. While a wave runs, scout and brief the next wave rather than idling.
+
+    The ≥2-wave transaction is ordered and indivisible:
+
+    1. **Validate inputs.** Reject overlapping exact allowlists, verify the epic and all workers at the shared base, and build each complete worker tree through a temporary index without changing the worker's real staged or unstaged state.
+    2. **Combine ordered commits.** Create one distinct commit object per worker, then cherry-pick them in manifest order on the detached integration worktree.
+    3. **Run one combined gate.** Run the full-suite gate exactly once on the combined detached HEAD and require its worktree to remain fully clean.
+    4. **Fast-forward the exact tested head.** Revalidate the epic and every worker after the gate, then fast-forward the epic only to that exact passing combined HEAD.
+    5. **Clean up only after success.** Remove transient worker and integration worktrees only after the exact-head fast-forward succeeds. Validation, conflict, gate, revalidation, or fast-forward failure leaves epic HEAD unmoved and retains every worktree and artifact for inspection.
 
 **What you do yourself vs dispatch.** Two kinds of task the orchestrator executes directly; everything else is dispatched to a worker:
 - **Non-code tasks** (pure docs, task bookkeeping) — there's no implementation to delegate.
@@ -168,14 +182,14 @@ For a delegated task the worker runs this loop in its own context under `contrac
 
 **Pre-completion verification (FRESH evidence required):**
 - All steps in description completed?
-- Tests passing? Run the FULL test command NOW — previous runs don't count after code changes
+- Tests passing? For a single-task wave, run its FULL test command now. For a wave of ≥2, require each worker's isolated evidence and the manifest's one combined full-suite gate; never rerun that full gate per worker.
 - Read complete output, check pass/fail counts and exit code
 - Changes committed?
 - State claim WITH evidence: "Tests pass. [Ran: X, Output: Y/Y passed, exit 0]"
 
 #### Checkpoint quality gate (judge the diff, not just the tests)
 
-A green test is necessary but NOT sufficient. Before marking the task complete, read the worker's actual changes — `git diff` (and `git status` for stray files) — and judge them. The orchestrator does this ITSELF in the common case (no dispatch): it is the most capable model in the loop and is reviewing a *worker's* code, not its own.
+A green test is necessary but NOT sufficient. Before marking the task complete, read the worker's complete change set — NUL-safe `git status`, staged and unstaged diffs, and every untracked/binary artifact named in `Files owned` — and judge it. Ordinary `git diff` alone is incomplete. The integrator later exposes a staged `--binary --full-index` diff for the durable record. The orchestrator does this ITSELF in the common case (no dispatch): it is the most capable model in the loop and is reviewing a *worker's* code, not its own.
 
 Judge the diff against six sources:
 1. **The epic's Quality Bar** (`TaskGet` the epic) — gambit's fixed maximal standard for good code, carried verbatim in every epic.
@@ -207,7 +221,7 @@ Agent subagent_type="general-purpose" model="<finder tier — see contracts/mode
 
 This solo dispatch has no verifier behind it (unlike the end-of-epic review, which pairs reviewers with a dedicated verifier) — so YOU are the adjudicator the quality reviewer's contract assumes downstream. Before acting on any finding it returns, confirm it yourself by reading the `file:line` its `Verify by:` cites; drop any finding you cannot confirm. Then act on the confirmed findings exactly as above (defect → fresh worker; clean → proceed). This is the per-task LOCAL gate; the full end-of-epic review (Step 5) — four reviewers plus that verifier — stays the architectural backstop, so do NOT run the four-dimension review per task.
 
-Mark complete with `TaskUpdate` only after ALL steps are verified with fresh evidence AND the checkpoint quality gate passed (or its escalation cleared).
+For a single task, mark complete with `TaskUpdate` only after all steps are verified with fresh evidence and the checkpoint quality gate passed. For a ≥2 wave, keep every task in progress until all per-worker quality verdicts clear and `integrate_wave.py` completes the atomic fast-forward after its one combined full-suite gate; then mark the wave's tasks complete together.
 
 #### When Hitting Obstacles
 
@@ -245,7 +259,7 @@ After a wave completes, build the NEXT wave from what you learned — and make i
 
 **Never manufacture disjointness.** Don't split one behavior along a file boundary to fake width — two halves of one change brief badly and integrate worse. Harvest width where the design provides it; don't engineer it.
 
-**Scale width to suite speed.** Integration is serial (gate → apply → full suite → commit, per task), so a wave of N costs ~N full-suite runs at the checkpoint. A fast suite affords a wide wave; a slow one argues for a narrower one.
+**Harvest width when the suite is slow.** A ≥2 wave pays for one combined full-suite gate, not one gate per worker, so independent work captures more speedup as the suite gets slower. Width is limited by real ownership, dependency, review-attention, and conflict surfaces — never manufacture disjointness merely to make a wave wider.
 
 **Review what you learned:**
 1. What did we discover during implementation?
@@ -270,7 +284,7 @@ After a wave completes, build the NEXT wave from what you learned — and make i
 **Task quality check:**
 - Scoped: one focused sitting (~15-45 min)
 - Self-contained: Can execute without asking questions
-- Explicit: All file paths specified
+- Explicit: `Files owned` is an exact path allowlist; `Hidden shared surfaces` records implicit collision checks; `Neighbors` gives every concurrent worker's exact allowlist
 - Definitive: Steps reference verified file paths — never conditional ("if exists", "if present"). Verify against the codebase first, then write the step.
 - Testable: Has verification command with expected output
 - Anchored: names the exact existing functions/files to mirror and the established idiom to follow — anchor quality visibly drives worker output quality
@@ -284,14 +298,14 @@ Two parts: commit any work that isn't already on the branch, then present the ch
 
 #### 4a: Commit Task's Work to Current Branch (Default)
 
-Before presenting the checkpoint, commit the wave's work to whatever branch is currently checked out — `main`, a feature branch, a worktree branch, whichever is active. The checkpoint is the agreed "one wave done" unit; a commit at this boundary makes each task a durable, reviewable history entry so the user's next action (review, clear context, hand off, walk away) finds the work preserved. A ≥2 wave commits each task as it integrates (Step 2), so its work is already on the branch — here you only confirm nothing is left uncommitted.
+Before presenting the checkpoint, commit the wave's work to whatever branch is currently checked out — `main`, a feature branch, a worktree branch, whichever is active. The checkpoint is the agreed "one wave done" unit; a commit at this boundary makes each task a durable, reviewable history entry so the user's next action (review, clear context, hand off, walk away) finds the work preserved. A successful ≥2 wave already reached the branch through one tested atomic fast-forward containing one commit per worker (Step 2), so here you only confirm nothing is left uncommitted.
 
 1. Run `git status` to see what's uncommitted
 2. If there are changes:
    - Stage each task's files by name — avoid `git add -A`, which can sweep in accidentally-created files. One commit per task, even within a wave.
    - Write a concise commit message: one-line subject describing what the task accomplished; optional short body for non-obvious WHY
    - Create a NEW commit (don't amend). Don't skip hooks. Don't push.
-3. If `git status` is clean (a ≥2 wave already committed each task at integration, intra-task commits during the TDD cycle captured everything, or the task was marked SKIPPED with no code changes), note it under "Commit" in the checkpoint summary
+3. If `git status` is clean (a ≥2 wave already landed its tested combined history atomically, intra-task commits during the TDD cycle captured everything, or the task was marked SKIPPED with no code changes), note it under "Commit" in the checkpoint summary
 
 **Do NOT push.** Committing is local — the user decides when to push.
 
@@ -390,6 +404,16 @@ TaskCreate
     ## Goal
     Use framework's built-in session middleware instead of custom implementation.
 
+    ## Files owned
+    - src/middleware/session.ts
+    - tests/middleware/session.test.ts
+
+    ## Hidden shared surfaces
+    - None (no manifest, generated registry, route table, or snapshot changes)
+
+    ## Neighbors
+    - None (single-task wave)
+
     ## Implementation
     1. Study existing middleware: src/middleware/session.ts:15-40
     2. Write test: auth token stored in session correctly
@@ -417,6 +441,7 @@ This task wouldn't have been correct if planned upfront — it reflects what you
 6. **Judge the diff at the checkpoint** — a green test is necessary, not sufficient; read the diff, emit a cited verdict against the epic's Quality Bar, route clean/defect/escalate. Never mark complete on a passing test alone
 7. **Never water down requirements** — if blocked, ask user, don't simplify
 8. **Commit before checkpoint** — default is commit to current branch; skip only if the user said "don't commit yet" this session. Never push.
+9. **A ≥2 wave is atomic** — exact allowlists first, commit-based `integrate_wave.py` transport, one combined full-suite gate, then one fast-forward. Never land or clean a partial wave.
 
 **Common rationalizations (all mean STOP, follow the process):**
 
@@ -437,8 +462,9 @@ Before the first wave:
 
 Before completing each task:
 - [ ] All steps in description executed
-- [ ] Tests passing (verified by running them)
+- [ ] Worker-scoped tests passing; for a ≥2 wave, the full-suite gate ran exactly once on the combined detached HEAD
 - [ ] Checkpoint quality gate run — diff judged against the epic's Quality Bar, cited verdict emitted, routed clean/defect/escalate
+- [ ] A ≥2 wave landed only through the successful atomic fast-forward; no partial worker history reached the epic
 - [ ] Changes committed
 - [ ] `TaskUpdate status="completed"` only after truly done
 

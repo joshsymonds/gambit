@@ -98,13 +98,28 @@ only orchestration sources of truth.
 
 ## Subagents
 
-`SpawnAgent` examples specify a role and prompt, not literal API syntax. Use
-Codex's subagent controls:
+Executable `SpawnAgent` examples use the Codex 0.144.3 V2 schema. A portable
+call supplies `task_name`, `message`, and `fork_turns: "none"`; `task_name` is
+lowercase snake_case. Spawn metadata is hidden by default, so portable calls do
+not require `agent_type`, model, reasoning, or service-tier fields.
 
-- Read-only exploration → `explorer`.
-- Implementation or fixes → `worker`.
-- Review, verification, or a fully specified contract → `default`, unless an
-  installed custom agent matches the named role.
+Codex exposes `agent_type` and the other optional metadata only when
+`hide_spawn_agent_metadata = false`. In that environment, an explicitly
+profile-aware example may add `agent_type` to select an installed named Gambit
+class. It must still use a non-full fork. Skills select classes, never concrete
+model IDs or reasoning settings; those choices belong to the installed Codex
+agent profile.
+
+Prefer a matching installed class, then use its built-in fallback: `scout` →
+`explorer`, `worker` and `test-runner` → `worker`, and `finder` and `verifier`
+→ `default`. When metadata is hidden, omit `agent_type`; the contract path and
+complete brief in `message` keep the portable dispatch class-bound while Codex
+uses its built-in default spawning behavior.
+
+Always set `fork_turns: "none"` rather than accepting its `"all"` default.
+Gambit briefs are self-contained and deliberately exclude inherited turns;
+copying the root transcript wastes context, weakens the worker boundary, and is
+incompatible with profile/model metadata on a full fork.
 
 Dispatch independent agents concurrently. Keep dependent work sequential.
 When a skill specifies an agent contract, pass its path and require the agent

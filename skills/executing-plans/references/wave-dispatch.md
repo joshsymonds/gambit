@@ -1,60 +1,76 @@
-# Wave dispatch — parallel workers in isolated worktrees
+# Wave dispatch — parallel workers with atomic integration
 
-Read this when a wave has **≥2 tasks**. A single-task wave needs none of it: the worker works in the epic's tree and you commit as usual.
+Read this for every wave with **≥2 tasks**. A single-task wave needs none of it: the worker uses the epic worktree and the ordinary checkpoint commit path.
 
-## Why worktrees, not shared-tree parallelism
+## Isolate every worker at one base
 
-File-disjoint tasks still interfere in a shared tree — one worker's mid-RED broken state, half-written package, or repo-wide lint run fails another worker's verification through no fault of either. (This happened in practice: a concurrent worker's temporary fixture deletion failed a neighbor's test run.) Isolation removes it — each worker gets its own worktree, so its tests, lints, and builds see only its own changes.
-
-## Fork the wave from the epic worktree's HEAD
-
-The epic's working tree is the integration base. For each task in the wave, fork a **detached-HEAD** worktree from its current HEAD, in a sibling directory:
+File-disjoint tasks still interfere in a shared tree: one worker's mid-RED state, generated artifact, or build output can invalidate another worker's verification. Run each worker in a detached worktree forked from the clean epic worktree's exact HEAD:
 
 ```bash
 BASE=$(git rev-parse HEAD)                    # run in the epic worktree
 git worktree add --detach ../wave-<task-id> "$BASE"
 ```
 
-Detached HEAD, not a branch: a branch can be checked out in only one worktree at a time, and a detached fork leaves no branch to clean up afterward. Pass the worktree path to the worker as its Workspace; it works only there.
+Reserve a sibling path for the detached integration worktree, but do not create it. `integrate_wave.py` creates it only after every worker validates. Pass each worker its own path and the shared `$BASE`; workers edit but never commit.
 
-**Alternative:** the Agent tool's native `isolation: "worktree"`. It works (real isolation; the diff is retrievable after the agent returns) but forks from the *orchestrator's-checkout* HEAD and leaves a lingering locked branch each wave — so prefer the explicit `git worktree add --detach` above, which forks from the exact base you name and cleans up completely.
+## Make ownership executable
 
-## Neighbors in every brief
+Every brief must name:
 
-Each brief in the wave carries a Neighbors section:
+```markdown
+## Files owned
+- exact/repository/path.ext
 
-```
+## Hidden shared surfaces
+- package lockfiles, generated indexes, registries, snapshots, or `None`
+
 ## Neighbors
-- <task subject> — owns <files>   (off-limits to you)
+- <worker name> — exact allowlist: <every path it owns> (off-limits)
 ```
 
-The worker contract treats a neighbor's file as out of scope (a Stop Trigger), so a worker that finds it needs a neighbor's file reports rather than colliding.
+`Files owned` is an exact path allowlist, not a directory, glob, or illustrative list. Any hidden surface a worker must change belongs in its allowlist; if that overlaps a neighbor, move the work to another wave. New and untracked text or binary files, deletions, symlinks, and executable-mode changes are deliverables and must be listed exactly.
 
-## Integrate serially — you are the sole committer
+## Inspect each worker before integration
 
-Workers never commit, even in their own worktrees — so a worker's changes are **uncommitted working-tree edits**, and its worktree HEAD is still `$BASE`. Retrieve them with a plain working-tree diff (NOT `$BASE..HEAD`, which compares two identical commits and yields nothing). Integrate one at a time, in the epic worktree:
+After all workers return, inspect every isolated worktree's NUL-delimited status and actual diff against its brief. Run the checkpoint quality gate on each worker's complete change set. Do not use a plain `git diff` patch as transport: it can omit untracked files and cannot safely reconstruct every binary, index, mode, and symlink state.
+
+Reject or re-dispatch quality defects before invoking the integrator. Do not run the full repository gate per worker; worker-scoped tests already ran concurrently in their isolated worktrees.
+
+## Integrate the whole wave atomically
+
+Create a JSON manifest outside the epic and worker worktrees. Preserve worker order because it becomes commit order:
+
+```json
+{
+  "base": "<wave-start commit>",
+  "epic_worktree": "<absolute epic worktree path>",
+  "integration_worktree": "<absolute absent sibling path>",
+  "gate": ["<program>", "<arg1>", "<arg2>"],
+  "workers": [
+    {
+      "name": "<worker name>",
+      "worktree": "<absolute worker worktree path>",
+      "owned_paths": ["exact/path.ext", "exact/new-binary.dat"],
+      "commit_message": "<durable per-worker commit subject>"
+    }
+  ]
+}
+```
+
+Resolve the script beside this skill (plugin/cache paths vary), then run it by absolute path:
 
 ```bash
-patch=$(mktemp)                                   # scratch file (mktemp, not a predictable /tmp path)
-git -C ../wave-<id> diff > "$patch"               # the worker's uncommitted edits
-# → run the checkpoint quality gate on this diff (Step 2)
-git apply "$patch"                                # apply into the epic tree
-# → run the FULL test suite here, in the epic tree (not the worktree)
-git add <the task's files by name> && git commit  # per-task commit (this is Step 4a)
+python3 <absolute-skill-directory>/scripts/integrate_wave.py <manifest.json>
 ```
 
-Gate → apply → full suite → commit, then the next worker. Never apply two unverified diffs at once. If an apply conflicts, or the suite fails after applying, that task drops to BLOCKED / quality-defect routing (Step 2) — the workers already integrated stay committed; the wave does not roll back.
+The script executes one fail-closed transaction in this order:
 
-Integration is **serial**: each task's full-suite run happens one at a time, so a wave of N tasks costs ~N × the suite. The wave parallelizes worker *write* time, not integration — scale width to suite speed: a fast suite affords a wide wave, a slow one argues for narrower.
+1. **Validate inputs.** Reject any exact path owned by more than one worker before touching Git state. Verify the clean epic and every worker at `base`; discover staged, unstaged, untracked, deleted, binary, mode, symlink, space-containing, and Unicode paths NUL-safely; and reject empty or out-of-allowlist work. For each worker, build the complete candidate tree in a temporary index initialized from `base`, stage only its exact allowlist there, print its `--binary --full-index` diff, and fingerprint the unchanged real worktree and index.
+2. **Combine ordered commits.** Revalidate every input, create one orchestrator-owned Git commit object per worker, and cherry-pick those commits in manifest order into the detached integration worktree. This is commit-based Git transport, never a plain patch. A conflict leaves epic HEAD unmoved and preserves the integration and worker worktrees as evidence.
+3. **Run one combined gate.** Run the manifest's full-suite gate exactly once after every worker commit is combined on the detached candidate HEAD. A nonzero gate or any tracked, staged, or non-ignored untracked integration artifact fails closed.
+4. **Fast-forward the exact tested head.** After the gate, revalidate the clean integration state, every worker, and the epic. Only then fast-forward the epic from `base` to the exact combined HEAD that passed the gate.
+5. **Clean up only after success.** Remove worker and integration worktrees only after the exact-head fast-forward succeeds. Every validation, conflict, gate, or fast-forward failure leaves epic HEAD unmoved and retains all worktrees and artifacts as failure evidence.
 
-## Remove the worktrees
+## Checkpoint once
 
-```bash
-git worktree remove --force ../wave-<id>     # --force: test runs leave untracked artifacts
-```
-
-Detached HEAD means there is no branch left to delete.
-
-## What reaches the checkpoint
-
-A ≥2 wave produces **N per-task commits** (one per integrated worker) inside a single cycle, then **one** checkpoint summary (Step 4b) listing them all. The STOP still happens once, after the whole wave integrates.
+A successful ≥2-task wave reaches the epic as one atomic fast-forward containing one distinct history entry per worker. It still produces one checkpoint and one STOP after the whole wave. On any failure, do not clean or commit around the evidence: route the validation, conflict, or gate defect while the native wave remains in progress.

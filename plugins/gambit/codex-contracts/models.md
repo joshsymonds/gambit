@@ -1,11 +1,11 @@
 # Codex agent-profile resolution
 
-Gambit assigns work by role. Prefer an installed custom Codex agent with the
-matching role; otherwise use Codex's built-in `explorer`, `worker`, or
-`default` agent as described below. Agent configuration owns concrete model
-and reasoning settings—skills never pin a model ID.
+Gambit skills select classes; they never select concrete models or reasoning
+effort. Prefer an installed custom Codex agent with the matching class;
+otherwise use Codex's built-in `explorer`, `worker`, or `default` agent as
+described below. Agent-profile configuration owns model and reasoning settings.
 
-| Gambit role | Codex agent fallback | Purpose |
+| Gambit class | Codex agent fallback | Purpose |
 |---|---|---|
 | `finder` | `default` | Deep review where missed findings are costly |
 | `verifier` | `default` | Independent confirmation or refutation |
@@ -17,9 +17,10 @@ and reasoning settings—skills never pin a model ID.
 ## Hard rules
 
 - Never encode a concrete model ID in a skill or contract.
+- Never encode a concrete reasoning effort in a skill or contract.
 - Never retry the same unchanged prompt with the same agent profile.
 - A verifier must be capable of reasoning at least as deeply as the finder.
 - Use read-only sandboxing for scouts, finders, and verifiers when the active
   Codex surface supports per-agent sandbox configuration.
 - Custom profiles belong under `~/.codex/agents/` or project `.codex/agents/`;
-  Gambit consumes them by role but does not overwrite personal model choices.
+  Gambit consumes them by class but does not overwrite personal model choices.

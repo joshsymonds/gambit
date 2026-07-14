@@ -136,10 +136,10 @@ Resolve the absolute path to this skill's `reviewers/` directory **once** (Glob 
 In ONE message, emit exactly four `finder` SpawnAgent calls. Use an installed `finder` profile when available, otherwise use `default` with the finder contract. Each prompt is just: (1) a directive to read and follow that agent's instruction file by path, then (2) the review brief.
 
 ```
-SpawnAgent role="finder" description="Conformance review" prompt="Read <abs>/reviewers/conformance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
-SpawnAgent role="finder" description="Security review"    prompt="Read <abs>/reviewers/security.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
-SpawnAgent role="finder" description="Quality review"     prompt="Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
-SpawnAgent role="finder" description="Performance review" prompt="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+SpawnAgent agent_type="finder" task_name="conformance_review" message="Read <abs>/reviewers/conformance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false.
+SpawnAgent agent_type="finder" task_name="security_review"    message="Read <abs>/reviewers/security.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false.
+SpawnAgent agent_type="finder" task_name="quality_review"     message="Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false.
+SpawnAgent agent_type="finder" task_name="performance_review" message="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false.
 ```
 
 **Parallelism is structural, not a reminder.** That single message contains four SpawnAgent calls and nothing else — no `Read` calls, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself using `Read` on a reviewer file, you've reverted to the old serializing pattern — stop and dispatch by path.
@@ -172,7 +172,7 @@ The deduped list and frozen boundary go to the verifier in Step 6.
 Dispatch ONE `verifier` agent. Use an installed `verifier` profile when available, otherwise use `default` with the verifier contract. Pass the path rather than reading `verifier.md` into this context. The candidate list IS passed inline (it's dynamic):
 
 ```
-SpawnAgent role="verifier" description="Verify candidates" prompt="Read <abs>/reviewers/verifier.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\nmode: initial\nreview_base: [revision]\nreview_snapshot: [revision]\n\n## Candidate Findings\n\n[deduped list with ids]"
+SpawnAgent agent_type="verifier" task_name="verify_candidates" message="Read <abs>/reviewers/verifier.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\nmode: initial\nreview_base: [revision]\nreview_snapshot: [revision]\n\n## Candidate Findings\n\n[deduped list with ids]" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false.
 ```
 
 **Do NOT include reviewer severity, category (Gap vs. Improvement), or reasoning chain in the candidate list.** The verifier receives the mode, frozen revisions, and only `id`, `path`, `line_range`, `body`, `verify_by` per candidate. Fresh context prevents anchoring. Retain stripped fields in the Step 5 side-table.
@@ -216,7 +216,7 @@ In initial mode, implement every confirmed improvement. Confirmed gaps become fi
 After any remediation, enter closure mode. **Do not dispatch the four finders again.** Dispatch the verifier with only open ledger entries:
 
 ```
-SpawnAgent role="verifier" description="Close review ledger" prompt="Read <abs>/reviewers/verifier.md and follow it exactly.\n\nmode: closure\nreview_base: [revision]\nreview_snapshot: [original reviewed revision]\ncurrent_revision: [current HEAD]\n\n## Open Ledger Findings\n\n[original candidate fields for open IDs only]"
+SpawnAgent agent_type="verifier" task_name="close_review_ledger" message="Read <abs>/reviewers/verifier.md and follow it exactly.\n\nmode: closure\nreview_base: [revision]\nreview_snapshot: [original reviewed revision]\ncurrent_revision: [current HEAD]\n\n## Open Ledger Findings\n\n[original candidate fields for open IDs only]" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false.
 ```
 
 Interpret closure verdicts against the original claim:

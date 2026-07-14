@@ -1,4 +1,0 @@
-interface:
-  display_name: "Parallel Agent Dispatch"
-  short_description: "Use when facing 3+ independent test failures, bugs in unrelated subsystems, or investigation ques..."
-  default_prompt: "Use $gambit:parallel-agents for this task."

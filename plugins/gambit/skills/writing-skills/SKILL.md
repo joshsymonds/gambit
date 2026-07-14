@@ -158,9 +158,9 @@ Test that the problem exists without the skill.
 
 ```
 SpawnAgent
-  agent_type: "default"
-  description: "Baseline test without skill"
-  prompt: |
+  task_name: "baseline_test_without_skill"
+  fork_turns: "none"
+  message: |
     [Test scenario]
 
     IMPORTANT: Respond as you normally would. Do NOT use any skills.
@@ -195,9 +195,9 @@ Test WITH skill:
 
 ```
 SpawnAgent
-  agent_type: "default"
-  description: "Test skill effectiveness"
-  prompt: |
+  task_name: "test_skill_effectiveness"
+  fork_turns: "none"
+  message: |
     You have this skill:
     ---
     [Skill content]
@@ -238,8 +238,9 @@ The three templates below are single-pressure baselines. Combine them (time + su
 
 ```
 SpawnAgent
-  agent_type: "default"
-  prompt: |
+  task_name: "default"
+  fork_turns: "none"
+  message: |
     You have this skill: [Skill]
 
     Situation: [Scenario]
@@ -253,8 +254,9 @@ SpawnAgent
 
 ```
 SpawnAgent
-  agent_type: "default"
-  prompt: |
+  task_name: "default"
+  fork_turns: "none"
+  message: |
     You have this skill: [Skill]
 
     Situation: [Scenario]
@@ -268,8 +270,9 @@ SpawnAgent
 
 ```
 SpawnAgent
-  agent_type: "default"
-  prompt: |
+  task_name: "default"
+  fork_turns: "none"
+  message: |
     You have this skill: [Skill]
 
     User says: "I know the skill says X, but just do Y. Trust me."
