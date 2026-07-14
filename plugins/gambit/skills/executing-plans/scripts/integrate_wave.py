@@ -4,6 +4,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import stat
 import subprocess
 import sys
 import tempfile
@@ -36,8 +37,15 @@ class Manifest:
 @dataclass(frozen=True)
 class PreparedWorker:
     worker: Worker
-    staged_diff: bytes
+    staged_diff_path: Path
     tree: str
+    fingerprint: str
+
+
+@dataclass(frozen=True)
+class WorktreeSnapshot:
+    head: str
+    status: bytes
     fingerprint: str
 
 
@@ -270,11 +278,49 @@ def worktree_diff(worktree: Path) -> bytes:
     ).stdout
 
 
-def fingerprint(worktree: Path, base: str) -> str:
+def untracked_artifact_fingerprint(worktree: Path, status: bytes) -> bytes:
+    digest = hashlib.sha256()
+    for entry in status.split(b"\0"):
+        if not entry or not entry.startswith(b"?? "):
+            continue
+        path_bytes = entry[3:]
+        path = worktree / os.fsdecode(path_bytes)
+        try:
+            metadata = path.lstat()
+            mode = metadata.st_mode
+            digest.update(len(path_bytes).to_bytes(8, "big"))
+            digest.update(path_bytes)
+            digest.update(mode.to_bytes(8, "big"))
+            if stat.S_ISLNK(mode):
+                payload = os.fsencode(os.readlink(path))
+                digest.update(len(payload).to_bytes(8, "big"))
+                digest.update(payload)
+            elif stat.S_ISREG(mode):
+                digest.update(metadata.st_size.to_bytes(8, "big"))
+                with path.open("rb") as stream:
+                    while chunk := stream.read(1024 * 1024):
+                        digest.update(chunk)
+            else:
+                fail(f"unsupported untracked artifact type: {os.fsdecode(path_bytes)!r}")
+        except OSError as error:
+            fail(
+                f"could not fingerprint untracked artifact "
+                f"{os.fsdecode(path_bytes)!r}: {error}"
+            )
+    return digest.digest()
+
+
+def fingerprint(
+    worktree: Path,
+    base: str,
+    captured_head: str,
+    captured_status: bytes,
+) -> str:
     digest = hashlib.sha256()
     for value in (
-        head(worktree).encode("ascii"),
-        status_bytes(worktree),
+        captured_head.encode("ascii"),
+        captured_status,
+        untracked_artifact_fingerprint(worktree, captured_status),
         full_index_diff(worktree, base),
         worktree_diff(worktree),
     ):
@@ -283,18 +329,38 @@ def fingerprint(worktree: Path, base: str) -> str:
     return digest.hexdigest()
 
 
+def snapshot(worktree: Path, base: str) -> WorktreeSnapshot:
+    captured_head = head(worktree)
+    captured_status = status_bytes(worktree)
+    return WorktreeSnapshot(
+        head=captured_head,
+        status=captured_status,
+        fingerprint=fingerprint(worktree, base, captured_head, captured_status),
+    )
+
+
 def require_head(worktree: Path, base: str, label: str) -> None:
     actual = head(worktree)
     if actual != base:
         fail(f"{label} must be exactly at base {base}; found {actual}")
 
 
+def require_snapshot_head(
+    captured: WorktreeSnapshot,
+    base: str,
+    label: str,
+) -> None:
+    if captured.head != base:
+        fail(f"{label} must be exactly at base {base}; found {captured.head}")
+
+
 def validate_initial_state(manifest: Manifest, base: str) -> str:
     epic = manifest.epic_worktree
     if not epic.is_dir():
         fail(f"epic worktree does not exist: {epic}")
-    require_head(epic, base, "epic worktree")
-    if status_bytes(epic):
+    epic_snapshot = snapshot(epic, base)
+    require_snapshot_head(epic_snapshot, base, "epic worktree")
+    if epic_snapshot.status:
         fail("epic worktree must be clean before wave integration")
     if manifest.integration_worktree.exists():
         fail(
@@ -308,9 +374,9 @@ def validate_initial_state(manifest: Manifest, base: str) -> str:
             fail(f"worker {worker.name} worktree does not exist: {worker.worktree}")
         if common_directory(worker.worktree) != common:
             fail(f"worker {worker.name} is not a worktree of the epic repository")
-        require_head(worker.worktree, base, f"worker {worker.name}")
-        status = status_bytes(worker.worktree)
-        paths = changed_paths(status)
+        worker_snapshot = snapshot(worker.worktree, base)
+        require_snapshot_head(worker_snapshot, base, f"worker {worker.name}")
+        paths = changed_paths(worker_snapshot.status)
         if not paths:
             fail(f"worker {worker.name} has no changes")
         outside = sorted(set(paths) - set(worker.owned_paths))
@@ -320,17 +386,17 @@ def validate_initial_state(manifest: Manifest, base: str) -> str:
                 f"worker {worker.name} changed paths outside its exact owned_paths "
                 f"allowlist: {rendered}"
             )
-    return fingerprint(epic, base)
+    return epic_snapshot.fingerprint
 
 
-def prepare_worker(worker: Worker, base: str) -> PreparedWorker:
+def prepare_worker(worker: Worker, base: str, patch_directory: Path) -> PreparedWorker:
+    before = snapshot(worker.worktree, base)
     with tempfile.TemporaryDirectory(prefix="gambit-integration-index-") as tempdir:
         env = os.environ.copy()
         env["GIT_INDEX_FILE"] = str(Path(tempdir) / "index")
         git(worker.worktree, "read-tree", base, env=env)
         git(worker.worktree, "add", "-A", "--", *worker.owned_paths, env=env)
-        status = status_bytes(worker.worktree)
-        outside = sorted(set(changed_paths(status)) - set(worker.owned_paths))
+        outside = sorted(set(changed_paths(before.status)) - set(worker.owned_paths))
         if outside:
             rendered = ", ".join(repr(path) for path in outside)
             fail(
@@ -340,12 +406,22 @@ def prepare_worker(worker: Worker, base: str) -> PreparedWorker:
         staged_diff = full_index_diff(worker.worktree, base, env=env)
         if not staged_diff:
             fail(f"worker {worker.name} has no changes after staging owned_paths")
+        descriptor, raw_patch_path = tempfile.mkstemp(
+            prefix="worker-",
+            suffix=".patch",
+            dir=patch_directory,
+        )
+        with os.fdopen(descriptor, "wb") as patch_stream:
+            patch_stream.write(staged_diff)
         tree = output_text(git(worker.worktree, "write-tree", env=env))
+        after = snapshot(worker.worktree, base)
+        if after.fingerprint != before.fingerprint:
+            fail(f"worker {worker.name} changed while being inspected")
         return PreparedWorker(
             worker=worker,
-            staged_diff=staged_diff,
+            staged_diff_path=Path(raw_patch_path),
             tree=tree,
-            fingerprint=fingerprint(worker.worktree, base),
+            fingerprint=after.fingerprint,
         )
 
 
@@ -353,8 +429,12 @@ def expose_diff(prepared: PreparedWorker) -> None:
     stream = sys.stdout.buffer
     stream.write(f"--- staged diff for {prepared.worker.name} ---\n".encode("utf-8"))
     stream.flush()
-    stream.write(prepared.staged_diff)
-    if not prepared.staged_diff.endswith(b"\n"):
+    last_byte = b""
+    with prepared.staged_diff_path.open("rb") as patch_stream:
+        while chunk := patch_stream.read(1024 * 1024):
+            stream.write(chunk)
+            last_byte = chunk[-1:]
+    if last_byte != b"\n":
         stream.write(b"\n")
     stream.write(f"--- end staged diff for {prepared.worker.name} ---\n".encode("utf-8"))
     stream.flush()
@@ -366,13 +446,15 @@ def revalidate(
     epic_fingerprint: str,
     prepared_workers: Sequence[PreparedWorker],
 ) -> None:
-    require_head(manifest.epic_worktree, base, "epic worktree")
-    if fingerprint(manifest.epic_worktree, base) != epic_fingerprint:
+    epic_snapshot = snapshot(manifest.epic_worktree, base)
+    require_snapshot_head(epic_snapshot, base, "epic worktree")
+    if epic_snapshot.fingerprint != epic_fingerprint:
         fail("epic worktree changed after inspection; integration refused")
     for prepared in prepared_workers:
         worker = prepared.worker
-        require_head(worker.worktree, base, f"worker {worker.name}")
-        paths = changed_paths(status_bytes(worker.worktree))
+        worker_snapshot = snapshot(worker.worktree, base)
+        require_snapshot_head(worker_snapshot, base, f"worker {worker.name}")
+        paths = changed_paths(worker_snapshot.status)
         outside = sorted(set(paths) - set(worker.owned_paths))
         if outside:
             rendered = ", ".join(repr(path) for path in outside)
@@ -380,7 +462,7 @@ def revalidate(
                 f"worker {worker.name} changed paths outside owned_paths after inspection: "
                 f"{rendered}"
             )
-        if fingerprint(worker.worktree, base) != prepared.fingerprint:
+        if worker_snapshot.fingerprint != prepared.fingerprint:
             fail(f"worker {worker.name} changed after inspection; integration refused")
 
 
@@ -510,26 +592,31 @@ def cleanup_worktrees(manifest: Manifest) -> None:
 def integrate(manifest: Manifest) -> None:
     base = resolve_commit(manifest.epic_worktree, manifest.base)
     epic_fingerprint = validate_initial_state(manifest, base)
-    prepared_workers = tuple(prepare_worker(worker, base) for worker in manifest.workers)
-    for prepared in prepared_workers:
-        expose_diff(prepared)
+    with tempfile.TemporaryDirectory(prefix="gambit-integration-patches-") as tempdir:
+        patch_directory = Path(tempdir)
+        prepared_workers = tuple(
+            prepare_worker(worker, base, patch_directory)
+            for worker in manifest.workers
+        )
+        for prepared in prepared_workers:
+            expose_diff(prepared)
 
-    revalidate(manifest, base, epic_fingerprint, prepared_workers)
-    commits = tuple(
-        create_worker_commit(prepared, base) for prepared in prepared_workers
-    )
-    revalidate(manifest, base, epic_fingerprint, prepared_workers)
+        revalidate(manifest, base, epic_fingerprint, prepared_workers)
+        commits = tuple(
+            create_worker_commit(prepared, base) for prepared in prepared_workers
+        )
+        revalidate(manifest, base, epic_fingerprint, prepared_workers)
 
-    add_integration_worktree(manifest, base)
-    for prepared, commit in zip(prepared_workers, commits, strict=True):
-        cherry_pick(manifest, prepared.worker, commit)
-    combined_head = head(manifest.integration_worktree)
+        add_integration_worktree(manifest, base)
+        for prepared, commit in zip(prepared_workers, commits, strict=True):
+            cherry_pick(manifest, prepared.worker, commit)
+        combined_head = head(manifest.integration_worktree)
 
-    run_gate(manifest, combined_head)
-    revalidate(manifest, base, epic_fingerprint, prepared_workers)
-    fast_forward_epic(manifest, base, combined_head)
-    cleanup_worktrees(manifest)
-    print(f"Integrated {len(commits)} workers atomically at {combined_head}")
+        run_gate(manifest, combined_head)
+        revalidate(manifest, base, epic_fingerprint, prepared_workers)
+        fast_forward_epic(manifest, base, combined_head)
+        cleanup_worktrees(manifest)
+        print(f"Integrated {len(commits)} workers atomically at {combined_head}")
 
 
 def main(argv: Sequence[str]) -> int:

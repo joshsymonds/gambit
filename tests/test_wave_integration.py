@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import importlib.util
 import json
 import os
 import stat
@@ -7,11 +8,27 @@ import subprocess
 import sys
 import tempfile
 import unittest
+from collections.abc import Callable
 from pathlib import Path
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "src" / "skills" / "executing-plans" / "scripts" / "integrate_wave.py"
+
+
+def load_integrator() -> object:
+    module_name = "_gambit_integrate_wave_under_test"
+    existing = sys.modules.get(module_name)
+    if existing is not None:
+        return existing
+    spec = importlib.util.spec_from_file_location(module_name, SCRIPT)
+    if spec is None or spec.loader is None:
+        raise AssertionError(f"could not load integration script: {SCRIPT}")
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return module
 
 
 def run(
@@ -107,6 +124,174 @@ class WaveIntegrationTest(unittest.TestCase):
 
     def tearDown(self) -> None:
         self.tempdir.cleanup()
+
+    def assert_untracked_rewrite_fails_closed(
+        self,
+        artifact_name: str,
+        initialize: Callable[[Path], None],
+        gate_code: str,
+        inspect_artifact: Callable[[Path], object],
+        expected_artifact: object,
+    ) -> None:
+        worker = self.repo.add_worker("rewritten-artifact-worker")
+        witness = self.repo.add_worker("witness-worker")
+        artifact = worker / artifact_name
+        initialize(artifact)
+        (witness / "tracked.txt").write_text("witness\n", encoding="utf-8")
+        self.repo.write_manifest(
+            [
+                (
+                    "rewritten-artifact-worker",
+                    [artifact_name],
+                    "add artifact",
+                ),
+                ("witness-worker", ["tracked.txt"], "add witness"),
+            ],
+            [sys.executable, "-c", gate_code],
+        )
+
+        result = self.repo.integrate()
+
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("rewritten-artifact-worker", result.stderr)
+        self.assertIn("after inspection", result.stderr)
+        self.assertEqual(self.repo.head(), self.repo.base)
+        self.assertTrue(worker.exists())
+        self.assertTrue(witness.exists())
+        self.assertTrue(self.repo.integration.exists())
+        self.assertEqual(inspect_artifact(artifact), expected_artifact)
+
+    def test_same_path_untracked_text_rewrite_fails_closed(self) -> None:
+        artifact = self.root / "rewritten-artifact-worker" / "artifact.txt"
+
+        def initialize(path: Path) -> None:
+            path.write_text("initial text\n", encoding="utf-8")
+
+        self.assert_untracked_rewrite_fails_closed(
+            "artifact.txt",
+            initialize,
+            (
+                "from pathlib import Path; "
+                f"Path({str(artifact)!r}).write_text('rewritten text\\n')"
+            ),
+            lambda path: path.read_text(encoding="utf-8"),
+            "rewritten text\n",
+        )
+
+    def test_same_path_untracked_binary_rewrite_fails_closed(self) -> None:
+        artifact = self.root / "rewritten-artifact-worker" / "artifact.bin"
+
+        def initialize(path: Path) -> None:
+            path.write_bytes(b"\x00initial\xff")
+
+        self.assert_untracked_rewrite_fails_closed(
+            "artifact.bin",
+            initialize,
+            (
+                "from pathlib import Path; "
+                f"Path({str(artifact)!r}).write_bytes(b'\\x00rewritten\\xfe')"
+            ),
+            Path.read_bytes,
+            b"\x00rewritten\xfe",
+        )
+
+    def test_same_path_untracked_symlink_rewrite_fails_closed(self) -> None:
+        artifact = self.root / "rewritten-artifact-worker" / "artifact-link"
+
+        def initialize(path: Path) -> None:
+            os.symlink("tracked.txt", path)
+
+        self.assert_untracked_rewrite_fails_closed(
+            "artifact-link",
+            initialize,
+            (
+                "import os; "
+                f"os.unlink({str(artifact)!r}); "
+                f"os.symlink('conflict.txt', {str(artifact)!r})"
+            ),
+            os.readlink,
+            "conflict.txt",
+        )
+
+    def test_prepared_workers_spill_binary_patches_to_files(self) -> None:
+        integrator = load_integrator()
+        workers = []
+        for index in range(2):
+            worker_path = self.repo.add_worker(f"binary-worker-{index}")
+            artifact_name = f"artifact-{index}.bin"
+            (worker_path / artifact_name).write_bytes(os.urandom(256 * 1024))
+            workers.append(
+                integrator.Worker(
+                    f"binary-worker-{index}",
+                    worker_path,
+                    (artifact_name,),
+                    f"add binary artifact {index}",
+                )
+            )
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            patch_directory = Path(tempdir)
+            prepared_workers = tuple(
+                integrator.prepare_worker(worker, self.repo.base, patch_directory)
+                for worker in workers
+            )
+
+            for prepared in prepared_workers:
+                self.assertFalse(
+                    any(isinstance(value, bytes) for value in vars(prepared).values())
+                )
+                self.assertEqual(prepared.staged_diff_path.parent, patch_directory)
+                self.assertGreater(prepared.staged_diff_path.stat().st_size, 0)
+
+    def test_revalidation_reuses_one_head_and_status_read_per_worktree(self) -> None:
+        integrator = load_integrator()
+        worker_path = self.repo.add_worker("snapshot-worker")
+        (worker_path / "tracked.txt").write_text("candidate\n", encoding="utf-8")
+        worker = integrator.Worker(
+            "snapshot-worker",
+            worker_path,
+            ("tracked.txt",),
+            "snapshot candidate",
+        )
+        manifest = integrator.Manifest(
+            self.repo.base,
+            self.repo.epic,
+            self.repo.integration,
+            (sys.executable, "-c", "pass"),
+            (worker,),
+        )
+
+        with tempfile.TemporaryDirectory() as tempdir:
+            prepared = integrator.prepare_worker(
+                worker,
+                self.repo.base,
+                Path(tempdir),
+            )
+            epic_fingerprint = integrator.snapshot(
+                self.repo.epic,
+                self.repo.base,
+            ).fingerprint
+            with (
+                mock.patch.object(
+                    integrator,
+                    "head",
+                    wraps=integrator.head,
+                ) as head_spy,
+                mock.patch.object(
+                    integrator,
+                    "status_bytes",
+                    wraps=integrator.status_bytes,
+                ) as status_spy,
+            ):
+                integrator.revalidate(
+                    manifest,
+                    self.repo.base,
+                    epic_fingerprint,
+                    (prepared,),
+                )
+
+        self.assertEqual(head_spy.call_count, 2)
+        self.assertEqual(status_spy.call_count, 2)
 
     def test_integrates_all_git_change_types_atomically_and_cleans_up(self) -> None:
         first = self.repo.add_worker("worker-one")
