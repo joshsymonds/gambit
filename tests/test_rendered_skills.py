@@ -61,6 +61,33 @@ class RenderedSkillsTest(unittest.TestCase):
         self.assertNotIn("read all three reference files", text)
         self.assertTrue((skill / "references" / "codex-skill-guidance.md").exists())
 
+    def test_codex_dispatch_examples_use_spawn_agent_schema(self) -> None:
+        skills = {
+            path.parent.name: path.read_text(encoding="utf-8")
+            for path in sorted((CODEX_PLUGIN / "skills").glob("*/SKILL.md"))
+        }
+
+        for name, text in skills.items():
+            self.assertIsNone(
+                re.search(
+                    r"SpawnAgent\s+role=|^\s*role:\s*\"",
+                    text,
+                    re.MULTILINE,
+                ),
+                f"fictional role field leaked into {name}",
+            )
+
+        expected_dispatches = {
+            "brainstorming": 'agent_type: "scout"',
+            "executing-plans": 'agent_type="worker"',
+            "review": 'agent_type="finder"',
+            "verification": 'agent_type: "test-runner"',
+        }
+        for name, agent_type in expected_dispatches.items():
+            with self.subTest(skill=name):
+                self.assertIn(agent_type, skills[name])
+                self.assertIn("fork_turns", skills[name])
+
     def test_codex_plugin_uses_native_layout(self) -> None:
         self.assertTrue((CODEX_PLUGIN / ".codex-plugin" / "plugin.json").exists())
         self.assertTrue((CODEX_PLUGIN / "skills").is_dir())
@@ -211,6 +238,25 @@ class RenderedSkillsTest(unittest.TestCase):
         self.assertIn("Report that the wave is ready for its durable checkpoint", completion)
         self.assertIn("owning execution workflow", completion)
         self.assertNotIn("SessionPlanWrite", completion)
+
+    def test_review_closure_freezes_findings_and_has_a_terminal_condition(self) -> None:
+        review = (CODEX_PLUGIN / "skills" / "review" / "SKILL.md").read_text(
+            encoding="utf-8"
+        )
+        verifier = (
+            CODEX_PLUGIN / "skills" / "review" / "reviewers" / "verifier.md"
+        ).read_text(encoding="utf-8")
+        verification = (
+            CODEX_PLUGIN / "skills" / "verification" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        closure = review.split("### Step 8: Remediate and Close the Ledger", 1)[1]
+        self.assertIn("Do not dispatch the four finders again", closure)
+        self.assertIn("only open ledger entries", closure)
+        self.assertIn("This is the terminal condition", closure)
+        self.assertIn("Outside frozen review boundary", closure)
+        self.assertIn("emit no additional IDs or observations", verifier)
+        self.assertIn("Verification is non-generative", verification)
 
     def test_fresh_plan_templates_require_explicit_approval(self) -> None:
         artifacts = {
