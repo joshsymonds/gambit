@@ -3,6 +3,7 @@ from __future__ import annotations
 import re
 import subprocess
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -62,31 +63,133 @@ class RenderedSkillsTest(unittest.TestCase):
         self.assertTrue((skill / "references" / "codex-skill-guidance.md").exists())
 
     def test_codex_dispatch_examples_use_spawn_agent_schema(self) -> None:
-        skills = {
-            path.parent.name: path.read_text(encoding="utf-8")
-            for path in sorted((CODEX_PLUGIN / "skills").glob("*/SKILL.md"))
-        }
-
-        for name, text in skills.items():
-            self.assertIsNone(
-                re.search(
-                    r"SpawnAgent\s+role=|^\s*role:\s*\"",
-                    text,
-                    re.MULTILINE,
-                ),
-                f"fictional role field leaked into {name}",
+        fenced_code = re.compile(
+            r"^[ \t]*```[^\n]*\n(.*?)^[ \t]*```[ \t]*$",
+            re.MULTILINE | re.DOTALL,
+        )
+        spawn_start = re.compile(r"(?m)^[ \t]*SpawnAgent(?:\s|$)")
+        def field(name: str) -> re.Pattern[str]:
+            return re.compile(
+                rf"(?m)(?:^|\s){name}\s*(?:=|:)\s*\"([^\"]*)\""
             )
 
-        expected_dispatches = {
-            "brainstorming": 'agent_type: "scout"',
-            "executing-plans": 'agent_type="worker"',
-            "review": 'agent_type="finder"',
-            "verification": 'agent_type: "test-runner"',
-        }
-        for name, agent_type in expected_dispatches.items():
-            with self.subTest(skill=name):
-                self.assertIn(agent_type, skills[name])
-                self.assertIn("fork_turns", skills[name])
+        def field_name(name: str) -> re.Pattern[str]:
+            return re.compile(rf"(?m)(?:^|[ \t]){name}[ \t]*(?:=|:)")
+
+        forbidden_fields = (
+            "role",
+            "description",
+            "prompt",
+            "agent_profile",
+            "items",
+            "fork_context",
+            "model",
+            "reasoning_effort",
+            "service_tier",
+        )
+        concrete_models = re.compile(
+            r"(?i)\b(?:gpt-[a-z0-9.-]+|o[1-9](?:-[a-z0-9.-]+)?|"
+            r"codex-mini|haiku|sonnet|opus)\b"
+        )
+
+        with tempfile.TemporaryDirectory() as temporary:
+            skills_root, contracts_root = render_skills.render_backend(
+                "codex", Path(temporary)
+            )
+            examples: list[tuple[Path, str]] = []
+            for artifact in rendered_text_files(skills_root):
+                text = artifact.read_text(encoding="utf-8")
+                for fence in fenced_code.finditer(text):
+                    block = fence.group(1)
+                    starts = list(spawn_start.finditer(block))
+                    for index, start in enumerate(starts):
+                        end = (
+                            starts[index + 1].start()
+                            if index + 1 < len(starts)
+                            else len(block)
+                        )
+                        examples.append((artifact, block[start.start() : end]))
+
+            self.assertTrue(
+                examples, "rendered Codex skills contain no SpawnAgent examples"
+            )
+            portable_examples = 0
+            profile_aware_classes: set[str] = set()
+            for artifact, example in examples:
+                with self.subTest(artifact=artifact, example=example.splitlines()[0]):
+                    task_name = field("task_name").search(example)
+                    message = re.search(
+                        r"(?m)(?:^|\s)message\s*(?:=|:)\s*(?:\"|\|)",
+                        example,
+                    )
+                    fork_turns = field("fork_turns").search(example)
+                    self.assertIsNotNone(task_name, example)
+                    self.assertRegex(
+                        task_name.group(1),
+                        r"^[a-z][a-z0-9]*(?:_[a-z0-9]+)*$",
+                    )
+                    self.assertIsNotNone(message, example)
+                    self.assertIsNotNone(fork_turns, example)
+                    self.assertEqual(fork_turns.group(1), "none", example)
+
+                    for forbidden in forbidden_fields:
+                        self.assertIsNone(
+                            field_name(forbidden).search(example), example
+                        )
+                    self.assertIsNone(concrete_models.search(example), example)
+
+                    agent_type = field("agent_type").search(example)
+                    if agent_type is None:
+                        portable_examples += 1
+                    else:
+                        self.assertRegex(
+                            example,
+                            r"(?i)profile-aware[^\n]*hide_spawn_agent_metadata",
+                        )
+                        self.assertNotEqual(fork_turns.group(1), "all")
+                        profile_aware_classes.add(agent_type.group(1))
+
+            self.assertGreater(portable_examples, 0)
+            self.assertTrue(
+                {"worker", "scout", "finder", "verifier", "test-runner"}
+                <= profile_aware_classes
+            )
+
+            backend = (
+                skills_root
+                / "using-gambit"
+                / "references"
+                / "codex-backend.md"
+            ).read_text(encoding="utf-8")
+            for required in (
+                "`task_name`",
+                "`message`",
+                '`fork_turns: "none"`',
+                "metadata is hidden by default",
+                "`hide_spawn_agent_metadata = false`",
+                "inherited turns",
+                "self-contained",
+            ):
+                self.assertIn(required, backend)
+            self.assertNotIn("specify a role and prompt", backend)
+
+            contracts_readme = (contracts_root / "README.md").read_text(
+                encoding="utf-8"
+            )
+            for required in (
+                "portable",
+                "profile-aware",
+                "hidden by default",
+                "built-in fallback",
+                "`fork_turns: \"none\"`",
+            ):
+                self.assertIn(required, contracts_readme)
+
+            models = (contracts_root / "models.md").read_text(encoding="utf-8")
+            self.assertIn("select classes", models)
+            self.assertRegex(
+                models, r"never select concrete models or reasoning\s+effort"
+            )
 
     def test_codex_plugin_uses_native_layout(self) -> None:
         self.assertTrue((CODEX_PLUGIN / ".codex-plugin" / "plugin.json").exists())
@@ -372,19 +475,29 @@ common after
         )
 
     def test_claude_output_keeps_native_task_backend(self) -> None:
-        artifacts = rendered_text_files(CLAUDE_SKILLS) + rendered_text_files(
-            CLAUDE_CONTRACTS
-        )
-        combined = "\n".join(path.read_text(encoding="utf-8") for path in artifacts)
-        for operation in ("TaskCreate", "TaskUpdate", "TaskList", "TaskGet"):
-            self.assertIn(operation, combined)
-        for codex_term in (
-            "SessionPlanRead",
-            "SessionPlanWrite",
-            "SessionContextRead",
-            "update_plan",
-        ):
-            self.assertNotIn(codex_term, combined)
+        with tempfile.TemporaryDirectory() as temporary:
+            rendered_skills, rendered_contracts = render_skills.render_backend(
+                "claude", Path(temporary)
+            )
+            for expected_root, rendered_root in (
+                (CLAUDE_SKILLS, rendered_skills),
+                (CLAUDE_CONTRACTS, rendered_contracts),
+            ):
+                expected_files = [
+                    path.relative_to(expected_root)
+                    for path in rendered_text_files(expected_root)
+                ]
+                rendered_files = [
+                    path.relative_to(rendered_root)
+                    for path in rendered_text_files(rendered_root)
+                ]
+                self.assertEqual(expected_files, rendered_files)
+                for relative in expected_files:
+                    self.assertEqual(
+                        (expected_root / relative).read_bytes(),
+                        (rendered_root / relative).read_bytes(),
+                        str(relative),
+                    )
 
     def test_plugins_do_not_bundle_lifecycle_hooks(self) -> None:
         self.assertFalse((ROOT / "hooks").exists())

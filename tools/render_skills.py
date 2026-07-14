@@ -45,6 +45,14 @@ BACKEND_BLOCK_START = re.compile(
     r"^\s*<!-- gambit-backend:(claude|codex) -->\s*$"
 )
 BACKEND_BLOCK_END = re.compile(r"^\s*<!-- /gambit-backend -->\s*$")
+FENCED_CODE_BLOCK = re.compile(
+    r"(?P<open>^[ \t]*```[^\n]*\n)(?P<body>.*?)(?P<close>^[ \t]*```[ \t]*$)",
+    re.MULTILINE | re.DOTALL,
+)
+SPAWN_AGENT_START = re.compile(r"(?m)^[ \t]*SpawnAgent(?:\s|$)")
+PROFILE_AWARE_NOTE = (
+    "Profile-aware: requires hide_spawn_agent_metadata = false."
+)
 
 
 CODEX_REPLACEMENTS = [
@@ -122,6 +130,159 @@ def strip_codex_frontmatter_fields(text: str) -> str:
     frontmatter = text[4:end]
     frontmatter = re.sub(r"(?m)^user_invokable:\s*.*\n?", "", frontmatter)
     return f"---\n{frontmatter.rstrip()}\n---\n{text[end + 5:]}"
+
+
+def codex_task_name(description: str, fallback: str) -> str:
+    words = re.findall(r"[a-z0-9]+", description.lower())
+    task_name = "_".join(words) or fallback
+    if not task_name[0].isalpha():
+        task_name = f"task_{task_name}"
+    return task_name
+
+
+def transform_spawn_agent_call(call: str, fallback: str) -> str:
+    shorthand = re.match(
+        r'(?m)^(?P<indent>[ \t]*)SpawnAgent\s+prompt(?P<number>\d+)'
+        r'(?P<comment>[ \t]*//[^\n]*)?',
+        call,
+    )
+    if shorthand:
+        replacement = (
+            f'{shorthand.group("indent")}SpawnAgent '
+            f'task_name="prompt_{shorthand.group("number")}" '
+            f'message="[prompt {shorthand.group("number")}]" '
+            f'fork_turns="none"{shorthand.group("comment") or ""}'
+        )
+        return call[: shorthand.start()] + replacement + call[shorthand.end() :]
+
+    description = re.search(
+        r'(?m)(?:^|[ \t])description[ \t]*(?:=|:)[ \t]*"([^"]*)"',
+        call,
+    )
+    role = re.search(
+        r'(?m)(?:^|[ \t])role[ \t]*(?:=|:)[ \t]*"([^"]*)"',
+        call,
+    )
+    agent_type = re.search(
+        r'(?m)(?:^|[ \t])agent_type[ \t]*(?:=|:)[ \t]*"([^"]*)"',
+        call,
+    )
+    selected_class = (
+        role.group(1) if role else (agent_type.group(1) if agent_type else None)
+    )
+    task_name = codex_task_name(
+        description.group(1) if description else "",
+        codex_task_name(selected_class or "", fallback),
+    )
+
+    call = re.sub(r"(?m)(?<![a-z_])role(?=[ \t]*(?:=|:))", "agent_type", call)
+    call = re.sub(r"(?m)(?<![a-z_])prompt(?=[ \t]*(?:=|:))", "message", call)
+
+    if description:
+        call = re.sub(
+            r'(?m)(?<![a-z_])description(?P<separator>[ \t]*(?:=|:)[ \t]*)"[^"]*"',
+            lambda match: f'task_name{match.group("separator")}\"{task_name}\"',
+            call,
+            count=1,
+        )
+    else:
+        first_line_end = call.find("\n")
+        first_line = call if first_line_end < 0 else call[:first_line_end]
+        if first_line.strip() == "SpawnAgent":
+            indent = first_line[: len(first_line) - len(first_line.lstrip())] + "  "
+            insertion = f'\n{indent}task_name: "{task_name}"'
+            remainder = "" if first_line_end < 0 else call[first_line_end:]
+            call = first_line + insertion + remainder
+        else:
+            insertion_at = len(first_line)
+            call = (
+                call[:insertion_at]
+                + f' task_name="{task_name}"'
+                + call[insertion_at:]
+            )
+
+    call = re.sub(
+        r'(?m)^[ \t]*agent_type[ \t]*:[ \t]*"default"[ \t]*\n?',
+        "",
+        call,
+    )
+    call = re.sub(
+        r'[ \t]+agent_type[ \t]*=[ \t]*"default"',
+        "",
+        call,
+    )
+    call = re.sub(
+        r'(?m)^[ \t]*agent_profile[ \t]*:[^\n]*\n?',
+        "",
+        call,
+    )
+    call = re.sub(r'[ \t]+agent_profile[ \t]*=[ \t]*"[^"]*"', "", call)
+
+    first_line_end = call.find("\n")
+    first_line = call if first_line_end < 0 else call[:first_line_end]
+    if first_line.strip() == "SpawnAgent":
+        task_line = re.search(r'(?m)^(?P<indent>[ \t]*)task_name:', call)
+        if not task_line:
+            raise ValueError("SpawnAgent task_name insertion failed")
+        line_end = call.find("\n", task_line.end())
+        insertion_at = len(call) if line_end < 0 else line_end
+        call = (
+            call[:insertion_at]
+            + f'\n{task_line.group("indent")}fork_turns: "none"'
+            + call[insertion_at:]
+        )
+    else:
+        insertion_at = len(first_line)
+        call = call[:insertion_at] + ' fork_turns="none"' + call[insertion_at:]
+
+    if selected_class and selected_class != "default":
+        inline_agent_type = re.search(r'agent_type[ \t]*=[ \t]*"[^"]*"', first_line)
+        if inline_agent_type:
+            first_line_end = call.find("\n")
+            insertion_at = len(call) if first_line_end < 0 else first_line_end
+            call = (
+                call[:insertion_at]
+                + f"  # {PROFILE_AWARE_NOTE}"
+                + call[insertion_at:]
+            )
+        else:
+            call = re.sub(
+                r'(?m)^(?P<field>[ \t]*agent_type[ \t]*:[ \t]*"[^"]*")',
+                rf'\g<field>  # {PROFILE_AWARE_NOTE}',
+                call,
+                count=1,
+            )
+    return call
+
+
+def transform_codex_spawn_agent_examples(text: str, relative: Path) -> str:
+    dispatch_number = 0
+
+    def transform_fence(match: re.Match[str]) -> str:
+        nonlocal dispatch_number
+        body = re.sub(
+            r"(?m)^([ \t]*)Task prompt(\d+)([ \t]*//[^\n]*)?",
+            r"\1SpawnAgent prompt\2\3",
+            match.group("body"),
+        )
+        starts = list(SPAWN_AGENT_START.finditer(body))
+        if not starts:
+            return match.group(0)
+
+        transformed: list[str] = [body[: starts[0].start()]]
+        for index, start in enumerate(starts):
+            end = starts[index + 1].start() if index + 1 < len(starts) else len(body)
+            dispatch_number += 1
+            fallback = codex_task_name(
+                f"{relative.parts[0]} task {dispatch_number}",
+                f"delegated_task_{dispatch_number}",
+            )
+            transformed.append(
+                transform_spawn_agent_call(body[start.start() : end], fallback)
+            )
+        return match.group("open") + "".join(transformed) + match.group("close")
+
+    return FENCED_CODE_BLOCK.sub(transform_fence, text)
 
 
 def codex_transform(text: str, relative: Path) -> str:
@@ -246,6 +407,8 @@ def codex_transform(text: str, relative: Path) -> str:
                 text,
                 flags=re.DOTALL,
             )
+
+        text = transform_codex_spawn_agent_examples(text, relative)
 
         marker = "\n---\n"
         frontmatter_end = text.find(marker, 4)
