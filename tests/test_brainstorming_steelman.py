@@ -265,6 +265,31 @@ class BrainstormingSteelmanTest(unittest.TestCase):
                 ):
                     self.assertIn(required, prose)
 
+    def test_finalized_design_packet_is_the_immutable_contract_source(self) -> None:
+        for backend, text, epic_heading in (
+            ("claude", self.claude, "### 4. Create the Epic Task"),
+            ("codex", self.codex, "### 4. Present the Epic Contract"),
+        ):
+            steelman = text.split("### 3a. Steelman the Agreed Design", 1)[1]
+            steelman = steelman.split(epic_heading, 1)[0]
+            prose = " ".join(steelman.split())
+            with self.subTest(backend=backend):
+                for required in (
+                    "Before epic drafting, the root must produce a finalized Design Packet",
+                    "every `ADOPTED` conclusion",
+                    "Requirements (IMMUTABLE)",
+                    "Anti-Patterns (FORBIDDEN)",
+                    "Approach",
+                    "Validation Strategy",
+                    "Delivery Constraints",
+                    "A `READY` status permits drafting but is not the contract source",
+                    "Draft the epic contract from that finalized Design Packet",
+                    "Do not copy the Design Ledger itself into the epic",
+                    "do not convert ledger IDs into task or plan state",
+                    "ledger remains transcript-local",
+                ):
+                    self.assertIn(required, prose)
+
     def test_native_codex_dispatches_contracted_steelman_with_default_fallback(
         self,
     ) -> None:

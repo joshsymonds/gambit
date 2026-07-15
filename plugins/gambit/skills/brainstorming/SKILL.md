@@ -250,6 +250,18 @@ The third choice is the only choice that resets the budget, and it is valid only
 architecture reset with explicit user authorization. Never infer that authorization from a
 finding, a revision, or user silence.
 
+#### Finalize the packet for contract drafting
+
+Before epic drafting, the root must produce a finalized Design Packet from the agreed design,
+user decisions, and ledger dispositions. Incorporate every `ADOPTED` conclusion into the
+applicable packet field and carry it into the epic's **Requirements (IMMUTABLE)**,
+**Anti-Patterns (FORBIDDEN)**, **Approach**, **Validation Strategy**, or **Delivery Constraints**.
+A `READY` status permits drafting but is not the contract source.
+
+Draft the epic contract from that finalized Design Packet. Do not copy the Design Ledger itself
+into the epic, and do not convert ledger IDs into task or plan state; the ledger remains
+transcript-local.
+
 ---
 
 ### 4. Present the Epic Contract
