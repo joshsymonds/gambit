@@ -48,14 +48,21 @@ role:
         },
         "reasoning_effort": {
           "type": "string",
-          "minLength": 1,
-          "pattern": "^(?!.*[<>])\\S+$"
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+            "ultra"
+          ]
         },
         "sandbox": { "const": "read-only" },
         "approval_policy": {
           "type": "string",
-          "minLength": 1,
-          "pattern": "^(?!.*[<>])\\S+$"
+          "enum": ["untrusted", "on-request", "never"]
         },
         "web_search": { "const": "live" }
       },
@@ -99,18 +106,24 @@ role:
         },
         "reasoning_effort": {
           "type": "string",
-          "minLength": 1,
-          "pattern": "^(?!.*[<>])\\S+$"
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+            "ultra"
+          ]
         },
         "sandbox": {
           "type": "string",
-          "minLength": 1,
-          "pattern": "^(?!.*[<>])\\S+$"
+          "enum": ["read-only", "workspace-write", "danger-full-access"]
         },
         "approval_policy": {
           "type": "string",
-          "minLength": 1,
-          "pattern": "^(?!.*[<>])\\S+$"
+          "enum": ["untrusted", "on-request", "never"]
         }
       },
       "required": [
@@ -152,14 +165,21 @@ role:
         },
         "reasoning_effort": {
           "type": "string",
-          "minLength": 1,
-          "pattern": "^(?!.*[<>])\\S+$"
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+            "ultra"
+          ]
         },
         "sandbox": { "const": "read-only" },
         "approval_policy": {
           "type": "string",
-          "minLength": 1,
-          "pattern": "^(?!.*[<>])\\S+$"
+          "enum": ["untrusted", "on-request", "never"]
         },
         "web_search": { "const": "live" }
       },
@@ -181,9 +201,11 @@ role:
 
 `executor` is always the literal `codex`. `tool` is the fully qualified MCP tool name. `model` is
 a concrete external-config model value, never a placeholder, inherited value, or Gambit tier
-alias. `reasoning_effort`, `sandbox`, and `approval_policy` are concrete external-executor values.
-Steelman and finder require `web_search: "live"` and
-`sandbox: "read-only"`; worker forbids `web_search` through `additionalProperties: false`.
+alias. `reasoning_effort` accepts exactly `none`, `minimal`, `low`, `medium`, `high`, `xhigh`,
+`max`, or `ultra`; `approval_policy` accepts exactly `untrusted`, `on-request`, or `never`.
+Worker `sandbox` accepts exactly `read-only`, `workspace-write`, or `danger-full-access`. Steelman
+and finder require `web_search: "live"` and `sandbox: "read-only"`; worker forbids `web_search`
+through `additionalProperties: false`.
 
 ## Validation and resolution
 

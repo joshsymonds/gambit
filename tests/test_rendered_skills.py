@@ -413,6 +413,82 @@ class RenderedSkillsTest(unittest.TestCase):
                 with self.subTest(role=role, value=value):
                     self.assertFalse(accepts(model_schema, value))
 
+    def test_executor_registry_transport_fields_use_exact_enums(self) -> None:
+        source_text = (ROOT / "src" / "contracts" / "executors.md").read_text(
+            encoding="utf-8"
+        )
+        schema_match = re.search(r"```json\n(.*?)\n```", source_text, re.DOTALL)
+        self.assertIsNotNone(schema_match)
+        schema = json.loads(schema_match.group(1))
+
+        allowed_values = {
+            "reasoning_effort": (
+                "none",
+                "minimal",
+                "low",
+                "medium",
+                "high",
+                "xhigh",
+                "max",
+                "ultra",
+            ),
+            "approval_policy": ("untrusted", "on-request", "never"),
+            "sandbox": (
+                "read-only",
+                "workspace-write",
+                "danger-full-access",
+            ),
+        }
+        invalid_values = ("potato", "inherit", "default", "<value>", "")
+
+        for role, entry in schema["properties"].items():
+            for field in ("reasoning_effort", "approval_policy"):
+                field_schema = entry["properties"][field]
+                with self.subTest(role=role, field=field, schema=field_schema):
+                    self.assertEqual("string", field_schema["type"])
+                    self.assertEqual(
+                        list(allowed_values[field]),
+                        field_schema["enum"],
+                    )
+                for value in allowed_values[field]:
+                    with self.subTest(role=role, field=field, allowed=value):
+                        self.assertIn(value, field_schema["enum"])
+                for value in invalid_values:
+                    with self.subTest(role=role, field=field, rejected=value):
+                        self.assertNotIn(value, field_schema["enum"])
+
+        worker_sandbox = schema["properties"]["worker"]["properties"]["sandbox"]
+        self.assertEqual("string", worker_sandbox["type"])
+        self.assertEqual(list(allowed_values["sandbox"]), worker_sandbox["enum"])
+        for value in allowed_values["sandbox"]:
+            with self.subTest(field="worker.sandbox", allowed=value):
+                self.assertIn(value, worker_sandbox["enum"])
+        for value in invalid_values:
+            with self.subTest(field="worker.sandbox", rejected=value):
+                self.assertNotIn(value, worker_sandbox["enum"])
+
+        normalized = " ".join(source_text.split())
+        for accepted_values in allowed_values.values():
+            for value in accepted_values:
+                self.assertIn(f"`{value}`", normalized)
+
+    def test_validation_catalog_describes_wired_executor_routing(self) -> None:
+        validation = (
+            ROOT / "src" / "contracts" / "VALIDATION.md"
+        ).read_text(encoding="utf-8")
+        normalized = " ".join(validation.split())
+
+        self.assertNotIn(
+            "Dispatch behavior is deliberately not claimed here",
+            normalized,
+        )
+        for coverage in (
+            "`tests/test_brainstorming_steelman.py` covers Steelman executor resolution and call wiring",
+            "`tests/test_executing_plans_executors.py` covers worker and checkpoint-finder routing",
+            "`tests/test_review_executors.py` covers review-finder routing and the native verifier boundary",
+        ):
+            self.assertIn(coverage, normalized)
+
     def test_steelman_contract_bounds_discovery_and_closure(self) -> None:
         contracts = (
             ROOT / "src" / "contracts" / "steelman.md",
@@ -474,15 +550,18 @@ class RenderedSkillsTest(unittest.TestCase):
                 ):
                     self.assertIn(forbidden_authority, text)
 
-    def test_contracts_do_not_name_concrete_provider_model_ids(self) -> None:
+    def test_contracts_and_skills_do_not_name_concrete_provider_model_ids(self) -> None:
         roots = (
             ROOT / "src" / "contracts",
             ROOT / "src" / "backends" / "codex" / "overlays" / "codex-contracts",
             CLAUDE_CONTRACTS,
             CODEX_PLUGIN / "codex-contracts",
+            ROOT / "src" / "skills",
+            CLAUDE_SKILLS,
+            CODEX_PLUGIN / "skills",
         )
         for root in roots:
-            for path in sorted(root.glob("*.md")):
+            for path in sorted(root.rglob("*.md")):
                 self.assertIsNone(
                     CONCRETE_PROVIDER_MODEL_IDS.search(
                         path.read_text(encoding="utf-8")
