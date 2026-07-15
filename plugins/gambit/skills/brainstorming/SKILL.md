@@ -40,7 +40,7 @@ HIGH FREEDOM - Adapt questioning to context. But always:
 | 1 | Scope-check, then ask clarifying questions | Right granularity + understanding |
 | 2 | Research codebase and patterns | Existing approaches |
 | 3 | Propose 2-3 approaches | Recommended option |
-| 4 | Present design (isolated units, YAGNI) | Validated architecture |
+| 4 | Present design, then Steelman agreement | Validated architecture + frozen Design Ledger |
 | 5 | Present draft epic contract | Immutable requirements + anti-patterns |
 | 6 | Author complete first-wave worker briefs | Ready for self-review |
 | 7 | Apply task refinement | Corner cases covered |
@@ -138,6 +138,117 @@ Once approach is chosen, present in digestible sections. Ask "Does this look rig
 **Decompose for isolation.** Break the system into units that each have one clear purpose, communicate through well-defined interfaces, and can be understood and tested independently. For each unit, you should be able to say what it does, how to use it, and what it depends on — without reading its internals. If you can't change a unit's internals without breaking its consumers, the boundaries are wrong; rework them before locking the epic.
 
 **Apply YAGNI ruthlessly.** Cut every feature, abstraction, and "we might want this later" the stated requirements don't demand. Unbuilt scope is the cheapest scope to remove — if the user wants it, they'll say so when you present.
+
+---
+
+### 3a. Steelman the Agreed Design
+
+After the user and root agree on one coherent candidate design, run one mandatory discovery pass
+before drafting an epic contract or authoring first-wave work.
+Do not initialize or mutate native plan state during Steelman discovery, dialogue, or closure.
+No epic or first-wave work begins before Steelman resolution. The Steelman is read-only and
+advisory; the root owns all decisions and every ledger disposition.
+
+#### Build the Design Packet
+
+Supply a self-contained **Design Packet** containing exactly these contracted fields:
+
+1. **User goal**
+2. **Agreed constraints and scope**
+3. **Chosen approach**
+4. **Architecture and data flow**
+5. **Rejected alternatives and reasons**
+6. **Validation strategy**
+7. **Delivery constraints**
+8. **Unresolved decisions**
+
+Do not omit an empty field; write `None` when there is genuinely nothing unresolved. The packet
+must stand alone without inherited conversation.
+
+#### Resolve and dispatch the Steelman
+
+Resolve the absolute path to `codex-contracts/steelman.md`. Native Codex does not read the external
+executor registry. Dispatch the contracted `steelman` class, preferring an installed `steelman`
+profile and otherwise `default`, always with `fork_turns: "none"`. The dispatch is fresh and its
+message contains only the contract path plus the mode inputs.
+
+```
+SpawnAgent
+  agent_type: "steelman"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
+  task_name: "steelman_the_agreed_design"
+  fork_turns: "none"
+  message: |
+    Read <abs>/codex-contracts/steelman.md first and follow it exactly.
+
+    Mode: Discovery
+
+    Design Packet:
+    [complete self-contained packet]
+```
+
+Discovery receives the Design Packet and no previous Steelman output. Require one of the contract
+statuses — `READY`, `REVISE`, `NEEDS_DECISION`, or `BLOCKED` — and all contracted sections:
+**Status**, **Strongest case for the chosen design**, **Strongest credible alternative and when it
+wins**, **Numbered findings**, **Actual user decisions**, and **Evidence and coverage**. A missing
+status or section is a failed call, not permission for the root to invent the result.
+
+If the selected discovery dispatch or tool call fails, or its output is malformed or missing any
+contracted section, stop and report the failure. Do not create a Design Ledger, draft an epic
+contract, fall back to another dispatch path, or automatically redispatch.
+
+Route each valid discovery result exactly once:
+
+- `BLOCKED`: stop and show the exact missing material named by the result. Do not draft an epic or
+  dispatch another call.
+- `NEEDS_DECISION`: follow the ledger/yield path and yield on every named user decision. The root
+  cannot advance while any named decision remains unresolved.
+- `REVISE`: follow the ledger/yield path but do not advance directly. It requires finding
+  dispositions and a material Design Packet revision. If no material revision is adopted, stop.
+- `READY`: follow the ledger/yield path. It may skip closure only when no material design change
+  follows.
+
+No non-`READY` discovery result can fall through to epic drafting. No discovery branch
+automatically spends a second discovery call. Any adopted or open material revision requires the
+single closure pass.
+
+#### Freeze the ledger and yield
+
+For every result routed to the ledger/yield path, reflect every discovery finding visibly to the
+user in a transcript-local frozen **Design Ledger**. Keep every returned ID and assign it exactly
+one root-owned disposition: `ADOPTED`, `REJECTED` with a reason, `OPEN`, or `DEFERRED` with a scope
+boundary. Record user decisions and packet revisions against the affected IDs. Never put the
+ledger in task or plan state.
+
+Then yield to the user for discussion. The root cannot silently revise the packet and dispatch
+closure in the same turn. The user must be able to see every discovery finding, every disposition,
+and the resulting design change before deciding what comes next.
+
+#### Run bounded closure when required
+
+After user/root discussion, run exactly one closure pass if an `ADOPTED` or `OPEN` finding
+materially changes the design. Skip closure only when discovery returned `READY` and no material
+design change occurred. Use the revised self-contained Design Packet, the frozen
+Design Ledger verbatim, and a concise design delta as the only closure inputs. Repeat the same
+backend dispatch rules above.
+Under those rules, native Codex uses another fresh contracted dispatch with
+`fork_turns: "none"`.
+
+Require one closure status — `READY`, `STILL_OPEN`, `CHANGE_INDUCED_CONCERN`, or `BLOCKED` — plus
+**Status**, **Ledger dispositions**, **Change-induced concerns**, **Required caller action**, and
+**Evidence and coverage**. Closure cannot restart discovery, cannot reopen `REJECTED` or
+`DEFERRED` items, and cannot add unrelated improvements. A `READY` result, or the permitted
+discovery skip, allows epic drafting to begin.
+
+No automatic third call is allowed. For any non-`READY` closure, stop and offer exactly these user
+choices in prose:
+
+1. revise without another Steelman pass;
+2. lock the contract with the residual risk recorded; or
+3. explicitly authorize another discovery cycle.
+
+The third choice is the only choice that resets the budget, and it is valid only for a fundamental
+architecture reset with explicit user authorization. Never infer that authorization from a
+finding, a revision, or user silence.
 
 ---
 
@@ -261,13 +372,13 @@ Fix what you find in the draft contract and complete worker briefs. Do not initi
 
 #### Confirm the contract with the user
 
-Epic requirements are IMMUTABLE once execution starts — so the user reviews them BEFORE handoff, not after. Present the complete draft contract for confirmation: Requirements, Success Criteria, Anti-Patterns, Quality Bar, Approach, Approaches Considered, Delivery Constraints, and Validation Strategy. The Quality Bar is gambit's fixed standard, so note it rather than asking the user to set it:
+Epic requirements are IMMUTABLE once execution starts — so the user reviews them BEFORE handoff, not after. Present the complete draft contract and every complete first-wave worker brief for confirmation. The contract includes Requirements, Success Criteria, Anti-Patterns, Quality Bar, Approach, Approaches Considered, Delivery Constraints, and Validation Strategy. The Quality Bar is gambit's fixed standard, so note it rather than asking the user to set it:
 
-> "Here's the epic contract — these requirements lock once we start: [summary]. Good to lock, or change anything first?"
+> "Here's the epic contract and the complete first wave — these requirements lock once we start: [summary]. Good to lock both, or change anything first?"
 
 If they request changes, present the revised full contract and re-run the self-review. Only proceed to handoff once they confirm.
 
-After explicit user confirmation:
+After explicit user confirmation of the full epic contract and complete first-wave worker briefs:
 
 1. Present the full approved epic contract in the root transcript.
 2. Present every complete first-wave worker brief in the root transcript.
@@ -346,16 +457,22 @@ Present "Epic: OAuth" in the root transcript:
 3. **Research BEFORE proposing** — use explorer agent for codebase context
 4. **Propose 2-3 approaches** — don't jump to a single solution
 5. **Decompose for isolation, apply YAGNI** — well-bounded units, no unrequested scope
-6. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
-7. **Include anti-patterns** — prevents watering down under pressure
-8. **Author only the first wave** — independently pluckable tasks; the rest created iteratively
-9. **Apply task refinement** — before handoff
-10. **Confirm the contract before handoff** — user locks immutable requirements first
-11. **Invoke next skill directly** — don't tell user to run it manually
+6. **Steelman before epic drafting** — one mandatory discovery pass after design agreement
+7. **Freeze and show every finding** — disposition the complete ledger, then yield to the user
+8. **Bound closure** — at most one discovery and one closure call without an explicitly authorized reset
+9. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
+10. **Include anti-patterns** — prevents watering down under pressure
+11. **Author only the first wave** — independently pluckable tasks; the rest created iteratively
+12. **Apply task refinement** — before handoff
+13. **Confirm the contract before handoff** — user locks immutable requirements first
+14. **Invoke next skill directly** — don't tell user to run it manually
 
 **Common rationalizations (all mean STOP, follow the process):**
 - "Requirements obvious" → Questions reveal hidden complexity
 - "I know this pattern" → Research might show a better way
+- "The design already looks solid" → The contracted discovery pass is still mandatory
+- "Closure can happen immediately" → Show the frozen ledger and yield to the user first
+- "One more pass will settle it" → No automatic third call; only an explicit architecture reset renews the budget
 - "Can plan every worker upfront" → Worker briefs become brittle as you learn
 - "It's one project" → Independent subsystems are separate epics; decompose first
 - "They'll want this feature too" → YAGNI; propose minimal, let them ask for more
@@ -368,18 +485,21 @@ Present "Epic: OAuth" in the root transcript:
 - [ ] Proposed 2-3 approaches with trade-offs
 - [ ] Design decomposed into well-bounded, independently testable units
 - [ ] YAGNI applied — no scope the requirements don't demand
+- [ ] Sent the complete eight-field Design Packet through mandatory Steelman discovery
+- [ ] Reflected every finding in the visible frozen Design Ledger and yielded to the user
+- [ ] Ran closure when required, with no automatic third call or inferred reset
 - [ ] Created epic with all required sections
 - [ ] Anti-patterns include reasoning
 - [ ] Quality Bar present in the epic — gambit's fixed maximal standard, copied verbatim (not elicited, not weakened)
 - [ ] Rejected approaches have DO NOT REVISIT UNLESS
 - [ ] Created only the first wave (pluckable tasks, not full tree)
 - [ ] Task refined: scoped, self-contained, explicit, testable
-- [ ] User confirmed immutable requirements before handoff
+- [ ] User confirmed immutable requirements and the complete first wave before handoff
 - [ ] Offered next step in prose (execute/refine)
 - [ ] Invoked chosen skill directly via Codex skill invocation
 
 ## Integration
 
-**Calls:** explorer agent → prose next-step question → invokes one of:
+**Calls:** explorer agent → contracted Steelman discovery/closure → prose next-step question → invokes one of:
 - `gambit:executing-plans` (default — enters the epic worktree automatically)
 - `gambit:task-refinement` (optional, before execution)

@@ -58,6 +58,7 @@ PROFILE_AWARE_NOTE = (
 )
 CODEX_AGENT_CLASSES = frozenset(
     {
+        "steelman",
         "worker",
         "scout",
         "finder",

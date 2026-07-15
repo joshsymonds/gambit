@@ -127,11 +127,11 @@ root_agent_usage_hint_text = "Call collaboration tools through functions.gambit_
 subagent_usage_hint_text = "Call collaboration tools through functions.gambit_agents, including to=functions.gambit_agents.spawn_agent."
 ```
 
-Prefer a matching installed class, then use its built-in fallback: `scout` →
-`explorer`, `worker` and `test-runner` → `worker`, and `finder` and `verifier`
-→ `default`. When metadata is hidden, omit `agent_type`; the contract path and
-complete brief in `message` keep the portable dispatch class-bound while Codex
-uses its built-in default spawning behavior.
+Prefer a matching installed class, then use its built-in fallback: `steelman` →
+`default`, `scout` → `explorer`, `worker` and `test-runner` → `worker`, and
+`finder` and `verifier` → `default`. When metadata is hidden, omit `agent_type`;
+the contract path and complete brief in `message` keep the portable dispatch
+class-bound while Codex uses its built-in default spawning behavior.
 
 Always set `fork_turns: "none"` rather than accepting its `"all"` default.
 Gambit briefs are self-contained and deliberately exclude inherited turns;

@@ -552,6 +552,13 @@ class RenderedSkillsTest(unittest.TestCase):
                 )
 
     def test_codex_agent_classes_reject_unknown_values(self) -> None:
+        steelman = render_skills.transform_spawn_agent_call(
+            'SpawnAgent role="steelman" description="test design" prompt="packet"',
+            "synthetic",
+        )
+        self.assertIn('agent_type="steelman"', steelman)
+        self.assertIn('fork_turns="none"', steelman)
+
         invalid_native = (
             '```text\nSpawnAgent task_name="x" message="y" '
             'fork_turns="none" agent_type="not_configured" '
@@ -648,7 +655,14 @@ class RenderedSkillsTest(unittest.TestCase):
 
             self.assertGreater(portable_examples, 0)
             self.assertTrue(
-                {"worker", "scout", "finder", "verifier", "test-runner"}
+                {
+                    "steelman",
+                    "worker",
+                    "scout",
+                    "finder",
+                    "verifier",
+                    "test-runner",
+                }
                 <= profile_aware_classes
             )
 
