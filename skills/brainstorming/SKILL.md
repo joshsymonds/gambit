@@ -121,6 +121,8 @@ I recommend option 1 because [specific reason].
 
 Once approach is chosen, present in digestible sections. Ask "Does this look right?" after each. Cover: architecture, components, data flow, error handling, testing.
 
+**Design the validation ladder, not just the tests.** Identify the fastest focused worker command, the integrated wave/component gate, and any expensive release acceptance or blackbox suite. Record the freshness setup and an explicit acceptance budget. A slow system suite is a release claim, not a reflexive per-task check.
+
 **Decompose for isolation.** Break the system into units that each have one clear purpose, communicate through well-defined interfaces, and can be understood and tested independently. For each unit, you should be able to say what it does, how to use it, and what it depends on — without reading its internals. If you can't change a unit's internals without breaking its consumers, the boundaries are wrong; rework them before locking the epic.
 
 **Apply YAGNI ruthlessly.** Cut every feature, abstraction, and "we might want this later" the stated requirements don't demand. Unbuilt scope is the cheapest scope to remove — if the user wants it, they'll say so when you present.
@@ -141,6 +143,8 @@ After design is validated, create epic as immutable contract. See [TEMPLATES.md]
 | Quality Bar | gambit's fixed maximal standard for "good code" — the highest professional quality, written verbatim into every epic and judged against each diff by reviewers and the orchestrator at every checkpoint, beyond the objective Success Criteria |
 | Approach | 2-3 paragraph summary of chosen approach |
 | Approaches Considered | Rejected alternatives with DO NOT REVISIT conditions |
+| Delivery Constraints | Circuit breakers for non-convergence, repeated repairs, and scope growth |
+| Validation Strategy | Focused worker command, wave/component gate, release acceptance, freshness, and acceptance budget |
 
 **The Quality Bar is fixed — write it verbatim, don't elicit it.** Every epic carries the same bar: the highest professional standard, the code a master engineer would ship — elegant, complete, built on a superb foundation. It is not a per-project preference and is never negotiated down. Copy it verbatim from [TEMPLATES.md](TEMPLATES.md) into the epic so the checkpoint gate and reviewers have it locally. It governs *craftsmanship, not scope* — how well the required work is built, never how much of it; project-specific prohibitions go in Anti-Patterns. It sits on top of the mechanical floor the worker contract enforces (no suppression, no weakened tests, no dead code).
 
@@ -169,6 +173,16 @@ TaskCreate
     ### [Rejected Approach] - REJECTED
     REJECTED BECAUSE: [reason]
     DO NOT REVISIT UNLESS: [condition]
+
+    ## Delivery Constraints
+    - Stop after two consecutive non-converging checkpoints or the allowed repair ceiling;
+      require explicit user approval before expanding scope, architecture, or budget.
+
+    ## Validation Strategy
+    - Focused worker command: [fast exact command]
+    - Wave/component gate: [integrated exact command]
+    - Release acceptance: [fresh expensive exact command]
+    - Acceptance budget: [normally one final run]
   activeForm: "Planning [feature name]"
 ```
 
@@ -234,6 +248,8 @@ Scan for:
 - **Ambiguity:** Any sentence where two readers could reach different implementations. Pick one and say it.
 - **Internal consistency:** The first task's files, function names, and success criteria should match the epic's stated approach. Mismatches mean one of them is wrong.
 - **Quality Bar present:** Does the epic carry the fixed Quality Bar verbatim from [TEMPLATES.md](TEMPLATES.md), unweakened? It's the same standard on every epic — restore it if it's missing, paraphrased, or watered down.
+- **Convergence bounded:** Does Delivery Constraints stop autonomous continuation after two consecutive checkpoints that retire no success criterion or named blocker, bound repair attempts, and require explicit user approval for scope or budget growth?
+- **Validation tiered:** Does Validation Strategy distinguish the focused worker command, wave/component gate, and release acceptance, including freshness and an acceptance budget?
 
 Fix what you find by updating the epic or first task with `TaskUpdate`, then proceed. Do NOT present a plan that has items on this list.
 

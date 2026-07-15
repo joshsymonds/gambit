@@ -73,6 +73,25 @@ TaskCreate
     **Out of scope:**
     - [explicit exclusions with reasoning]
 
+    ## Delivery Constraints
+    - Convergence circuit breaker: STOP autonomous continuation when two consecutive checkpoints
+      retire no success criterion or named blocker, or when remaining work grows at both
+      checkpoints. Report the evidence and require explicit user approval before changing scope,
+      architecture, or the delivery budget.
+    - Repair ceiling: one implementation attempt plus at most two repair attempts for the same
+      defect. If the second repair fails, or the same defect recurs at a later checkpoint, STOP and
+      revisit the architecture or worker brief with the user.
+    - Scope growth: every newly discovered worker must map to an immutable requirement, an open
+      review-ledger finding, or a failing declared validation gate. Anything else is proposed scope,
+      not automatically authorized work.
+
+    ## Validation Strategy
+    - Focused worker command: [fast exact command each worker runs for its owned behavior]
+    - Wave/component gate: [exact command run once on the integrated wave]
+    - Release acceptance: [exact expensive end-to-end/system command, including freshness setup]
+    - Acceptance budget: [normally one fresh run after implementation and architecture/scope
+      preflight; name any additional allowed diagnostic run and what question it answers]
+
     ## Open Questions
     - [uncertainties to resolve during implementation]
     - [decisions deferred to execution phase]
@@ -133,6 +152,6 @@ TaskCreate
     - [ ] Tests passing
     - [ ] Pre-commit hooks passing
 
-    Test command: [exact argv/command for this task]
+    Test command: [exact focused worker command for this task]
   activeForm: "Adding [deliverable]"
 ```

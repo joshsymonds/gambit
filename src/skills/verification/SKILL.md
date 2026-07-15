@@ -21,7 +21,7 @@ Violating the letter of the rules is violating the spirit of the rules.
 
 | Claim | Verification Required | Not Sufficient |
 |-------|----------------------|----------------|
-| **Tests pass** | Run full test command, see 0 failures | Previous run, "should pass" |
+| **Tests pass** | Run the complete command for the declared validation tier, see 0 failures | Previous run, lower-tier evidence |
 | **Build succeeds** | Run build, see exit 0 | Linter passing |
 | **Bug fixed** | Test original symptom, passes | Code changed |
 | **Linter clean** | Linter output: 0 errors | Partial check, extrapolation |
@@ -92,6 +92,14 @@ Before making any completion claim, ask: "What command proves this?"
 
 Write down the complete claim set first. A failed declared claim blocks completion; an observation outside that set does not silently become a claim.
 
+Take the claim's tier from the approved Validation Strategy:
+
+- A **focused worker command** proves the worker-owned behavior and its TDD claim.
+- A **wave/component gate** proves the integrated wave at the component boundary.
+- **release acceptance** proves the final fresh system-level claim and consumes the declared acceptance budget.
+
+Never promote a worker or wave claim to release acceptance. Verification runs the complete command for the claim's declared tier; it does not spend a more expensive tier merely because that command is more comprehensive.
+
 | Claim Type | Verification |
 |------------|-------------|
 | Tests pass | Project's test command (`go test ./...`, `npm test`, etc.) |
@@ -107,7 +115,7 @@ Write down the complete claim set first. A failed declared claim blocks completi
 
 ### 2. Run the Command (Fresh)
 
-Execute the FULL command. Not a partial run. Not a cached result.
+Execute the COMPLETE command for the declared validation tier. Not a partial command within that tier. Not a cached result.
 
 **For verbose output:** Dispatch a general-purpose agent:
 
@@ -231,7 +239,7 @@ SessionContextRead → complete current-wave worker briefs
 2. **Each criterion individually** → "Tests pass" doesn't verify "no TODOs remain"
 3. **Agent results verified independently** → Check VCS diff, don't trust reports
 4. **No hedging language as evidence** → "Should", "probably", "seems to" are not verification
-5. **Full command, not partial** → Run the complete test suite, not just one file
+5. **Complete command for the claim tier** → Run the entire focused worker command, wave/component gate, or release acceptance command that proves this claim; do not substitute a lower tier or silently promote to a higher one
 6. **Closed claim set** → Verification challenges declared claims; it never expands requirements or a review ledger
 
 ### Common Excuses
@@ -259,7 +267,8 @@ Before any completion claim:
 - [ ] Kept newly noticed observations outside that set non-blocking
 
 Before claiming tests pass:
-- [ ] Ran full test command (not partial)
+- [ ] Identified the claim's declared validation tier
+- [ ] Ran its complete command (not a partial command within that tier)
 - [ ] Saw output showing 0 failures
 - [ ] Exit code was 0
 

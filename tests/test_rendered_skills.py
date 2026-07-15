@@ -564,6 +564,80 @@ class RenderedSkillsTest(unittest.TestCase):
         self.assertIn("emit no additional IDs or observations", verifier)
         self.assertIn("Verification is non-generative", verification)
 
+    def test_epic_contract_declares_convergence_and_validation_policy(self) -> None:
+        brainstorming = (
+            CODEX_PLUGIN / "skills" / "brainstorming" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        templates = (
+            CODEX_PLUGIN / "skills" / "brainstorming" / "TEMPLATES.md"
+        ).read_text(encoding="utf-8")
+
+        for required in (
+            "Delivery Constraints",
+            "Validation Strategy",
+        ):
+            self.assertIn(required, brainstorming)
+            self.assertIn(f"## {required}", templates)
+
+        for required in (
+            "two consecutive checkpoints",
+            "one implementation attempt plus at most two repair attempts",
+            "explicit user approval",
+            "Focused worker command",
+            "Wave/component gate",
+            "Release acceptance",
+            "Acceptance budget",
+        ):
+            self.assertIn(required, templates)
+
+    def test_execution_stops_negative_convergence_and_gates_acceptance(self) -> None:
+        executing = (
+            CODEX_PLUGIN / "skills" / "executing-plans" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        convergence = executing.split("#### Convergence Gate", 1)[1]
+        convergence = convergence.split("### 4. Commit and STOP Checkpoint", 1)[0]
+        for required in (
+            "two consecutive checkpoints",
+            "retire no success criterion or named blocker",
+            "remaining work grows",
+            "STOP autonomous continuation",
+            "one implementation attempt plus at most two repair attempts",
+            "explicit user approval",
+        ):
+            self.assertIn(required, convergence)
+
+        final_validation = executing.split("### 5. Epic Review", 1)[1]
+        architecture = final_validation.index("architecture/scope preflight")
+        acceptance = final_validation.index("release acceptance")
+        self.assertLess(architecture, acceptance)
+        self.assertIn("declared acceptance budget", final_validation)
+
+    def test_verification_respects_declared_validation_tier(self) -> None:
+        executing = (
+            CODEX_PLUGIN / "skills" / "executing-plans" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        verification = (
+            CODEX_PLUGIN / "skills" / "verification" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+
+        for required in (
+            "focused worker command",
+            "wave/component gate",
+            "release acceptance",
+        ):
+            self.assertIn(required, executing)
+            self.assertIn(required, verification)
+
+        self.assertIn(
+            "Never promote a worker or wave claim to release acceptance",
+            verification,
+        )
+        self.assertIn(
+            "Release acceptance is not a per-worker or per-wave default",
+            executing,
+        )
+
     def test_fresh_plan_templates_require_explicit_approval(self) -> None:
         artifacts = {
             "brainstorming template": (
