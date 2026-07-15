@@ -133,6 +133,8 @@ Do NOT include your opinions, implementation notes, or rationale. The reviewers 
 
 Resolve the absolute path to this skill's `reviewers/` directory **once** (Glob `**/skills/review/reviewers/conformance.md` if you don't already know it). You pass this path to the agents — **do NOT read the reviewer files into this context.** The four reviewer files are ~8k tokens; reading them here and re-emitting them as prompts wastes ~18k tokens every review. Each agent reads its own instruction file in its own fresh context.
 
+#### Native Codex finder dispatch
+
 In ONE message, emit exactly four `finder` SpawnAgent calls. Use an installed `finder` profile when available, otherwise use `default` with the finder contract. Each prompt is just: (1) a directive to read and follow that agent's instruction file by path, then (2) the review brief.
 
 ```
@@ -143,6 +145,7 @@ SpawnAgent agent_type="finder" task_name="performance_review" message="Read <abs
 ```
 
 **Parallelism is structural, not a reminder.** That single message contains four SpawnAgent calls and nothing else — no `Read` calls, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself using `Read` on a reviewer file, you've reverted to the old serializing pattern — stop and dispatch by path.
+
 
 Each reviewer will:
 - Read the changed files independently

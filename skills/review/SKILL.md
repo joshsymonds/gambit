@@ -128,6 +128,14 @@ Do NOT include your opinions, implementation notes, or rationale. The reviewers 
 
 Resolve the absolute path to this skill's `reviewers/` directory **once** (Glob `**/skills/review/reviewers/conformance.md` if you don't already know it). You pass this path to the agents — **do NOT read the reviewer files into this context.** The four reviewer files are ~8k tokens; reading them here and re-emitting them as prompts wastes ~18k tokens every review. Each agent reads its own instruction file in its own fresh context.
 
+#### Executor resolution (Claude only)
+
+Resolve `finder` exactly once through `contracts/executors.md` before emitting any of the four calls. Missing registry or a valid registry with no `finder` role selects native Claude and the native branch below, including its current finder-tier model resolution. Invalid registry stops the review before any finder dispatch; report the validation failure. A valid configured role selects the configured Codex branch. A configured call failure is fail-closed: stop and report with never native fallback.
+
+Do not infer selection from MCP tool availability, resolve once per dimension, or mix branches. One resolution selects the executor for the complete four-finder dispatch.
+
+#### Native Claude finder dispatch
+
 In ONE message, emit exactly four `general-purpose` Agent calls, each at the **finder tier** (`model:` resolved per `contracts/models.md` — default most-capable, because a missed finding is unrecoverable; set `model:` explicitly, never `inherit`). Each prompt is just: (1) a directive to read and follow that agent's instruction file by path, then (2) the review brief.
 
 ```
@@ -138,6 +146,34 @@ Agent subagent_type="general-purpose" model="<finder tier — see contracts/mode
 ```
 
 **Parallelism is structural, not a reminder.** That single message contains four Agent calls and nothing else — no `Read` calls, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself using `Read` on a reviewer file, you've reverted to the old serializing pattern — stop and dispatch by path.
+
+#### Configured Codex finder dispatch
+
+When resolution selects configured Codex, `finder.tool` is the configured fully qualified MCP tool. Emit one parallel message containing exactly these four calls and nothing else. The dimension-to-contract mapping is immutable: conformance, security, quality, and performance must each receive its matching absolute reviewer path and must never be interchanged. The prompt field of every call contains only that absolute path directive plus the same frozen Review Brief, byte-for-byte:
+
+```
+<finder.tool> prompt="Read <abs>/reviewers/conformance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]" model="<finder.model>" cwd="<absolute repository/worktree path>" sandbox="read-only" approval-policy="<finder.approval_policy>" developer-instructions="<subordinate finder instructions below>" config="<fixed finder config below>"
+<finder.tool> prompt="Read <abs>/reviewers/security.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]" model="<finder.model>" cwd="<absolute repository/worktree path>" sandbox="read-only" approval-policy="<finder.approval_policy>" developer-instructions="<subordinate finder instructions below>" config="<fixed finder config below>"
+<finder.tool> prompt="Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]" model="<finder.model>" cwd="<absolute repository/worktree path>" sandbox="read-only" approval-policy="<finder.approval_policy>" developer-instructions="<subordinate finder instructions below>" config="<fixed finder config below>"
+<finder.tool> prompt="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]" model="<finder.model>" cwd="<absolute repository/worktree path>" sandbox="read-only" approval-policy="<finder.approval_policy>" developer-instructions="<subordinate finder instructions below>" config="<fixed finder config below>"
+```
+
+Each call is fresh and distinct: omit any `threadId` input and never continue one dimension's thread for another. The direct wire fields are `prompt`, `model`, `cwd`, `sandbox`, `approval-policy`, `developer-instructions`, and `config`. `model` maps from `finder.model`; `cwd` is the absolute repository/worktree path under review; `sandbox` is the configured, schema-required `read-only`; `approval-policy` maps from `finder.approval_policy`; and `config.model_reasoning_effort` maps from `finder.reasoning_effort`. Every call uses the following fixed config in addition to that reasoning value:
+
+```toml
+web_search = "live"
+plugins."gambit@personal".enabled = false
+skills.include_instructions = false
+orchestrator.skills.enabled = false
+features.collab = false
+features.multi_agent_v2.enabled = false
+```
+
+Every call's `developer-instructions` value is exactly: "You are a subordinate read-only advisory finder. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only the supplied frozen Review Brief under the named reviewer contract and return advisory findings."
+
+Treat a call as successful only when the supported response contains both a non-empty string `threadId` and a non-empty string `content`. A tool error, protocol error, timeout, empty response, missing or empty response field, non-string field, or malformed response must stop and report the review; never retry natively. Do not persist `threadId`, pass it to another call, or use it after validating the response. Never call `codex-reply`.
+
+For each successful call, discard its `threadId` and treat its `content` as that dimension's advisory reviewer report. Feed the four reports unchanged into Step 5; configured Codex output receives the same frozen-boundary filtering, byte-identical deduplication, candidate side-table handling, and native verifier adjudication as native output.
 
 Each reviewer will:
 - Read the changed files independently
@@ -163,6 +199,8 @@ Semantic dedup ("these two findings sound alike, collapse them") silently drops 
 The deduped list and frozen boundary go to the verifier in Step 6.
 
 ### Step 6: Dispatch Verifier Sub-Agent
+
+The verifier always dispatches as a native Claude agent at the verifier tier. Never read the executor registry for `verifier`, and never route verifier work through `finder.tool`, even when the four finder reports came from configured Codex calls.
 
 Dispatch ONE `general-purpose` agent at the **verifier tier** (`model:` per `contracts/models.md` — default most-capable; a cheap verifier is forbidden for code/security review, where verifying a subtle finding is as hard as finding it). As with the reviewers, **pass the path — do NOT read `verifier.md` into this context.** The candidate list IS passed inline (it's dynamic):
 
@@ -237,7 +275,7 @@ Never create work from refuted, gap-classified-in-initial-mode, boundary-rejecte
 ## Critical Rules
 
 1. **All four reviewers dispatched once** — no skipping in initial mode; never dispatch them in closure mode
-2. **Parallel dispatch, by path** — one message, four Agent calls, each pointed at its reviewer file by path. Never read reviewer/verifier files into main context or paste their contents into prompts: the read-before-each-dispatch is what serializes the agents and wastes ~18k tokens/review
+2. **Parallel dispatch, by path** — one message, four calls through the once-selected finder executor: native Agent calls or configured `finder.tool` calls, each pointed at its reviewer file by path. Never read reviewer/verifier files into main context or paste their contents into prompts: the read-before-each-dispatch is what serializes the finders and wastes ~18k tokens/review
 3. **No self-review** — main context prepares brief and assembles, does NOT review or verify code
 4. **Verifier is the single source of truth for classification** — do NOT override confirmed/refuted/gap verdicts; do NOT verify in the main context
 5. **Any open ledger entry blocks** — closure must refute every original claim with evidence
@@ -292,7 +330,7 @@ Never create work from refuted, gap-classified-in-initial-mode, boundary-rejecte
 **Calls:**
 - `gambit:finishing-branch` (if approved)
 
-**Dispatches general-purpose agents (parallel, read-only) at the finder tier (`contracts/models.md`). Each agent reads its own instruction file by path — main context never loads them:**
+**Dispatches four finders (parallel, read-only) through native general-purpose agents or configured Codex calls. Native calls resolve the finder tier through `contracts/models.md`; configured calls use the registry's concrete model. Each finder reads its own instruction file by path — main context never loads it:**
 - `reviewers/conformance.md` — completeness, architecture, dead code
 - `reviewers/security.md` — OWASP audit, secrets, auth, data exposure
 - `reviewers/quality.md` — language idioms, linter circumvention, test quality
