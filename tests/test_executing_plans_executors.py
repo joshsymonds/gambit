@@ -46,6 +46,16 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
             "Pass the contract by path and the task as **constructed text**",
         )
         cls.worker_wire = yaml_fence(cls.configured_worker)
+        cls.claude_status_routing = bounded_section(
+            cls.claude,
+            "3. **Route on the worker's returned status**",
+            "**One of the four statuses is the ONLY signal",
+        )
+        cls.codex_status_routing = bounded_section(
+            cls.codex,
+            "3. **Route on the worker's returned status**",
+            "**One of the four statuses is the ONLY signal",
+        )
         cls.checkpoint_finder = bounded_section(
             cls.claude,
             "Before this checkpoint quality dispatch, resolve `finder`",
@@ -71,7 +81,7 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         self.assertContainsAll(
             self.worker_dispatch,
             (
-                "Before every worker dispatch, resolve `worker` through `contracts/executors.md`",
+                "Before every initial worker dispatch and every retry except the native needs-more-reasoning escalation defined in step 3",
                 "Missing registry file or valid registry with no `worker` role",
                 "Invalid registry",
                 "configured Codex call failure",
@@ -105,6 +115,33 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
                 "orchestration, skill loading, nested agents, task discovery, scope expansion",
                 "commits, merges, worktree creation, plan mutation, or task assignment",
             ),
+        )
+
+    def test_f05_configured_worker_explicitly_disables_web_search(self) -> None:
+        self.assertIn('web_search: "disabled"', self.worker_wire)
+        self.assertIn('`web_search = "disabled"`', self.configured_worker)
+        self.assertNotIn("worker.web_search", self.configured_worker)
+
+    def test_f02_needs_more_reasoning_uses_native_claude_escalation(self) -> None:
+        self.assertContainsAll(
+            self.claude_status_routing,
+            (
+                "needs-more-reasoning retry selects the native Claude escalation class",
+                "fresh `general-purpose` Agent at the resolved `escalation` tier",
+                "reusing the same absolute worker contract path and complete brief",
+                "bypasses the worker executor registry in `contracts/executors.md`",
+                "never invokes `worker.tool`",
+                'Agent subagent_type="general-purpose" model="<resolved escalation model>"',
+            ),
+        )
+        self.assertNotIn("<worker.tool>", self.claude_status_routing)
+        self.assertIn(
+            "re-dispatch with `default` or an installed `escalation` profile",
+            self.codex_status_routing,
+        )
+        self.assertNotIn(
+            "native Claude escalation class",
+            self.codex_status_routing,
         )
 
     def test_worker_input_and_response_protocol_are_complete(self) -> None:
@@ -164,6 +201,17 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
             ),
         )
 
+    def test_f06_checkpoint_finder_identifies_advisory_finder(self) -> None:
+        self.assertContainsAll(
+            self.finder_wire,
+            (
+                "subordinate read-only advisory finder",
+                "Do not perform orchestration",
+                "Do not edit files or run tests",
+                "Use live search only to validate advisory quality findings",
+            ),
+        )
+
     def test_claude_summaries_describe_both_worker_routes(self) -> None:
         self.assertContainsAll(
             self.claude,
@@ -195,6 +243,25 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
             with self.subTest(claude_only=claude_only):
                 self.assertNotIn(claude_only, self.codex)
 
+    def test_generated_outputs_are_current(self) -> None:
+        repository = Path(__file__).resolve().parents[1]
+        self.assertEqual(
+            self.claude,
+            (repository / "skills" / "executing-plans" / "SKILL.md").read_text(
+                encoding="utf-8"
+            ),
+        )
+        self.assertEqual(
+            self.codex,
+            (
+                repository
+                / "plugins"
+                / "gambit"
+                / "skills"
+                / "executing-plans"
+                / "SKILL.md"
+            ).read_text(encoding="utf-8"),
+        )
 
 if __name__ == "__main__":
     unittest.main()

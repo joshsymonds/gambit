@@ -213,7 +213,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
 **Resolve the contract path once.** Glob `**/contracts/worker.md` at the start of the epic to get its absolute path and pass that path to the worker — **do NOT Read `worker.md` into your own context**, and **do NOT hardcode or reuse a stale absolute path from an earlier session** (plugin store paths change; re-Glob). The worker reads it in its fresh context (exactly as the `review` skill passes `reviewers/*.md` by path); reading it yourself loads ~1.4k tokens into the long-lived orchestrator context on every epic, for nothing. The worker re-reads it on every dispatch, including retries — keep `worker.md` lean.
 
 <!-- gambit-backend:claude -->
-1. **Resolve the worker executor.** Before every worker dispatch, resolve `worker` through `contracts/executors.md` using its complete validation and resolution sequence.
+1. **Resolve the worker executor.** Before every initial worker dispatch and every retry except the native needs-more-reasoning escalation defined in step 3, resolve `worker` through `contracts/executors.md` using its complete validation and resolution sequence.
    - **Missing registry file or valid registry with no `worker` role** → preserve native Claude dispatch. Resolve the worker model by tier through `contracts/models.md`: default `worker → standard`, with `~/.claude/gambit/models.json` overrides and `escalation` for a re-dispatch. **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — native resolution is config/alias only.
    - **Invalid registry** → stop and report the registry error without dispatching.
    - **Configured Codex** → use only the configured call below. Any configured Codex call failure stops and is reported; do not retry through native Claude.
@@ -276,6 +276,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
      developer-instructions: "You are a subordinate worker assigned exactly one implementation brief. Do not perform orchestration, skill loading, nested agents, task discovery, scope expansion, commits, merges, worktree creation, plan mutation, or task assignment. Do not discover or adopt more work. Edit only owned files and return one required worker status."
      config:
        model_reasoning_effort: "<worker.reasoning_effort>"
+       web_search: "disabled"
        'plugins."gambit@personal".enabled': false
        skills.include_instructions: false
        orchestrator.skills.enabled: false
@@ -283,7 +284,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
        features.multi_agent_v2.enabled: false
    ```
 
-   Thus every configured call applies `plugins."gambit@personal".enabled = false`, `skills.include_instructions = false`, `orchestrator.skills.enabled = false`, `features.collab = false`, and `features.multi_agent_v2.enabled = false`.
+   Thus every configured call applies `web_search = "disabled"`, `plugins."gambit@personal".enabled = false`, `skills.include_instructions = false`, `orchestrator.skills.enabled = false`, `features.collab = false`, and `features.multi_agent_v2.enabled = false`.
 
    The configured prompt contains only the absolute worker contract path, the complete constructed brief, exact `## Files owned`, `## Hidden shared surfaces`, and `## Neighbors`, task context, epic requirements and Quality Bar needed by this brief, the exact worktree, shared wave-start base, focused test command, and four-state return requirement. Never paste session history. Use the task's exact worktree as `cwd`; isolation and `integrate_wave.py` stay unchanged.
 
@@ -326,6 +327,12 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
    - **NEEDS_CONTEXT** → supply the missing values/decisions and re-dispatch with them added.
 <!-- gambit-backend:claude -->
    - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch at the `escalation` tier (default `"opus"`); task too large → decompose into a new task (`TaskCreate`); the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
+
+     A needs-more-reasoning retry selects the native Claude escalation class: dispatch a fresh `general-purpose` Agent at the resolved `escalation` tier, reusing the same absolute worker contract path and complete brief. This native escalation bypasses the worker executor registry in `contracts/executors.md` and never invokes `worker.tool`:
+     ```
+     Agent subagent_type="general-purpose" model="<resolved escalation model>" description="Escalate: <task subject>"
+       prompt="<same absolute worker contract path directive and complete worker brief>"
+     ```
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
    - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch with `default` or an installed `escalation` profile; brief too large → split it into complete worker briefs in the checkpoint and revise the complete ordered wave list; the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
@@ -426,7 +433,7 @@ Before this checkpoint quality dispatch, resolve `finder` through `contracts/exe
     cwd: "<the task's exact worker worktree path>"
     sandbox: "<finder.sandbox; required read-only>"
     approval-policy: "<finder.approval_policy>"
-    developer-instructions: "You are a subordinate worker assigned exactly one read-only quality review. Do not perform orchestration, skill loading, nested agents, task discovery, scope expansion, commits, merges, worktree creation, plan mutation, or task assignment. Do not edit files or run tests. Use live search only to validate advisory quality findings, then return the review content."
+    developer-instructions: "You are a subordinate read-only advisory finder assigned exactly one quality review. Do not perform orchestration, skill loading, nested agents, task discovery, scope expansion, commits, merges, worktree creation, plan mutation, or task assignment. Do not edit files or run tests. Use live search only to validate advisory quality findings, then return the review content."
     config:
       model_reasoning_effort: "<finder.reasoning_effort>"
       web_search: "<finder.web_search; required live>"
