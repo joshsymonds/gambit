@@ -8,6 +8,7 @@ the expensive orchestrator model.
 
 | Role | Default tier | Why |
 |------|-------------|-----|
+| `steelman` (design collaborator) | most-capable | strengthen and challenge architecture without implementation authority |
 | `finder` (review reviewers) | most-capable | recall ceiling — a missed finding is unrecoverable, no verifier recovers it |
 | `verifier` (review verifier) | most-capable | code/security verification is as hard as finding; a cheap verifier rubber-stamps coherent-but-wrong findings and over-refutes real ones |
 | `worker` (implementation) | standard | mechanical work from a clear brief |
@@ -36,13 +37,16 @@ identically on the Anthropic API and on Amazon Bedrock:
    env vars in (1).
 3. **Optional per-role override** — `~/.claude/gambit/models.json`, needed ONLY when a role must use a
    different model than its tier's alias (e.g. `verifier` ≠ `finder` though both are most-capable).
-   Shape (any subset): `{ "worker": "<id>", "escalation": "<id>", "finder": "<id>", "verifier":
-   "<id>", "scout": "<id>", "test-runner": "<id>" }`. The orchestrator reads it and passes the value
+   Shape (any subset): `{ "steelman": "<id>", "worker": "<id>", "escalation": "<id>", "finder":
+   "<id>", "verifier": "<id>", "scout": "<id>", "test-runner": "<id>" }`. The orchestrator reads it and passes the value
    **verbatim** to `model:`. Absent / missing key → use the tier alias (resolved per 1–2). Most setups
    don't need this file — the native env vars cover per-tier pinning on both API and Bedrock.
 
 ## Hard rules
 
+- **Model-tier selection is separate from executor selection.** The tier above controls native
+  Claude dispatch. A configured external executor supplies its own model from
+  [executors.md](executors.md); neither registry selects or rewrites the other.
 - **Always set `model:` explicitly** to the tier alias (or an override value). An omitted model — or
   `model: "inherit"` — silently inherits the expensive session/orchestrator model.
 - **Never set `CLAUDE_CODE_SUBAGENT_MODEL`.** It is top-precedence and forces EVERY dispatched

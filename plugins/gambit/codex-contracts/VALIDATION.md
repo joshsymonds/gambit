@@ -1,5 +1,15 @@
 # Behavioral Validation
 
+## Contract-surface validation: executor registry and steelman
+
+The executor and steelman contracts have structural regression coverage in
+`tests/test_rendered_skills.py`. The coverage parses the executor registry schema, proves that only
+steelman, worker, and finder are configurable, checks every required and role-specific field, and
+locks the missing/invalid/failure resolution rules. It also checks both steelman modes, their exact
+statuses, the frozen Design Ledger, authority boundaries, and the two-call circuit breaker across
+source and rendered backends. Dispatch behavior is deliberately not claimed here: this contract
+wave establishes the boundary before workflow wiring can consume it.
+
 Each agent class and the governance reflex was validated with **baseline-RED → GREEN-under-pressure → mis-prompt/injection**, using the gambit:writing-skills evaluation-driven method (a fresh subagent, a realistic scenario, a forced choice under combined pressure). Tested at the tier each class actually runs at — the cheap tier is where contracts earn their keep, since capable models are already disciplined by default. Summary of recorded results:
 
 ## worker (`worker.md`)

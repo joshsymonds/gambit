@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import subprocess
 import sys
@@ -41,6 +42,10 @@ FORBIDDEN_SPAWN_AGENT_FIELDS = (
 CONCRETE_AGENT_MODELS = re.compile(
     r"(?i)\b(?:gpt-[a-z0-9.-]+|o[1-9](?:-[a-z0-9.-]+)?|"
     r"codex-mini|haiku|sonnet|opus)\b"
+)
+CONCRETE_PROVIDER_MODEL_IDS = re.compile(
+    r"(?i)\b(?:claude-[a-z0-9.-]*\d[a-z0-9.-]*|"
+    r"gpt-[a-z0-9.-]*\d[a-z0-9.-]*|o[1-9](?:-[a-z0-9.-]+)?|codex-mini)\b"
 )
 
 
@@ -177,6 +182,313 @@ class RenderedSkillsTest(unittest.TestCase):
             ).read_text(encoding="utf-8")
             for model in ("Haiku", "Sonnet", "Opus"):
                 self.assertIn(model, claude_writing)
+
+    def test_contract_catalogs_register_executor_registry_and_steelman(self) -> None:
+        catalogs = {
+            "shared source": ROOT / "src" / "contracts" / "README.md",
+            "claude rendered": CLAUDE_CONTRACTS / "README.md",
+            "codex source": (
+                ROOT
+                / "src"
+                / "backends"
+                / "codex"
+                / "overlays"
+                / "codex-contracts"
+                / "README.md"
+            ),
+            "codex rendered": CODEX_PLUGIN / "codex-contracts" / "README.md",
+        }
+        for name, path in catalogs.items():
+            with self.subTest(catalog=name):
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("[executors.md](executors.md)", text)
+                self.assertRegex(
+                    text,
+                    r"(?m)^\| \*\*steelman\*\* \| \[steelman\.md\]"
+                    r"\(steelman\.md\) \|",
+                )
+
+        for path in (
+            ROOT / "src" / "contracts" / "steelman.md",
+            CLAUDE_CONTRACTS / "steelman.md",
+            CODEX_PLUGIN / "codex-contracts" / "steelman.md",
+        ):
+            self.assertTrue(path.exists(), str(path))
+
+        for path in (
+            ROOT / "src" / "contracts" / "executors.md",
+            CLAUDE_CONTRACTS / "executors.md",
+            CODEX_PLUGIN / "codex-contracts" / "executors.md",
+        ):
+            self.assertTrue(path.exists(), str(path))
+
+    def test_model_docs_assign_steelman_tier_and_codex_fallback(self) -> None:
+        for path in (
+            ROOT / "src" / "contracts" / "models.md",
+            CLAUDE_CONTRACTS / "models.md",
+        ):
+            text = path.read_text(encoding="utf-8")
+            self.assertRegex(
+                text,
+                r"(?m)^\| `steelman` \(design collaborator\) \| most-capable \|",
+            )
+
+        for path in (
+            ROOT
+            / "src"
+            / "backends"
+            / "codex"
+            / "overlays"
+            / "codex-contracts"
+            / "models.md",
+            CODEX_PLUGIN / "codex-contracts" / "models.md",
+        ):
+            text = path.read_text(encoding="utf-8")
+            self.assertRegex(
+                text,
+                r"(?m)^\| `steelman` \| `default` \| Fresh read-only design collaboration \|",
+            )
+
+    def test_executor_registry_schema_and_resolution_are_fail_closed(self) -> None:
+        source_text = (ROOT / "src" / "contracts" / "executors.md").read_text(
+            encoding="utf-8"
+        )
+        schema_match = re.search(
+            r"```json\n(.*?)\n```", source_text, re.DOTALL
+        )
+        self.assertIsNotNone(schema_match)
+        schema = json.loads(schema_match.group(1))
+        source = " ".join(source_text.split())
+
+        self.assertEqual(
+            {"steelman", "worker", "finder"},
+            set(schema["properties"]),
+        )
+        self.assertEqual("object", schema["type"])
+        self.assertFalse(schema["additionalProperties"])
+
+        worker_keys = {
+            "executor",
+            "tool",
+            "model",
+            "reasoning_effort",
+            "sandbox",
+            "approval_policy",
+        }
+        expected_keys = {
+            "worker": worker_keys,
+            "steelman": worker_keys | {"web_search"},
+            "finder": worker_keys | {"web_search"},
+        }
+        string_fields = {
+            "tool",
+            "model",
+            "reasoning_effort",
+            "approval_policy",
+        }
+        for role, entry in schema["properties"].items():
+            with self.subTest(role=role):
+                self.assertEqual("object", entry["type"])
+                self.assertEqual(expected_keys[role], set(entry["properties"]))
+                self.assertEqual(expected_keys[role], set(entry["required"]))
+                self.assertEqual("codex", entry["properties"]["executor"]["const"])
+                self.assertRegex(
+                    "mcp__server__tool",
+                    entry["properties"]["tool"]["pattern"],
+                )
+                for field in string_fields:
+                    self.assertEqual("string", entry["properties"][field]["type"])
+                if role == "worker":
+                    self.assertEqual(
+                        "string", entry["properties"]["sandbox"]["type"]
+                    )
+                self.assertFalse(entry["additionalProperties"])
+
+        for role in ("steelman", "finder"):
+            entry = schema["properties"][role]
+            self.assertEqual("read-only", entry["properties"]["sandbox"]["const"])
+            self.assertEqual("live", entry["properties"]["web_search"]["const"])
+            self.assertIn("web_search", entry["required"])
+
+        self.assertNotIn("web_search", schema["properties"]["worker"]["properties"])
+
+        resolution_match = re.search(
+            r"use this deterministic sequence:\n\n(?P<steps>.*?)(?:\n\nNever infer)",
+            source_text,
+            re.DOTALL,
+        )
+        self.assertIsNotNone(resolution_match)
+        resolution = " ".join(resolution_match.group("steps").split())
+        missing_file = "Missing registry file: use native execution"
+        parse_stop = "JSON parse or duplicate-key failure: stop immediately"
+        schema_stop = "Schema validation failure: stop immediately"
+        valid_absence = "Valid registry, requested role absent: use native execution"
+        valid_presence = "Valid registry, requested role present"
+        call_stop = "Configured Codex call fails: stop immediately"
+        ordered_markers = (
+            missing_file,
+            parse_stop,
+            schema_stop,
+            valid_absence,
+            valid_presence,
+            call_stop,
+        )
+        positions = {
+            marker: resolution.find(marker) for marker in ordered_markers
+        }
+        self.assertNotIn(-1, positions.values(), positions)
+        self.assertTrue(resolution.startswith(f"1. {missing_file}."), resolution)
+        self.assertEqual(
+            list(positions.values()),
+            sorted(positions.values()),
+            positions,
+        )
+        self.assertLess(positions[parse_stop], positions[valid_absence])
+        self.assertLess(positions[schema_stop], positions[valid_absence])
+
+        for required in (
+            "~/.claude/gambit/executors.json",
+            "For `scout`, `test-runner`, `escalation`, or `verifier`, select native execution without reading the registry",
+            "Reject duplicate JSON object keys before schema validation",
+            "Unknown roles, unknown fields, missing fields, and invalid values invalidate the entire registry",
+            "Missing registry file: use native execution",
+            "Valid registry, requested role absent: use native execution",
+            "Schema validation failure: stop immediately",
+            "Configured Codex call fails: stop",
+            "do not retry natively",
+            "Never infer executor selection from MCP tool availability",
+            "Never silently fall back from configured Codex to native Claude",
+            "Executor selection is independent of model-tier selection",
+        ):
+            self.assertIn(required, source)
+
+        codex_notice = (
+            CODEX_PLUGIN / "codex-contracts" / "executors.md"
+        ).read_text(encoding="utf-8")
+        codex_notice = " ".join(codex_notice.split())
+        self.assertIn("Claude-only executor registry", codex_notice)
+        self.assertIn("does not apply to native Codex", codex_notice)
+        self.assertNotIn("~/.claude/gambit/executors.json", codex_notice)
+
+    def test_executor_registry_model_schema_requires_concrete_external_value(
+        self,
+    ) -> None:
+        source_text = (ROOT / "src" / "contracts" / "executors.md").read_text(
+            encoding="utf-8"
+        )
+        schema_match = re.search(r"```json\n(.*?)\n```", source_text, re.DOTALL)
+        self.assertIsNotNone(schema_match)
+        schema = json.loads(schema_match.group(1))
+
+        def accepts(model_schema: dict[str, object], value: object) -> bool:
+            if model_schema.get("type") == "string" and not isinstance(value, str):
+                return False
+            if len(value) < model_schema.get("minLength", 0):
+                return False
+            pattern = model_schema.get("pattern")
+            if pattern is not None and re.search(pattern, value) is None:
+                return False
+            forbidden = model_schema.get("not", {}).get("enum", ())
+            return value not in forbidden
+
+        forbidden_selectors = (
+            "inherit",
+            "default",
+            "haiku",
+            "sonnet",
+            "opus",
+            "fable",
+            "cheap",
+            "cheap-or-standard",
+            "standard",
+            "most-capable",
+        )
+        invalid_values = (*forbidden_selectors, "<model>", "external model", "")
+
+        for role, entry in schema["properties"].items():
+            model_schema = entry["properties"]["model"]
+            with self.subTest(role=role, value="external-model-v1"):
+                self.assertTrue(accepts(model_schema, "external-model-v1"))
+            for value in invalid_values:
+                with self.subTest(role=role, value=value):
+                    self.assertFalse(accepts(model_schema, value))
+
+    def test_steelman_contract_bounds_discovery_and_closure(self) -> None:
+        contracts = (
+            ROOT / "src" / "contracts" / "steelman.md",
+            CLAUDE_CONTRACTS / "steelman.md",
+            CODEX_PLUGIN / "codex-contracts" / "steelman.md",
+        )
+        for path in contracts:
+            with self.subTest(contract=path):
+                text = " ".join(path.read_text(encoding="utf-8").split())
+
+                for field in (
+                    "User goal",
+                    "Agreed constraints and scope",
+                    "Chosen approach",
+                    "Architecture and data flow",
+                    "Rejected alternatives and reasons",
+                    "Validation strategy",
+                    "Delivery constraints",
+                    "Unresolved decisions",
+                ):
+                    self.assertIn(field, text)
+
+                self.assertIn(
+                    "Discovery status: exactly one of `READY`, `REVISE`, `NEEDS_DECISION`, or `BLOCKED`",
+                    text,
+                )
+                self.assertIn(
+                    "Closure status: exactly one of `READY`, `STILL_OPEN`, `CHANGE_INDUCED_CONCERN`, or `BLOCKED`",
+                    text,
+                )
+                for requirement in (
+                    "Strengthen the chosen design before challenging it",
+                    "Strongest credible alternative and when it wins",
+                    "Number assumptions, failure modes, ambiguities, and validation gaps",
+                    "concrete contract changes",
+                    "Actual user decisions",
+                    "transcript-local frozen Design Ledger",
+                    "`ADOPTED`, `REJECTED` with its reason, `OPEN`, or `DEFERRED` with its scope boundary",
+                    "Steelman cannot mutate the Design Ledger",
+                    "one disposition for every `ADOPTED` and `OPEN` ledger item",
+                    "cannot restart discovery",
+                    "cannot resurrect `REJECTED` or `DEFERRED` items",
+                    "one discovery call and one closure call",
+                    "No automatic third pass",
+                    "explicit user authorization",
+                    "transcript design context, never plan steps or repository state",
+                ):
+                    self.assertIn(requirement, text)
+
+                self.assertNotIn("Concrete contract changes", text)
+
+                for forbidden_authority in (
+                    "edit files",
+                    "mutate task or plan state",
+                    "create contracts or briefs",
+                    "invoke workflows",
+                    "spawn children",
+                    "choose another pass",
+                ):
+                    self.assertIn(forbidden_authority, text)
+
+    def test_contracts_do_not_name_concrete_provider_model_ids(self) -> None:
+        roots = (
+            ROOT / "src" / "contracts",
+            ROOT / "src" / "backends" / "codex" / "overlays" / "codex-contracts",
+            CLAUDE_CONTRACTS,
+            CODEX_PLUGIN / "codex-contracts",
+        )
+        for root in roots:
+            for path in sorted(root.glob("*.md")):
+                self.assertIsNone(
+                    CONCRETE_PROVIDER_MODEL_IDS.search(
+                        path.read_text(encoding="utf-8")
+                    ),
+                    f"concrete provider model ID leaked into {path}",
+                )
 
     def test_worktree_prose_is_backend_native(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:

@@ -6,8 +6,12 @@ to the subagent, and require the subagent to read it first.
 
 > Dispatch a contracted class; never spawn a bare generic agent without a contract.
 
+[executors.md](executors.md) records why the Claude-side external executor registry is not part of
+native Codex dispatch. Executor choice never changes a class contract or its authority.
+
 | Class | Contract | Codex fallback | Use it when |
 |---|---|---|---|
+| **steelman** | [steelman.md](steelman.md) | `default` | Fresh read-only design collaboration |
 | **worker** | [worker.md](worker.md) | `worker` | Implementing one bounded task |
 | **scout** | [scout.md](scout.md) | `explorer` | Read-only discovery with file:line evidence |
 | **finder** | `skills/review/reviewers/{conformance,security,quality,performance}.md` | `default` | Independent issue discovery |

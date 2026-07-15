@@ -5,14 +5,19 @@ bare `general-purpose` agent improvised without one. When a skill needs a subage
 one of these classes, passes the class contract by path, and sets an explicit `model:` at the
 class's tier (see [models.md](models.md)).
 
+For the three externally executable classes, [executors.md](executors.md) defines executor
+selection independently from class and model-tier selection. A selected executor never changes
+the class contract or its authority.
+
 > **Rule: dispatch a contracted class; never spawn a bare generic agent without a contract.**
 > A contractless agent has no blast-radius limit, no return protocol, and no tier — the disciplines
 > these contracts encode simply evaporate.
 
-**A class is not a `subagent_type`.** Dispatch `subagent_type: "general-purpose"` for worker / finder / verifier / test-runner, or `subagent_type: "Explore"` for the read-only scout — and attach the class by passing its **contract path** (the agent's first action is to Read it) plus its **model tier**. There is no `subagent_type: "worker"` / `"scout"` / etc.
+**A class is not a `subagent_type`.** Dispatch `subagent_type: "general-purpose"` for steelman / worker / finder / verifier / test-runner, or `subagent_type: "Explore"` for the read-only scout — and attach the class by passing its **contract path** (the agent's first action is to Read it) plus its **model tier**. There is no `subagent_type: "worker"` / `"scout"` / etc.
 
 | Class | Contract | Default tier | Use it when |
 |-------|----------|-------------|-------------|
+| **steelman** | [steelman.md](steelman.md) | most-capable | fresh read-only design collaboration during bounded discovery and closure |
 | **worker** | [worker.md](worker.md) | standard | implementing a task's code for executing-plans |
 | **scout** | [scout.md](scout.md) | cheap-or-standard | read-only investigation — find code/patterns/answers and return evidence (brainstorming, executing-plans, debugging) |
 | **finder** | `skills/review/reviewers/{conformance,security,quality,performance}.md` | most-capable | reviewing changed code for issues — all four at end-of-epic review; the `quality` finder alone, scoped to one diff, as the `executing-plans` checkpoint gate's escalation reviewer |
