@@ -13,6 +13,12 @@ the class contract or its authority.
 > A contractless agent has no blast-radius limit, no return protocol, and no tier — the disciplines
 > these contracts encode simply evaporate.
 
+> **Transport exception — `wrapper` only:** The async configured-executor wrapper defined by
+> [async-dispatch.md](async-dispatch.md) is pure transport, not a contracted class. It reads no
+> contract path. The dispatching orchestrator embeds its governing instructions verbatim from that
+> contract. This exception grants zero judgment and applies only to the one configured MCP call and
+> one artifact write defined there.
+
 **A class is not a `subagent_type`.** Dispatch `subagent_type: "general-purpose"` for steelman / worker / finder / verifier / test-runner, or `subagent_type: "Explore"` for the read-only scout — and attach the class by passing its **contract path** (the agent's first action is to Read it) plus its **model tier**. There is no `subagent_type: "worker"` / `"scout"` / etc.
 
 | Class | Contract | Default tier | Use it when |

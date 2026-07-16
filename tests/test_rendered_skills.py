@@ -222,6 +222,39 @@ class RenderedSkillsTest(unittest.TestCase):
         ):
             self.assertTrue(path.exists(), str(path))
 
+    def test_async_dispatch_contract_renders_for_each_backend(self) -> None:
+        claude_contract = CLAUDE_CONTRACTS / "async-dispatch.md"
+        self.assertTrue(claude_contract.exists(), str(claude_contract))
+        if claude_contract.exists():
+            claude_text = claude_contract.read_text(encoding="utf-8")
+            self.assertIn(
+                "threadId: <id>\n"
+                "artifact: <path>\n"
+                "status-head: <first line of content>",
+                claude_text,
+            )
+            self.assertIn(
+                "only after the envelope's artifact path matches it exactly",
+                claude_text,
+            )
+
+        codex_contract = CODEX_PLUGIN / "codex-contracts" / "async-dispatch.md"
+        self.assertTrue(codex_contract.exists(), str(codex_contract))
+        if codex_contract.exists():
+            codex_text = codex_contract.read_text(encoding="utf-8")
+            self.assertIn("Claude-orchestrator mechanism only", codex_text)
+            self.assertIn("does not apply to native Codex", codex_text)
+            self.assertNotIn("Agent", codex_text)
+            self.assertNotIn("TaskOutput", codex_text)
+
+        models = (CLAUDE_CONTRACTS / "models.md").read_text(encoding="utf-8")
+        self.assertRegex(
+            models,
+            r"(?m)^\| `wrapper` \(async transport relay\) \| cheap \| "
+            r"pure transport relay, zero judgment — one configured MCP call plus one "
+            r"artifact write \|$",
+        )
+
     def test_model_docs_assign_steelman_tier_and_codex_fallback(self) -> None:
         for path in (
             ROOT / "src" / "contracts" / "models.md",

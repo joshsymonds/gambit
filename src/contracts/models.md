@@ -14,6 +14,7 @@ the expensive orchestrator model.
 | `worker` (implementation) | standard | mechanical work from a clear brief |
 | `escalation` (blocked worker) | most-capable | re-dispatch a worker that blocked needing more reasoning |
 | `scout` (read-only Explore) | cheap-or-standard | output is cheaply checkable — the orchestrator spot-checks the cited `file:line` |
+| `wrapper` (async transport relay) | cheap | pure transport relay, zero judgment — one configured MCP call plus one artifact write |
 | `test-runner` | cheap | objective oracle (exit code) |
 
 Tier words map to the harness model **aliases**: most-capable → `"opus"`, standard → `"sonnet"`,
@@ -38,9 +39,10 @@ identically on the Anthropic API and on Amazon Bedrock:
 3. **Optional per-role override** — `~/.claude/gambit/models.json`, needed ONLY when a role must use a
    different model than its tier's alias (e.g. `verifier` ≠ `finder` though both are most-capable).
    Shape (any subset): `{ "steelman": "<id>", "worker": "<id>", "escalation": "<id>", "finder":
-   "<id>", "verifier": "<id>", "scout": "<id>", "test-runner": "<id>" }`. The orchestrator reads it and passes the value
-   **verbatim** to `model:`. Absent / missing key → use the tier alias (resolved per 1–2). Most setups
-   don't need this file — the native env vars cover per-tier pinning on both API and Bedrock.
+   "<id>", "verifier": "<id>", "scout": "<id>", "wrapper": "<id>", "test-runner": "<id>" }`. The
+   orchestrator reads it and passes the value **verbatim** to `model:`. Absent / missing key → use
+   the tier alias (resolved per 1–2). Most setups don't need this file — the native env vars cover
+   per-tier pinning on both API and Bedrock.
 
 ## Hard rules
 
