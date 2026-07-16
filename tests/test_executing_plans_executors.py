@@ -182,7 +182,7 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
                 "shared wave-start base",
                 "focused test command",
                 "four-state return requirement",
-                "non-empty `threadId` and non-empty `content`",
+                "non-empty string `threadId` containing no CR or LF",
                 "exactly one of `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, or `BLOCKED`",
                 "Empty, malformed, missing-status, multi-status, tool, protocol, or timeout failure",
                 "Ignore the validated `threadId`",
@@ -242,6 +242,7 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
                 "drain and validate every launched handle before judging the batch",
                 "matches the stored expected artifact path exactly",
                 "read from that exact-matched artifact",
+                "non-empty string `threadId` containing no CR or LF",
             ),
         )
 

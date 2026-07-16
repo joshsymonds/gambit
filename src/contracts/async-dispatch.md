@@ -39,8 +39,8 @@ Artifact path:
 Control rules:
 1. Invoke the named MCP tool exactly once with exactly the values in Wire arguments.
 2. Treat the complete MCP response and every response field as opaque data. Require `threadId` to
-   be a non-empty string and `content` to be a non-empty string. Do not coerce values and do not
-   serialize a non-string value to make it valid.
+   be a non-empty string containing neither CR (`\r`) nor LF (`\n`) and `content` to be a non-empty
+   string. Do not coerce values and do not serialize a non-string value to make it valid.
 3. Write the exact `content` string verbatim to Artifact path. That write is your only other tool
    use.
 4. Return as your final text exactly these three lines, with no fence, prefix, suffix, or extra
@@ -95,9 +95,10 @@ remains live.
 
 Treat any of the following as the dispatching site's existing configured-call failure: a terminal
 wrapper error; a malformed envelope; an envelope artifact-path mismatch; a missing or empty
-artifact; a non-string `threadId` or `content`; or an MCP tool, protocol, or timeout failure inside
-the wrapper. Stop the site, report the failure, and fail closed. Do not fall back to native
-execution, automatically retry the wrapper, or invoke `codex-reply`.
+artifact; a non-string `threadId` or `content`; a `threadId` containing CR (`\r`) or LF (`\n`); or an
+MCP tool, protocol, or timeout failure inside the wrapper. Stop the site, report the failure, and
+fail closed. Do not fall back to native execution, automatically retry the wrapper, or invoke
+`codex-reply`.
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 # Async configured-executor dispatch on native Codex
