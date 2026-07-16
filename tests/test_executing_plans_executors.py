@@ -13,8 +13,9 @@ def bounded_section(text: str, start: str, end: str) -> str:
     return text[start_index:end_index]
 
 
-def yaml_fence(section: str) -> str:
-    fence_start = section.index("```yaml\n") + len("```yaml\n")
+def code_fence(section: str, language: str) -> str:
+    marker = f"```{language}\n"
+    fence_start = section.index(marker) + len(marker)
     wire_lines = section[fence_start:].splitlines()
     fence_end = next(
         index for index, line in enumerate(wire_lines) if line.strip() == "```"
@@ -45,7 +46,7 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
             "**Configured Codex:** Configured Codex workers are fresh calls.",
             "Pass the contract by path and the task as **constructed text**",
         )
-        cls.worker_wire = yaml_fence(cls.configured_worker)
+        cls.worker_wire = code_fence(cls.configured_worker, "json")
         cls.claude_status_routing = bounded_section(
             cls.claude,
             "3. **Route on the worker's returned status**",
@@ -63,10 +64,10 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         )
         cls.configured_finder = bounded_section(
             cls.checkpoint_finder,
-            "- **Configured Codex** → invoke exactly the fully qualified MCP tool",
+            "- **Configured Codex** → dispatch",
             "The configured result is advisory content only",
         )
-        cls.finder_wire = yaml_fence(cls.configured_finder)
+        cls.finder_wire = code_fence(cls.configured_finder, "json")
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -92,25 +93,24 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         )
 
     def test_configured_worker_call_maps_registry_to_codex_wire_shape(self) -> None:
-        self.assertIn(
-            "invoke exactly the fully qualified MCP tool in `worker.tool`",
+        self.assertNotIn(
+            "For each worker, invoke exactly the fully qualified MCP tool in `worker.tool`",
             self.configured_worker,
         )
         self.assertContainsAll(
             self.worker_wire,
             (
-                "<worker.tool>",
-                'model: "<worker.model>"',
-                'cwd: "<the task\'s exact worker worktree path>"',
-                'sandbox: "<worker.sandbox>"',
-                'approval-policy: "<worker.approval_policy>"',
-                'model_reasoning_effort: "<worker.reasoning_effort>"',
-                "'plugins.\"gambit@personal\".enabled': false",
-                "skills.include_instructions: false",
-                "orchestrator.skills.enabled: false",
-                "features.collab: false",
-                "features.multi_agent_v2.enabled: false",
-                "developer-instructions",
+                '"model": "<worker.model>"',
+                '"cwd": "<the task\'s exact worker worktree path>"',
+                '"sandbox": "<worker.sandbox>"',
+                '"approval-policy": "<worker.approval_policy>"',
+                '"model_reasoning_effort": "<worker.reasoning_effort>"',
+                '"plugins.\\"gambit@personal\\".enabled": false',
+                '"skills.include_instructions": false',
+                '"orchestrator.skills.enabled": false',
+                '"features.collab": false',
+                '"features.multi_agent_v2.enabled": false',
+                '"developer-instructions"',
                 "subordinate worker",
                 "orchestration, skill loading, nested agents, task discovery, scope expansion",
                 "commits, merges, worktree creation, plan mutation, or task assignment",
@@ -118,9 +118,35 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         )
 
     def test_f05_configured_worker_explicitly_disables_web_search(self) -> None:
-        self.assertIn('web_search: "disabled"', self.worker_wire)
+        self.assertIn('"web_search": "disabled"', self.worker_wire)
         self.assertIn('`web_search = "disabled"`', self.configured_worker)
         self.assertNotIn("worker.web_search", self.configured_worker)
+
+    def test_configured_worker_uses_async_wrapper_artifact_collection(self) -> None:
+        self.assertContainsAll(
+            self.configured_worker,
+            (
+                "`contracts/async-dispatch.md`",
+                "anonymous background `Agent` wrapper",
+                "never pass `name:`",
+                "executing-plans worker site and task",
+                "fully qualified `worker.tool` name",
+                "one opaque JSON object",
+                "`~/.claude/gambit/async-results/`",
+                "one collision-resistant unique artifact path per worker",
+                "record the complete handle mapping",
+                "scout and brief the next wave",
+                "`TaskOutput block=true`",
+                "nonterminal timeout means continue waiting",
+                "drain and validate every launched handle before judging the batch",
+                "matches the stored expected artifact path exactly",
+                "read from that exact-matched artifact",
+            ),
+        )
+        self.assertIn(
+            "all configured worker wrapper launches together in one message",
+            self.worker_dispatch,
+        )
 
     def test_f02_needs_more_reasoning_uses_native_claude_escalation(self) -> None:
         self.assertContainsAll(
@@ -159,13 +185,9 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
                 "non-empty `threadId` and non-empty `content`",
                 "exactly one of `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, or `BLOCKED`",
                 "Empty, malformed, missing-status, multi-status, tool, protocol, or timeout failure",
-                "Ignore `threadId` after validating it",
+                "Ignore the validated `threadId`",
                 "Never use `codex-reply`",
             ),
-        )
-        self.assertIn(
-            "all independent configured worker calls together in one message",
-            self.worker_dispatch,
         )
 
     def test_checkpoint_finder_resolves_registry_and_remains_advisory(self) -> None:
@@ -175,7 +197,7 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
                 "resolve `finder` through `contracts/executors.md`",
                 "Missing registry file or valid registry with no `finder` role",
                 "Invalid registry or any configured call, tool, protocol, or timeout failure stops the checkpoint",
-                "invoke exactly the fully qualified MCP tool in `finder.tool`",
+                "fully qualified MCP tool in `finder.tool`",
                 "absolute quality contract path",
                 "frozen review brief",
                 "read-only, live-search, advisory reviewer",
@@ -186,19 +208,61 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         self.assertContainsAll(
             self.finder_wire,
             (
-                "<finder.tool>",
-                'model: "<finder.model>"',
-                'cwd: "<the task\'s exact worker worktree path>"',
-                'sandbox: "<finder.sandbox; required read-only>"',
-                'approval-policy: "<finder.approval_policy>"',
-                'model_reasoning_effort: "<finder.reasoning_effort>"',
-                'web_search: "<finder.web_search; required live>"',
-                "'plugins.\"gambit@personal\".enabled': false",
-                "skills.include_instructions: false",
-                "orchestrator.skills.enabled: false",
-                "features.collab: false",
-                "features.multi_agent_v2.enabled: false",
+                '"model": "<finder.model>"',
+                '"cwd": "<the task\'s exact worker worktree path>"',
+                '"sandbox": "<finder.sandbox; required read-only>"',
+                '"approval-policy": "<finder.approval_policy>"',
+                '"model_reasoning_effort": "<finder.reasoning_effort>"',
+                '"web_search": "<finder.web_search; required live>"',
+                '"plugins.\\"gambit@personal\\".enabled": false',
+                '"skills.include_instructions": false',
+                '"orchestrator.skills.enabled": false',
+                '"features.collab": false',
+                '"features.multi_agent_v2.enabled": false',
             ),
+        )
+
+    def test_checkpoint_finder_requires_frozen_hunks_and_async_collection(self) -> None:
+        self.assertContainsAll(
+            self.configured_finder,
+            (
+                "actual frozen diff hunks",
+                "empty or missing hunk set",
+                "composition failure before dispatch",
+                "Reading the material supplied in this brief and the single named quality-contract path is required and is not repository discovery",
+                "only exploration beyond the supplied brief and that single named path",
+                "`contracts/async-dispatch.md`",
+                "anonymous background `Agent` wrapper",
+                "never pass `name:`",
+                "checkpoint quality finder site and task",
+                "one opaque JSON object",
+                "one collision-resistant unique artifact path",
+                "`TaskOutput block=true`",
+                "nonterminal timeout means continue waiting",
+                "drain and validate every launched handle before judging the batch",
+                "matches the stored expected artifact path exactly",
+                "read from that exact-matched artifact",
+            ),
+        )
+
+    def test_configured_patience_uses_only_bounded_taskoutput_rewaits(self) -> None:
+        patience = bounded_section(
+            self.claude,
+            "**One of the four statuses is the ONLY signal",
+            "When a collision does happen anyway",
+        )
+        self.assertContainsAll(
+            patience,
+            (
+                "configured Codex call now has a checkable task handle",
+                "bounded `TaskOutput block=true` re-waits per `contracts/async-dispatch.md`",
+                "Never send messages to a wrapper",
+                "missing or invalid terminal result is the configured failure already defined above",
+            ),
+        )
+        self.assertNotIn(
+            "A configured Codex call has no persistent thread to ping",
+            patience,
         )
 
     def test_f06_checkpoint_finder_identifies_advisory_finder(self) -> None:
