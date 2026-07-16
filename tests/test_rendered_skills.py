@@ -15,6 +15,7 @@ ROOT = Path(__file__).resolve().parents[1]
 CODEX_PLUGIN = ROOT / "plugins" / "gambit"
 CLAUDE_SKILLS = ROOT / "skills"
 CLAUDE_CONTRACTS = ROOT / "contracts"
+CLAUDE_WRAPPER_AGENT = ROOT / "agents" / "gambit-wrapper.md"
 TEXT_SUFFIXES = {".md", ".txt", ".json", ".toml", ".yaml", ".yml", ".sh", ".py"}
 CODE_FENCE = re.compile(
     r"^[ \t]*```[^\n]*\n(.*?)^[ \t]*```[ \t]*$",
@@ -126,6 +127,55 @@ def validated_codex_dispatch_examples(
 
 
 class RenderedSkillsTest(unittest.TestCase):
+    def test_claude_wrapper_agent_matches_dispatches_and_has_only_transport_tools(
+        self,
+    ) -> None:
+        text = CLAUDE_WRAPPER_AGENT.read_text(encoding="utf-8")
+        frontmatter_match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
+        self.assertIsNotNone(frontmatter_match)
+        frontmatter = frontmatter_match.group(1)
+
+        name_match = re.search(r"(?m)^name:\s*([^\n]+)$", frontmatter)
+        self.assertIsNotNone(name_match)
+        agent_name = name_match.group(1).strip().strip('"\'')
+
+        tools_match = re.search(
+            r"(?ms)^tools:\s*\n(?P<items>(?:\s+-\s+[^\n]+\n?)+)",
+            frontmatter,
+        )
+        self.assertIsNotNone(tools_match)
+        tools = tuple(
+            item.strip().strip('"\'')
+            for item in re.findall(r"(?m)^\s+-\s+([^\n]+)$", tools_match.group("items"))
+        )
+        self.assertEqual(("ToolSearch", "Write", "mcp__*"), tools)
+        for forbidden in (
+            "Bash",
+            "Read",
+            "Agent",
+            "Skill",
+            "SendMessage",
+            "TaskOutput",
+            "TaskCreate",
+            "TaskUpdate",
+            "TaskList",
+            "TaskGet",
+        ):
+            self.assertNotIn(forbidden, tools)
+
+        dispatched_types: set[str] = set()
+        for skill in ("executing-plans", "review"):
+            skill_text = (CLAUDE_SKILLS / skill / "SKILL.md").read_text(
+                encoding="utf-8"
+            )
+            dispatched_types.update(
+                re.findall(
+                    r'Agent subagent_type="([^"]+)"[^\n]*wrapper',
+                    skill_text,
+                )
+            )
+        self.assertEqual({agent_name}, dispatched_types)
+
     def test_generated_trees_are_current(self) -> None:
         subprocess.run(
             [sys.executable, str(ROOT / "tools" / "render_skills.py"), "--check"],

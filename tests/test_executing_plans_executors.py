@@ -147,6 +147,10 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
             "all configured worker wrapper launches together in one message",
             self.worker_dispatch,
         )
+        self.assertIn('Agent subagent_type="gambit-wrapper"', self.configured_worker)
+        self.assertNotIn(
+            'Agent subagent_type="general-purpose"', self.configured_worker
+        )
 
     def test_f02_needs_more_reasoning_uses_native_claude_escalation(self) -> None:
         self.assertContainsAll(
@@ -244,6 +248,10 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
                 "read from that exact-matched artifact",
                 "non-empty string `threadId` containing no CR or LF",
             ),
+        )
+        self.assertIn('Agent subagent_type="gambit-wrapper"', self.configured_finder)
+        self.assertNotIn(
+            'Agent subagent_type="general-purpose"', self.configured_finder
         )
 
     def test_configured_patience_uses_only_bounded_taskoutput_rewaits(self) -> None:

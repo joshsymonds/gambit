@@ -6,7 +6,8 @@ authority, or failure semantics.
 
 ## Wrapper role
 
-Dispatch each configured call as an anonymous background Claude `Agent` at the `wrapper` tier from
+Dispatch each configured call as an anonymous background Claude `Agent` with
+`subagent_type="gambit-wrapper"`, setting its model at dispatch from the `wrapper` tier in
 [models.md](models.md). The wrapper is pure transport and exercises zero judgment.
 
 - **Always dispatch anonymously: never pass `name:`.** A named agent has no `TaskOutput` handle, and
@@ -14,6 +15,11 @@ Dispatch each configured call as an anonymous background Claude `Agent` at the `
 - Give every wrapper a unique `description` identifying both the dispatch site and its
   task/dimension.
 - Give the wrapper only the relay prompt below. It reads no contract path.
+
+The `gambit-wrapper` agent definition grants only `ToolSearch`, `Write`, and MCP tools. `Read`,
+shell, `Agent`, `Skill`, and task/messaging tools are structurally unavailable. Because the static
+MCP grant cannot narrow itself to the one registry-configured tool selected at runtime, the relay
+prompt's named-tool, exactly-once rule remains normative on top of this capability boundary.
 
 ## Relay prompt
 
