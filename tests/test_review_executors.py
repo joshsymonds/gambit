@@ -62,7 +62,7 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         for dimension in ("conformance", "security", "quality", "performance"):
             self.assertEqual(1, step.count(f"reviewers/{dimension}.md"))
 
-    def test_configured_codex_path_is_four_fresh_parallel_calls_with_exact_prompts(
+    def test_configured_codex_path_is_four_fresh_async_wrappers_with_exact_wire_prompts(
         self,
     ) -> None:
         step = self.section(
@@ -71,30 +71,46 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             "### Step 5: Scope-Filter and Dedupe Candidate Findings",
         )
         self.assertIn(
-            "one parallel message containing exactly these four calls and nothing else",
+            "`contracts/async-dispatch.md`",
             step,
         )
-        calls = re.findall(r"(?m)^<finder\.tool> .+$", step)
+        self.assertIn(
+            "one message containing all four background Agent wrapper calls and nothing else",
+            step,
+        )
+        calls = re.findall(r'(?m)^Agent subagent_type="general-purpose" .+$', step)
         self.assertEqual(4, len(calls))
+        expected_descriptions = [
+            f'description="Review configured finder: {dimension}"'
+            for dimension in ("conformance", "security", "quality", "performance")
+        ]
+        for call, description in zip(calls, expected_descriptions, strict=True):
+            self.assertIn('model="<wrapper tier — see contracts/models.md>"', call)
+            self.assertIn("run_in_background=true", call)
+            self.assertIn(description, call)
+            self.assertNotIn("name=", call)
+
+        wire_arguments = re.findall(
+            r'(?ms)^(conformance|security|quality|performance) Wire arguments:\n(\{.*?^\})$',
+            step,
+        )
+        self.assertEqual(4, len(wire_arguments))
         prompts = []
         dimensions = []
-        for call in calls:
-            prompt = re.search(r' prompt="([^"]+)" model=', " " + call)
-            self.assertIsNotNone(prompt, call)
-            prompt_text = prompt.group(1)
-            prompts.append(prompt_text)
-            dimension = re.search(r"reviewers/(conformance|security|quality|performance)\.md", prompt_text)
-            self.assertIsNotNone(dimension, prompt_text)
-            dimensions.append(dimension.group(1))
+        for dimension, arguments in wire_arguments:
+            dimensions.append(dimension)
+            prompt = re.search(r'^  "prompt": "([^"]+)"', arguments, re.MULTILINE)
+            self.assertIsNotNone(prompt, arguments)
+            prompts.append(prompt.group(1))
             for required in (
-                'model="<finder.model>"',
-                'cwd="<absolute repository/worktree path>"',
-                'sandbox="read-only"',
-                'approval-policy="<finder.approval_policy>"',
-                'developer-instructions="<subordinate finder instructions below>"',
-                'config="<fixed finder config below>"',
+                '"model": "<finder.model>"',
+                '"cwd": "<absolute repository/worktree path>"',
+                '"sandbox": "read-only"',
+                '"approval-policy": "<finder.approval_policy>"',
+                '"developer-instructions": "<subordinate finder instructions below>"',
+                '"config": "<fixed finder config below>"',
             ):
-                self.assertIn(required, call)
+                self.assertIn(required, arguments)
 
         self.assertEqual(
             ["conformance", "security", "quality", "performance"], dimensions
@@ -111,6 +127,38 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         self.assertIn(r"\n\n## Review Brief\n\n[identical frozen Review Brief]", prompts[0])
         self.assertIn("Each call is fresh and distinct", step)
         self.assertIn("omit any `threadId` input", step)
+        self.assertNotRegex(step, r"(?m)^<finder\.tool> ")
+
+    def test_configured_wrapper_batch_prepares_artifacts_and_collects_every_handle(
+        self,
+    ) -> None:
+        step = self.section(
+            self.claude,
+            "#### Configured Codex finder dispatch",
+            "### Step 5: Scope-Filter and Dedupe Candidate Findings",
+        )
+        self.assertIn(
+            "expand `~/.claude/gambit/async-results/` to an absolute path and ensure the directory exists",
+            step,
+        )
+        self.assertIn(
+            "four collision-resistant unique absolute artifact paths under that prepared directory",
+            step,
+        )
+        for dimension in ("conformance", "security", "quality", "performance"):
+            self.assertIn(f"`<{dimension}-artifact-path>`", step)
+        self.assertIn(
+            "task_id → dispatch site → task/dimension → worktree → expected artifact path",
+            step,
+        )
+        self.assertIn("repeated bounded `TaskOutput block=true` calls", step)
+        self.assertIn("Drain every launched handle to a terminal state", step)
+        self.assertIn(
+            "validate all four terminal results before judging the batch", step
+        )
+        self.assertIn("matches its stored expected artifact path exactly", step)
+        self.assertIn("read only that exact-matched artifact", step)
+        self.assertIn("delete it after successful validation", step)
 
     def test_configured_calls_map_registry_values_and_disable_orchestration(self) -> None:
         step = self.section(
@@ -130,6 +178,9 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             "features.collab = false",
             "features.multi_agent_v2.enabled = false",
             "subordinate read-only advisory finder",
+            "REQUIRED",
+            "is not repository discovery",
+            "only exploration beyond the supplied brief and that named path",
             "Do not orchestrate",
             "invoke skills",
             "spawn nested agents",
@@ -137,6 +188,20 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             "expand scope",
             "edit files",
             "execute commands or tests",
+        ):
+            self.assertIn(required, step)
+
+    def test_frozen_brief_requires_actual_hunks_before_any_finder_dispatch(self) -> None:
+        step = self.section(
+            self.claude,
+            "### Step 3: Freeze Boundary and Prepare Brief",
+            "### Step 5: Scope-Filter and Dedupe Candidate Findings",
+        )
+        for required in (
+            "actual frozen diff hunks",
+            "empty or missing hunk set is a composition failure",
+            "before any finder dispatch",
+            "never dispatch a finder with nothing to review",
         ):
             self.assertIn(required, step)
 
@@ -158,9 +223,12 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             "malformed response",
             "stop and report",
             "never retry natively",
-            "Do not persist `threadId`",
+            "discard its `threadId` after validation",
             "Never call `codex-reply`",
             "advisory reviewer report",
+            "malformed envelope",
+            "artifact-path mismatch",
+            "missing or empty artifact",
         ):
             self.assertIn(required, step4)
 
@@ -202,13 +270,14 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         )
         self.assertIn("four calls through the once-selected finder executor", claude_rules)
         self.assertIn(
-            "native Agent calls or configured `finder.tool` calls", claude_rules
+            "native Agent calls or configured anonymous background wrapper calls",
+            claude_rules,
         )
         self.assertNotIn("four Agent calls", claude_rules)
 
         claude_integration = self.claude.split("## Integration", 1)[1]
         self.assertIn(
-            "native general-purpose agents or configured Codex calls",
+            "native general-purpose agents or configured async wrapper calls",
             claude_integration,
         )
 

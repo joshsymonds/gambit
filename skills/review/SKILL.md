@@ -124,6 +124,8 @@ Commit history, checkpoint formatting, transcript/process compliance, unchanged 
 
 Do NOT include your opinions, implementation notes, or rationale. The reviewers should form their own conclusions from the code.
 
+Before any finder dispatch, validate that the frozen Review Brief contains the actual frozen diff hunks from `review_base..review_snapshot`. An empty or missing hunk set is a composition failure: stop the review before any finder dispatch, and never dispatch a finder with nothing to review.
+
 ### Step 4: Dispatch Four Reviewers
 
 Resolve the absolute path to this skill's `reviewers/` directory **once** (Glob `**/skills/review/reviewers/conformance.md` if you don't already know it). You pass this path to the agents — **do NOT read the reviewer files into this context.** The four reviewer files are ~8k tokens; reading them here and re-emitting them as prompts wastes ~18k tokens every review. Each agent reads its own instruction file in its own fresh context.
@@ -149,16 +151,56 @@ Agent subagent_type="general-purpose" model="<finder tier — see contracts/mode
 
 #### Configured Codex finder dispatch
 
-When resolution selects configured Codex, `finder.tool` is the configured fully qualified MCP tool. Emit one parallel message containing exactly these four calls and nothing else. The dimension-to-contract mapping is immutable: conformance, security, quality, and performance must each receive its matching absolute reviewer path and must never be interchanged. The prompt field of every call contains only that absolute path directive plus the same frozen Review Brief, byte-for-byte:
+When resolution selects configured Codex, `finder.tool` is the configured fully qualified MCP tool. Follow `contracts/async-dispatch.md` for the frozen wrapper, artifact, handle, waiting, envelope, and failure mechanics; this section defines only the review finders' site-specific wire arguments and gates. The dimension-to-contract mapping is immutable: conformance, security, quality, and performance must each receive its matching absolute reviewer path and must never be interchanged.
+
+Each call is fresh and distinct: omit any `threadId` input and never continue one dimension's thread for another. Each complete Wire arguments object has `prompt`, `model`, `cwd`, `sandbox`, `approval-policy`, `developer-instructions`, and `config`. `model` maps from `finder.model`; `cwd` is the absolute repository/worktree path under review; `sandbox` is the configured, schema-required `read-only`; `approval-policy` maps from `finder.approval_policy`; and `config.model_reasoning_effort` maps from `finder.reasoning_effort`.
+
+The prompt value contains only the dimension's absolute reviewer-contract path directive plus the same frozen Review Brief, byte-for-byte. Use these four complete structured objects as the opaque Wire arguments payloads in the async relay prompts:
 
 ```
-<finder.tool> prompt="Read <abs>/reviewers/conformance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]" model="<finder.model>" cwd="<absolute repository/worktree path>" sandbox="read-only" approval-policy="<finder.approval_policy>" developer-instructions="<subordinate finder instructions below>" config="<fixed finder config below>"
-<finder.tool> prompt="Read <abs>/reviewers/security.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]" model="<finder.model>" cwd="<absolute repository/worktree path>" sandbox="read-only" approval-policy="<finder.approval_policy>" developer-instructions="<subordinate finder instructions below>" config="<fixed finder config below>"
-<finder.tool> prompt="Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]" model="<finder.model>" cwd="<absolute repository/worktree path>" sandbox="read-only" approval-policy="<finder.approval_policy>" developer-instructions="<subordinate finder instructions below>" config="<fixed finder config below>"
-<finder.tool> prompt="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]" model="<finder.model>" cwd="<absolute repository/worktree path>" sandbox="read-only" approval-policy="<finder.approval_policy>" developer-instructions="<subordinate finder instructions below>" config="<fixed finder config below>"
+conformance Wire arguments:
+{
+  "prompt": "Read <abs>/reviewers/conformance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
+  "model": "<finder.model>",
+  "cwd": "<absolute repository/worktree path>",
+  "sandbox": "read-only",
+  "approval-policy": "<finder.approval_policy>",
+  "developer-instructions": "<subordinate finder instructions below>",
+  "config": "<fixed finder config below>"
+}
+security Wire arguments:
+{
+  "prompt": "Read <abs>/reviewers/security.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
+  "model": "<finder.model>",
+  "cwd": "<absolute repository/worktree path>",
+  "sandbox": "read-only",
+  "approval-policy": "<finder.approval_policy>",
+  "developer-instructions": "<subordinate finder instructions below>",
+  "config": "<fixed finder config below>"
+}
+quality Wire arguments:
+{
+  "prompt": "Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
+  "model": "<finder.model>",
+  "cwd": "<absolute repository/worktree path>",
+  "sandbox": "read-only",
+  "approval-policy": "<finder.approval_policy>",
+  "developer-instructions": "<subordinate finder instructions below>",
+  "config": "<fixed finder config below>"
+}
+performance Wire arguments:
+{
+  "prompt": "Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
+  "model": "<finder.model>",
+  "cwd": "<absolute repository/worktree path>",
+  "sandbox": "read-only",
+  "approval-policy": "<finder.approval_policy>",
+  "developer-instructions": "<subordinate finder instructions below>",
+  "config": "<fixed finder config below>"
+}
 ```
 
-Each call is fresh and distinct: omit any `threadId` input and never continue one dimension's thread for another. The direct wire fields are `prompt`, `model`, `cwd`, `sandbox`, `approval-policy`, `developer-instructions`, and `config`. `model` maps from `finder.model`; `cwd` is the absolute repository/worktree path under review; `sandbox` is the configured, schema-required `read-only`; `approval-policy` maps from `finder.approval_policy`; and `config.model_reasoning_effort` maps from `finder.reasoning_effort`. Every call uses the following fixed config in addition to that reasoning value:
+Every call uses the following fixed config in addition to its mapped reasoning value:
 
 ```toml
 web_search = "live"
@@ -169,11 +211,29 @@ features.collab = false
 features.multi_agent_v2.enabled = false
 ```
 
-Every call's `developer-instructions` value is exactly: "You are a subordinate read-only advisory finder. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only the supplied frozen Review Brief under the named reviewer contract and return advisory findings."
+Every call's `developer-instructions` value is exactly: "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single named reviewer-contract path is REQUIRED and is not repository discovery. The prohibition covers only exploration beyond the supplied brief and that named path. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only those supplied materials and return advisory findings."
 
-Treat a call as successful only when the supported response contains both a non-empty string `threadId` and a non-empty string `content`. A tool error, protocol error, timeout, empty response, missing or empty response field, non-string field, or malformed response must stop and report the review; never retry natively. Do not persist `threadId`, pass it to another call, or use it after validating the response. Never call `codex-reply`.
+Before launching any wrapper, expand `~/.claude/gambit/async-results/` to an absolute path and ensure the directory exists. If preparation fails, stop before launching any wrapper; do not fall back to native execution. Generate four collision-resistant unique absolute artifact paths under that prepared directory and store each expected path with its call before dispatch:
 
-For each successful call, discard its `threadId` and treat its `content` as that dimension's advisory reviewer report. Feed the four reports unchanged into Step 5; configured Codex output receives the same frozen-boundary filtering, byte-identical deduplication, candidate side-table handling, and native verifier adjudication as native output.
+- conformance → `<conformance-artifact-path>`
+- security → `<security-artifact-path>`
+- quality → `<quality-artifact-path>`
+- performance → `<performance-artifact-path>`
+
+Build each anonymous wrapper's exact relay prompt from `contracts/async-dispatch.md`, using `finder.tool`, that dimension's complete Wire arguments object, and its stored expected artifact path. At the wrapper tier from `contracts/models.md`, emit one message containing all four background Agent wrapper calls and nothing else. Every wrapper is anonymous: never pass `name:`. Descriptions are unique and identify this review site and the dimension:
+
+```
+Agent subagent_type="general-purpose" model="<wrapper tier — see contracts/models.md>" run_in_background=true description="Review configured finder: conformance" prompt="<exact relay prompt from contracts/async-dispatch.md with conformance Wire arguments and conformance artifact path>"
+Agent subagent_type="general-purpose" model="<wrapper tier — see contracts/models.md>" run_in_background=true description="Review configured finder: security" prompt="<exact relay prompt from contracts/async-dispatch.md with security Wire arguments and security artifact path>"
+Agent subagent_type="general-purpose" model="<wrapper tier — see contracts/models.md>" run_in_background=true description="Review configured finder: quality" prompt="<exact relay prompt from contracts/async-dispatch.md with quality Wire arguments and quality artifact path>"
+Agent subagent_type="general-purpose" model="<wrapper tier — see contracts/models.md>" run_in_background=true description="Review configured finder: performance" prompt="<exact relay prompt from contracts/async-dispatch.md with performance Wire arguments and performance artifact path>"
+```
+
+As the wrappers launch, record every handle using the complete `task_id → dispatch site → task/dimension → worktree → expected artifact path` mapping, with the review dimension in `task/dimension`, and restate all four mappings in checkpoint scratch state. Drain every launched handle to a terminal state with repeated bounded `TaskOutput block=true` calls on that same handle, continuing after nonterminal waits and never messaging a wrapper. Per the collection barrier, validate all four terminal results before judging the batch; never cancel or retry a wrapper, and never stop collection while a sibling remains live.
+
+For each terminal result, require the exact envelope from `contracts/async-dispatch.md`; require that the envelope contains a non-empty string `threadId` and that the envelope's artifact path matches its stored expected artifact path exactly. Only after that match may you read only that exact-matched artifact; require a non-empty string `content`, then delete it after successful validation. The exact artifact content is that dimension's advisory reviewer report; discard its `threadId` after validation, never persist it, pass it to another call, or use it again. Feed all four advisory reports unchanged into Step 5.
+
+A terminal wrapper error, malformed envelope, artifact-path mismatch, missing or empty artifact, non-string `threadId` or `content`, tool error, protocol error, timeout, empty response, missing or empty response field, non-string field, or malformed response is a configured call failure. After satisfying the collection barrier, stop and report the complete batch outcome; never retry natively or fall back to native execution. Never call `codex-reply`. Configured Codex output otherwise receives the same frozen-boundary filtering, byte-identical deduplication, candidate side-table handling, and native verifier adjudication as native output.
 
 Each reviewer will:
 - Read the changed files independently
@@ -275,7 +335,7 @@ Never create work from refuted, gap-classified-in-initial-mode, boundary-rejecte
 ## Critical Rules
 
 1. **All four reviewers dispatched once** — no skipping in initial mode; never dispatch them in closure mode
-2. **Parallel dispatch, by path** — one message, four calls through the once-selected finder executor: native Agent calls or configured `finder.tool` calls, each pointed at its reviewer file by path. Never read reviewer/verifier files into main context or paste their contents into prompts: the read-before-each-dispatch is what serializes the finders and wastes ~18k tokens/review
+2. **Parallel dispatch, by path** — one message, four calls through the once-selected finder executor: native Agent calls or configured anonymous background wrapper calls, each carrying its reviewer path in the finder wire arguments. Never read reviewer/verifier files into main context or paste their contents into prompts: the read-before-each-dispatch is what serializes the finders and wastes ~18k tokens/review
 3. **No self-review** — main context prepares brief and assembles, does NOT review or verify code
 4. **Verifier is the single source of truth for classification** — do NOT override confirmed/refuted/gap verdicts; do NOT verify in the main context
 5. **Any open ledger entry blocks** — closure must refute every original claim with evidence
@@ -330,7 +390,7 @@ Never create work from refuted, gap-classified-in-initial-mode, boundary-rejecte
 **Calls:**
 - `gambit:finishing-branch` (if approved)
 
-**Dispatches four finders (parallel, read-only) through native general-purpose agents or configured Codex calls. Native calls resolve the finder tier through `contracts/models.md`; configured calls use the registry's concrete model. Each finder reads its own instruction file by path — main context never loads it:**
+**Dispatches four finders (parallel, read-only) through native general-purpose agents or configured async wrapper calls. Native calls resolve the finder tier through `contracts/models.md`; configured calls use the registry's concrete model behind anonymous background wrappers. Each finder reads its own instruction file by path — main context never loads it:**
 - `reviewers/conformance.md` — completeness, architecture, dead code
 - `reviewers/security.md` — OWASP audit, secrets, auth, data exposure
 - `reviewers/quality.md` — language idioms, linter circumvention, test quality
