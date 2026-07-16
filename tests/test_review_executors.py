@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import tempfile
 import unittest
@@ -80,14 +81,17 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         )
         calls = re.findall(r'(?m)^Agent subagent_type="general-purpose" .+$', step)
         self.assertEqual(4, len(calls))
-        expected_descriptions = [
-            f'description="Review configured finder: {dimension}"'
-            for dimension in ("conformance", "security", "quality", "performance")
-        ]
-        for call, description in zip(calls, expected_descriptions, strict=True):
+        expected_dimensions = ("conformance", "security", "quality", "performance")
+        for call, dimension in zip(calls, expected_dimensions, strict=True):
             self.assertIn('model="<wrapper tier — see contracts/models.md>"', call)
             self.assertIn("run_in_background=true", call)
-            self.assertIn(description, call)
+            self.assertIn(
+                f'description="Review configured finder: {dimension}"', call
+            )
+            self.assertIn(
+                f"with {dimension} Wire arguments and {dimension} artifact path",
+                call,
+            )
             self.assertNotIn("name=", call)
 
         wire_arguments = re.findall(
@@ -95,22 +99,39 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             step,
         )
         self.assertEqual(4, len(wire_arguments))
+        finder_instructions = (
+            "You are a subordinate read-only advisory finder. Reading and analyzing "
+            "the material supplied in the frozen Review Brief and the single named "
+            "reviewer-contract path is REQUIRED and is not repository discovery. The "
+            "prohibition covers only exploration beyond the supplied brief and that "
+            "named path. Do not orchestrate, invoke skills, spawn nested agents, "
+            "discover tasks, expand scope, edit files, or execute commands or tests. "
+            "Analyze only those supplied materials and return advisory findings."
+        )
+        finder_config = {
+            "model_reasoning_effort": "<finder.reasoning_effort>",
+            "web_search": "live",
+            'plugins."gambit@personal".enabled': False,
+            "skills.include_instructions": False,
+            "orchestrator.skills.enabled": False,
+            "features.collab": False,
+            "features.multi_agent_v2.enabled": False,
+        }
         prompts = []
         dimensions = []
         for dimension, arguments in wire_arguments:
             dimensions.append(dimension)
-            prompt = re.search(r'^  "prompt": "([^"]+)"', arguments, re.MULTILINE)
-            self.assertIsNotNone(prompt, arguments)
-            prompts.append(prompt.group(1))
-            for required in (
-                '"model": "<finder.model>"',
-                '"cwd": "<absolute repository/worktree path>"',
-                '"sandbox": "read-only"',
-                '"approval-policy": "<finder.approval_policy>"',
-                '"developer-instructions": "<subordinate finder instructions below>"',
-                '"config": "<fixed finder config below>"',
-            ):
-                self.assertIn(required, arguments)
+            payload = json.loads(arguments)
+            prompts.append(payload["prompt"])
+            self.assertEqual("<finder.model>", payload["model"])
+            self.assertEqual("<absolute repository/worktree path>", payload["cwd"])
+            self.assertEqual("read-only", payload["sandbox"])
+            self.assertEqual(
+                "<finder.approval_policy>", payload["approval-policy"]
+            )
+            self.assertEqual(finder_instructions, payload["developer-instructions"])
+            self.assertIsInstance(payload["config"], dict)
+            self.assertEqual(finder_config, payload["config"])
 
         self.assertEqual(
             ["conformance", "security", "quality", "performance"], dimensions
@@ -124,7 +145,7 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             for prompt in prompts
         ]
         self.assertEqual([normalized[0]] * 4, normalized)
-        self.assertIn(r"\n\n## Review Brief\n\n[identical frozen Review Brief]", prompts[0])
+        self.assertIn("\n\n## Review Brief\n\n[identical frozen Review Brief]", prompts[0])
         self.assertIn("Each call is fresh and distinct", step)
         self.assertIn("omit any `threadId` input", step)
         self.assertNotRegex(step, r"(?m)^<finder\.tool> ")
@@ -171,12 +192,12 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             "`model` maps from `finder.model`",
             "`approval-policy` maps from `finder.approval_policy`",
             "`config.model_reasoning_effort` maps from `finder.reasoning_effort`",
-            'web_search = "live"',
-            'plugins."gambit@personal".enabled = false',
-            "skills.include_instructions = false",
-            "orchestrator.skills.enabled = false",
-            "features.collab = false",
-            "features.multi_agent_v2.enabled = false",
+            '"web_search": "live"',
+            '"plugins.\\"gambit@personal\\".enabled": false',
+            '"skills.include_instructions": false',
+            '"orchestrator.skills.enabled": false',
+            '"features.collab": false',
+            '"features.multi_agent_v2.enabled": false',
             "subordinate read-only advisory finder",
             "REQUIRED",
             "is not repository discovery",
@@ -214,7 +235,7 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             "### Step 5: Scope-Filter and Dedupe Candidate Findings",
         )
         for required in (
-            "non-empty string `threadId`",
+            "non-empty string `threadId` containing no CR or LF",
             "non-empty string `content`",
             "tool error",
             "protocol error",

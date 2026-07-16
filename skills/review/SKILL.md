@@ -165,8 +165,16 @@ conformance Wire arguments:
   "cwd": "<absolute repository/worktree path>",
   "sandbox": "read-only",
   "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "<subordinate finder instructions below>",
-  "config": "<fixed finder config below>"
+  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single named reviewer-contract path is REQUIRED and is not repository discovery. The prohibition covers only exploration beyond the supplied brief and that named path. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only those supplied materials and return advisory findings.",
+  "config": {
+    "model_reasoning_effort": "<finder.reasoning_effort>",
+    "web_search": "live",
+    "plugins.\"gambit@personal\".enabled": false,
+    "skills.include_instructions": false,
+    "orchestrator.skills.enabled": false,
+    "features.collab": false,
+    "features.multi_agent_v2.enabled": false
+  }
 }
 security Wire arguments:
 {
@@ -175,8 +183,16 @@ security Wire arguments:
   "cwd": "<absolute repository/worktree path>",
   "sandbox": "read-only",
   "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "<subordinate finder instructions below>",
-  "config": "<fixed finder config below>"
+  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single named reviewer-contract path is REQUIRED and is not repository discovery. The prohibition covers only exploration beyond the supplied brief and that named path. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only those supplied materials and return advisory findings.",
+  "config": {
+    "model_reasoning_effort": "<finder.reasoning_effort>",
+    "web_search": "live",
+    "plugins.\"gambit@personal\".enabled": false,
+    "skills.include_instructions": false,
+    "orchestrator.skills.enabled": false,
+    "features.collab": false,
+    "features.multi_agent_v2.enabled": false
+  }
 }
 quality Wire arguments:
 {
@@ -185,8 +201,16 @@ quality Wire arguments:
   "cwd": "<absolute repository/worktree path>",
   "sandbox": "read-only",
   "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "<subordinate finder instructions below>",
-  "config": "<fixed finder config below>"
+  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single named reviewer-contract path is REQUIRED and is not repository discovery. The prohibition covers only exploration beyond the supplied brief and that named path. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only those supplied materials and return advisory findings.",
+  "config": {
+    "model_reasoning_effort": "<finder.reasoning_effort>",
+    "web_search": "live",
+    "plugins.\"gambit@personal\".enabled": false,
+    "skills.include_instructions": false,
+    "orchestrator.skills.enabled": false,
+    "features.collab": false,
+    "features.multi_agent_v2.enabled": false
+  }
 }
 performance Wire arguments:
 {
@@ -195,23 +219,18 @@ performance Wire arguments:
   "cwd": "<absolute repository/worktree path>",
   "sandbox": "read-only",
   "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "<subordinate finder instructions below>",
-  "config": "<fixed finder config below>"
+  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single named reviewer-contract path is REQUIRED and is not repository discovery. The prohibition covers only exploration beyond the supplied brief and that named path. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only those supplied materials and return advisory findings.",
+  "config": {
+    "model_reasoning_effort": "<finder.reasoning_effort>",
+    "web_search": "live",
+    "plugins.\"gambit@personal\".enabled": false,
+    "skills.include_instructions": false,
+    "orchestrator.skills.enabled": false,
+    "features.collab": false,
+    "features.multi_agent_v2.enabled": false
+  }
 }
 ```
-
-Every call uses the following fixed config in addition to its mapped reasoning value:
-
-```toml
-web_search = "live"
-plugins."gambit@personal".enabled = false
-skills.include_instructions = false
-orchestrator.skills.enabled = false
-features.collab = false
-features.multi_agent_v2.enabled = false
-```
-
-Every call's `developer-instructions` value is exactly: "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single named reviewer-contract path is REQUIRED and is not repository discovery. The prohibition covers only exploration beyond the supplied brief and that named path. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only those supplied materials and return advisory findings."
 
 Before launching any wrapper, expand `~/.claude/gambit/async-results/` to an absolute path and ensure the directory exists. If preparation fails, stop before launching any wrapper; do not fall back to native execution. Generate four collision-resistant unique absolute artifact paths under that prepared directory and store each expected path with its call before dispatch:
 
@@ -231,7 +250,7 @@ Agent subagent_type="general-purpose" model="<wrapper tier — see contracts/mod
 
 As the wrappers launch, record every handle using the complete `task_id → dispatch site → task/dimension → worktree → expected artifact path` mapping, with the review dimension in `task/dimension`, and restate all four mappings in checkpoint scratch state. Drain every launched handle to a terminal state with repeated bounded `TaskOutput block=true` calls on that same handle, continuing after nonterminal waits and never messaging a wrapper. Per the collection barrier, validate all four terminal results before judging the batch; never cancel or retry a wrapper, and never stop collection while a sibling remains live.
 
-For each terminal result, require the exact envelope from `contracts/async-dispatch.md`; require that the envelope contains a non-empty string `threadId` and that the envelope's artifact path matches its stored expected artifact path exactly. Only after that match may you read only that exact-matched artifact; require a non-empty string `content`, then delete it after successful validation. The exact artifact content is that dimension's advisory reviewer report; discard its `threadId` after validation, never persist it, pass it to another call, or use it again. Feed all four advisory reports unchanged into Step 5.
+For each terminal result, require the exact envelope from `contracts/async-dispatch.md`; require that the envelope contains a non-empty string `threadId` containing no CR or LF and that the envelope's artifact path matches its stored expected artifact path exactly. Only after that match may you read only that exact-matched artifact; require a non-empty string `content`, then delete it after successful validation. The exact artifact content is that dimension's advisory reviewer report; discard its `threadId` after validation, never persist it, pass it to another call, or use it again. Feed all four advisory reports unchanged into Step 5.
 
 A terminal wrapper error, malformed envelope, artifact-path mismatch, missing or empty artifact, non-string `threadId` or `content`, tool error, protocol error, timeout, empty response, missing or empty response field, non-string field, or malformed response is a configured call failure. After satisfying the collection barrier, stop and report the complete batch outcome; never retry natively or fall back to native execution. Never call `codex-reply`. Configured Codex output otherwise receives the same frozen-boundary filtering, byte-identical deduplication, candidate side-table handling, and native verifier adjudication as native output.
 
