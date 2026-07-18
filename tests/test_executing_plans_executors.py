@@ -147,7 +147,7 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
             "all configured worker wrapper launches together in one message",
             self.worker_dispatch,
         )
-        self.assertIn('Agent subagent_type="gambit-wrapper"', self.configured_worker)
+        self.assertIn('Agent subagent_type="gambit:gambit-wrapper"', self.configured_worker)
         self.assertNotIn(
             'Agent subagent_type="general-purpose"', self.configured_worker
         )
@@ -249,7 +249,7 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
                 "non-empty string `threadId` containing no CR or LF",
             ),
         )
-        self.assertIn('Agent subagent_type="gambit-wrapper"', self.configured_finder)
+        self.assertIn('Agent subagent_type="gambit:gambit-wrapper"', self.configured_finder)
         self.assertNotIn(
             'Agent subagent_type="general-purpose"', self.configured_finder
         )

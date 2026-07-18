@@ -7,7 +7,7 @@ authority, or failure semantics.
 ## Wrapper role
 
 Dispatch each configured call as an anonymous background Claude `Agent` with
-`subagent_type="gambit-wrapper"`, setting its model at dispatch from the `wrapper` tier in
+`subagent_type="gambit:gambit-wrapper"`, setting its model at dispatch from the `wrapper` tier in
 [models.md](models.md). The wrapper is pure transport and exercises zero judgment.
 
 - **Always dispatch anonymously: never pass `name:`.** A named agent has no `TaskOutput` handle, and

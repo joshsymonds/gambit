@@ -174,7 +174,12 @@ class RenderedSkillsTest(unittest.TestCase):
                     skill_text,
                 )
             )
-        self.assertEqual({agent_name}, dispatched_types)
+        # Claude Code registers plugin agents as <plugin>:<agent>, so dispatches
+        # must use the namespaced form of the shipped definition's name.
+        plugin_name = json.loads(
+            (ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
+        )["name"]
+        self.assertEqual({f"{plugin_name}:{agent_name}"}, dispatched_types)
 
     def test_generated_trees_are_current(self) -> None:
         subprocess.run(

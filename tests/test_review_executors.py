@@ -79,7 +79,7 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             "one message containing all four background Agent wrapper calls and nothing else",
             step,
         )
-        calls = re.findall(r'(?m)^Agent subagent_type="gambit-wrapper" .+$', step)
+        calls = re.findall(r'(?m)^Agent subagent_type="gambit:gambit-wrapper" .+$', step)
         self.assertEqual(4, len(calls))
         self.assertNotRegex(
             step,
