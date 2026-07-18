@@ -23,7 +23,7 @@
 
           mkdir -p "$out"
           if [ "${backend}" = claude ]; then
-            cp -r .claude-plugin skills contracts README.md gambit.png "$out/"
+            cp -r .claude-plugin agents skills contracts README.md gambit.png "$out/"
           else
             cp -r plugins/gambit/. "$out/"
             cp README.md gambit.png "$out/"
@@ -42,6 +42,7 @@
             pkgs.bash
             pkgs.coreutils
             pkgs.gawk
+            pkgs.git
             pkgs.gnused
             pkgs.jq
             pkgs.python3
