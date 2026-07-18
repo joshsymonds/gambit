@@ -14,7 +14,7 @@ the expensive orchestrator model.
 | `worker` (implementation) | standard | mechanical work from a clear brief |
 | `escalation` (blocked worker) | most-capable | re-dispatch a worker that blocked needing more reasoning |
 | `scout` (read-only Explore) | cheap-or-standard | output is cheaply checkable — the orchestrator spot-checks the cited `file:line` |
-| `wrapper` (async transport relay) | cheap | pure transport relay, zero judgment — one configured MCP call plus one artifact write |
+| `wrapper` (async transport relay) | standard | pure transport relay, zero judgment — one configured MCP call plus one artifact write, and failure handling that must stay honest rather than fabricate an envelope |
 | `test-runner` | cheap | objective oracle (exit code) |
 
 Tier words map to the harness model **aliases**: most-capable → `"opus"`, standard → `"sonnet"`,

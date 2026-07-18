@@ -148,20 +148,13 @@ class RenderedSkillsTest(unittest.TestCase):
             item.strip().strip('"\'')
             for item in re.findall(r"(?m)^\s+-\s+([^\n]+)$", tools_match.group("items"))
         )
-        self.assertEqual(("ToolSearch", "Write", "mcp__*"), tools)
-        for forbidden in (
-            "Bash",
-            "Read",
-            "Agent",
-            "Skill",
-            "SendMessage",
-            "TaskOutput",
-            "TaskCreate",
-            "TaskUpdate",
-            "TaskList",
-            "TaskGet",
-        ):
-            self.assertNotIn(forbidden, tools)
+        # The harness honors only exact built-in tool names in agent grants, so the
+        # definition declares "*" and confinement lives in the normative relay rules.
+        self.assertEqual(("*",), tools)
+        body = text[frontmatter_match.end() :]
+        self.assertIn("exactly once", body)
+        self.assertIn("fail honestly", body)
+        self.assertIn("Never fabricate", body)
 
         dispatched_types: set[str] = set()
         for skill in ("executing-plans", "review"):
@@ -322,9 +315,10 @@ class RenderedSkillsTest(unittest.TestCase):
         models = (CLAUDE_CONTRACTS / "models.md").read_text(encoding="utf-8")
         self.assertRegex(
             models,
-            r"(?m)^\| `wrapper` \(async transport relay\) \| cheap \| "
+            r"(?m)^\| `wrapper` \(async transport relay\) \| standard \| "
             r"pure transport relay, zero judgment — one configured MCP call plus one "
-            r"artifact write \|$",
+            r"artifact write, and failure handling that must stay honest rather than "
+            r"fabricate an envelope \|$",
         )
         self.assertRegex(
             models,

@@ -16,10 +16,12 @@ Dispatch each configured call as an anonymous background Claude `Agent` with
   task/dimension.
 - Give the wrapper only the relay prompt below. It reads no contract path.
 
-The `gambit-wrapper` agent definition grants only `ToolSearch`, `Write`, and MCP tools. `Read`,
-shell, `Agent`, `Skill`, and task/messaging tools are structurally unavailable. Because the static
-MCP grant cannot narrow itself to the one registry-configured tool selected at runtime, the relay
-prompt's named-tool, exactly-once rule remains normative on top of this capability boundary.
+The `gambit-wrapper` agent definition declares a broad `"*"` tool grant because the harness honors
+only exact built-in tool names in agent grants — `ToolSearch` and `mcp__*` patterns are silently
+dropped, and no static grant can name the one registry-configured MCP tool selected at runtime.
+Confinement is therefore normative, not structural: the relay prompt's named-tool, exactly-once
+rule and its prohibition on every other tool are the binding boundary, and the wrapper must fail
+honestly — no artifact, no envelope — when the named tool is unavailable or its response invalid.
 
 ## Relay prompt
 
