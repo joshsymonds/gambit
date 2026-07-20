@@ -168,6 +168,7 @@ class BrainstormingSteelmanTest(unittest.TestCase):
             "backgrounding",
             "tests",
             "mutation",
+            "arbitrary absolute paths",
             "orchestration",
             "skills/workflows",
             "nested agents/delegation",

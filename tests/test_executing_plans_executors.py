@@ -226,7 +226,6 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         self.assertNotIn("Ignore the validated `threadId`", configured)
 
     def test_fresh_worker_escalation_and_checkpoint_configs_disable_apps(self) -> None:
-        rung_1 = bounded_section(self.configured_worker, "## Rung 1", "## Rung 2")
         rung_3 = self.configured_worker.split("## Rung 3", 1)[1]
         self.assertIs(json.loads(self.worker_wire)["config"]["features.apps"], False)
         self.assertIs(
