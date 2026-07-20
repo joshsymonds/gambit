@@ -196,18 +196,31 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
 
     def test_configured_worker_reuses_thread_then_fresh_escalation(self) -> None:
         configured = self.configured_worker
+        rung_1 = bounded_section(configured, "## Rung 1", "## Rung 2")
+        rung_2 = bounded_section(configured, "## Rung 2", "## Rung 3")
+        rung_3 = configured.split("## Rung 3", 1)[1]
 
-        initial = configured.index("worker.tool")
-        reply = configured.index("worker.reply_tool")
-        escalation = configured.index("escalation.tool")
-        self.assertLess(initial, reply)
-        self.assertLess(reply, escalation)
-        self.assertIn('"service_tier": "<worker.service_tier>"', configured)
-        self.assertIn('"threadId": "<validated initial worker threadId>"', configured)
-        self.assertIn('"model": "<escalation.model>"', configured)
-        self.assertIn('"model_reasoning_effort": "<escalation.reasoning_effort>"', configured)
+        self.assertEqual(3, configured.count("## Rung "))
+        self.assertEqual(1, rung_1.count("`worker.tool`"))
+        self.assertNotIn("`worker.reply_tool`", rung_1)
+        self.assertNotIn("`escalation.tool`", rung_1)
+        self.assertEqual(1, rung_2.count("`worker.reply_tool`"))
+        self.assertNotIn("`worker.tool`", rung_2)
+        self.assertNotIn("`escalation.tool`", rung_2)
+        self.assertEqual(1, rung_3.count("`escalation.tool`"))
+        self.assertNotIn("`worker.tool`", rung_3)
+        self.assertNotIn("`worker.reply_tool`", rung_3)
+        self.assertIn('"service_tier": "<worker.service_tier>"', rung_1)
+        self.assertIn('"threadId": "<validated initial worker threadId>"', rung_2)
+        self.assertIn('"model": "<escalation.model>"', rung_3)
+        self.assertIn('"model_reasoning_effort": "<escalation.reasoning_effort>"', rung_3)
         self.assertIn("exactly one informed same-thread repair", configured.lower())
         self.assertIn("second and final repair attempt", configured)
+        self.assertIn("at most 2,000 characters", rung_2)
+        self.assertNotIn("Original brief: <complete brief>", rung_2)
+        self.assertNotIn("Prior result: <initial content>", rung_2)
+        self.assertIn("at most 1,000 characters", rung_3)
+        self.assertIn("Never embed either prior result's whole `content`", rung_3)
         self.assertNotIn("Ignore the validated `threadId`", configured)
 
     def test_checkpoint_finder_resolves_registry_and_remains_advisory(self) -> None:

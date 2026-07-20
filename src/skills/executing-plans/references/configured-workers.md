@@ -1,5 +1,10 @@
 # Configured Codex Worker Ladder
 
+- [Common async transport](#common-async-transport)
+- [Rung 1: initial implementation](#rung-1-initial-implementation)
+- [Rung 2: informed same-thread repair](#rung-2-informed-same-thread-repair)
+- [Rung 3: fresh reasoning escalation](#rung-3-fresh-reasoning-escalation)
+
 Read this reference completely whenever `contracts/executors.md` resolves the Claude
 `executing-plans` worker to configured Codex. It defines the fixed ladder for each task:
 
@@ -62,15 +67,16 @@ Launch a new wrapper for `worker.reply_tool` with exactly these wire fields:
 
 ```json
 {
-  "prompt": "Reread the worker contract and complete the one informed same-thread repair in the existing worktree. Original brief: <complete brief>. Prior result: <initial content>. Actionable evidence: <cited defect, missing value, or exact failing output>. Repair only in scope, rerun the focused command, and return exactly one required worker status.",
+  "prompt": "Reread <absolute worker contract path> and complete the one informed same-thread repair in the existing worktree. Actionable evidence: <at most 2,000 characters containing the cited defect, missing value, or relevant failing-output excerpt; cite the artifact or log path when longer>. The original brief and prior result are already in this thread; do not require them to be repeated. Repair only in scope, rerun the focused command, and return exactly one required worker status.",
   "threadId": "<validated initial worker threadId>"
 }
 ```
 
 This semantic continuation is the only permitted use of `codex-reply`. It inherits the initial
 worker's model, reasoning, service tier, cwd, sandbox, approval, and isolation configuration. Do
-not use it to recover a transport failure. A verified, quality-clean result advances; any remaining
-semantic, verification, or quality defect advances to rung 3 with evidence.
+not resend the original brief or whole initial `content`, and do not use it to recover a transport
+failure. A verified, quality-clean result advances; any remaining semantic, verification, or quality
+defect advances to rung 3 with bounded evidence.
 
 ## Rung 3: fresh reasoning escalation
 
@@ -78,7 +84,7 @@ Launch `escalation.tool` as a fresh call in the same worktree:
 
 ```json
 {
-  "prompt": "Read <absolute worker contract path> first. Implement the complete original brief in <same worktree>. Initial result: <content>. Informed repair: <content>. Remaining evidence: <exact defect or failing output>. Rerun the focused command and return exactly one required worker status.",
+  "prompt": "Read <absolute worker contract path> first. Implement the complete original brief in <same worktree>. Initial attempt: <at most 1,000 characters summarizing the relevant result with cited excerpts>. Informed repair: <at most 1,000 characters summarizing the relevant result with cited excerpts>. Remaining evidence: <at most 2,000 characters with the exact defect and relevant failing-output excerpt; cite the artifact or log path when longer>. Rerun the focused command and return exactly one required worker status.",
   "model": "<escalation.model>",
   "cwd": "<same worker worktree>",
   "sandbox": "<escalation.sandbox>",
@@ -95,6 +101,9 @@ Launch `escalation.tool` as a fresh call in the same worktree:
   }
 }
 ```
+
+Never embed either prior result's whole `content` in the fresh escalation prompt; carry only the
+bounded summaries, cited excerpts, and evidence above.
 
 If this fresh escalation does not produce a verified, quality-clean result, stop autonomous
 continuation and revisit the architecture or worker brief with the user. There is no fourth attempt.

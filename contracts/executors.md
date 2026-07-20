@@ -295,11 +295,14 @@ registry. For `steelman`, `worker`, `escalation`, or `finder`, use this determin
    canonical schema. Unknown roles, unknown fields, missing fields, and invalid values invalidate
    the entire registry. Do not ignore an invalid unrequested entry. Report the validation error and
    do not dispatch the requested class.
-4. Valid registry, requested role absent: use native execution.
-5. Valid registry, requested role present: select the configured Codex executor and invoke exactly
+4. When `worker` is present, split `worker.tool` and `worker.reply_tool` at their final `__`. Their
+   complete prefixes before that separator must be byte-identical. A mismatch means the reply tool
+   belongs to a different MCP server namespace: stop as an invalid whole registry before dispatch.
+5. Valid registry, requested role absent: use native execution.
+6. Valid registry, requested role present: select the configured Codex executor and invoke exactly
    its configured fully qualified MCP tool with its configured model, reasoning effort, sandbox,
    approval policy, and, when present, web-search value.
-6. Configured Codex call fails: stop immediately. Preserve and report the call failure; do not retry
+7. Configured Codex call fails: stop immediately. Preserve and report the call failure; do not retry
    natively.
 
 Never infer executor selection from MCP tool availability. Availability cannot opt a role into
