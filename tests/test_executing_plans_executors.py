@@ -165,9 +165,14 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
             ),
         )
         self.assertNotIn("<worker.tool>", self.claude_status_routing)
-        self.assertIn(
-            "re-dispatch with `default` or an installed `escalation` profile",
+        self.assertContainsAll(
             self.codex_status_routing,
+            (
+                "exactly one informed repair turn to the same worker thread",
+                "followup_task",
+                "one fresh `escalation` worker in the same worktree",
+                'SpawnAgent agent_type="escalation"',
+            ),
         )
         self.assertNotIn(
             "native Claude escalation class",

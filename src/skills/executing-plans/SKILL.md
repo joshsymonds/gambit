@@ -306,11 +306,11 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
    Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 <!-- /gambit-backend -->
 
+<!-- gambit-backend:claude -->
 3. **Route on the worker's returned status** (the contract defines four). **Never retry the same model on the same unchanged task** — something must change. The retry ceiling is one implementation attempt plus at most two repair attempts for the same defect. If the second repair fails, or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user:
    - **DONE** → single-task wave: verify with FRESH evidence by running its focused worker command. Wave of ≥2: confirm the worker's isolated RED/GREEN evidence and rerun only a missing worker-scoped check; the declared wave/component gate belongs to the combined manifest and runs exactly once. Then run the **Checkpoint quality gate** (below) on that worker's complete change set before proceeding.
    - **DONE_WITH_CONCERNS** → read the concern. Correctness or scope → resolve it (refine + re-dispatch, or fix directly) before accepting; treat it as an escalation trigger in the quality gate (below). Benign observation → note it and verify as DONE. **A "bigger behavior change than the brief implied" flag usually means the brief was wrong, not the worker** — re-read the requirement the worker cites and fix the brief, don't wave the flag through because the worker followed instructions literally. A worker's scope-surprise is often your spec catching itself.
    - **NEEDS_CONTEXT** → supply the missing values/decisions and re-dispatch with them added.
-<!-- gambit-backend:claude -->
    - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch at the `escalation` tier (default `"opus"`); task too large → decompose into a new task (`TaskCreate`); the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
 
      A needs-more-reasoning retry selects the native Claude escalation class: dispatch a fresh `general-purpose` Agent at the resolved `escalation` tier, reusing the same absolute worker contract path and complete brief. This native escalation bypasses the worker executor registry in `contracts/executors.md` and never invokes `worker.tool`:
@@ -320,7 +320,32 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
      ```
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
-   - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch with `default` or an installed `escalation` profile; brief too large → split it into complete worker briefs in the checkpoint and revise the complete ordered wave list; the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
+3. **Route on the worker's returned status** (the contract defines four) through this fixed three-rung worker ladder. Do not skip, repeat, or reorder a rung:
+
+   1. **Initial implementation — worker.** Use the `worker` SpawnAgent dispatch above.
+      ```
+      SpawnAgent role="worker" description="Implement: <task subject>"
+        prompt="<absolute worker contract path directive and complete worker brief>"
+      ```
+   2. **Informed repair — same worker.** Give exactly one informed repair turn to the same worker thread and agent configuration with `followup_task`. The message MUST add the missing values, cited defect, failing command output, or other actionable evidence; an unchanged retry is forbidden. Require the worker to reread the same contract, repair the existing tree in scope, rerun its focused command, and return exactly one four-state status.
+      ```
+      followup_task
+        target: "<worker task name returned by the initial SpawnAgent>"
+        message: "Reread <abs>/contracts/worker.md and perform the one informed repair. <new actionable evidence and exact remaining defect>"
+      ```
+   3. **Reasoning escalation — fresh escalation worker.** If rung 2 does not produce a verified, quality-clean result, dispatch one fresh `escalation` worker in the same worktree. Pass the same contract path and complete original brief plus both prior results and the exact remaining evidence. This is the second and final repair attempt.
+      ```
+      SpawnAgent role="escalation" description="Escalate: <task subject>"
+        prompt="Read <abs>/contracts/worker.md first, then implement the complete original brief in <same worktree>. Prior attempt: <result>. Informed repair: <result>. Remaining evidence: <exact defect or failing output>."
+      ```
+
+   Route each terminal result within that ladder:
+   - **DONE** → verify with FRESH evidence, then run the **Checkpoint quality gate** below. A verification or quality defect consumes the next unused repair rung.
+   - **DONE_WITH_CONCERNS** → accept only a benign observation after verification. Correctness or scope concerns consume the next unused repair rung unless they prove the brief or architecture is wrong. **A "bigger behavior change than the brief implied" flag usually means the brief was wrong, not the worker** — reread the cited requirement before repairing.
+   - **NEEDS_CONTEXT** → add the missing values or decision as the actionable evidence for the next unused repair rung.
+   - **BLOCKED** → missing context or insufficient reasoning consumes the next unused repair rung; a brief that is too large is split into later complete worker briefs, while a wrong plan/brief or unsettled architecture STOPs for user input. Do NOT water down requirements.
+
+   If the escalation worker fails verification, returns a non-DONE terminal state that cannot be accepted, or leaves a quality defect, STOP autonomous continuation and revisit the architecture or worker brief with the user. The ladder is exactly one implementation attempt plus at most two repair attempts; a defect recurring at a later checkpoint also STOPs.
 <!-- /gambit-backend -->
 
 <!-- gambit-backend:claude -->
@@ -385,7 +410,12 @@ Route on the verdict:
 <!-- gambit-backend:codex -->
 - **Clean** → proceed to the durable checkpoint with the native wave still `in_progress`.
 <!-- /gambit-backend -->
+<!-- gambit-backend:claude -->
 - **Quality defect** → re-dispatch a FRESH worker with the specific cited defects (never the same worker on unchanged input). **Never edit the diff yourself — you judge and route; workers implement.**
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- **Quality defect** → consume the next unused rung in the fixed worker ladder with the cited defect as new actionable evidence: same-thread `followup_task` first, then a fresh `escalation` worker. After escalation, STOP on any remaining defect. **Never edit the diff yourself — you judge and route; workers implement.**
+<!-- /gambit-backend -->
 - **Doubt, or an escalation trigger fired** → escalate (below) before deciding.
 
 <!-- gambit-backend:claude -->
@@ -448,7 +478,14 @@ Agent subagent_type="general-purpose" model="<finder tier — see contracts/mode
 ```
 <!-- /gambit-backend -->
 
-This solo dispatch has no verifier behind it (unlike the end-of-epic review, which pairs reviewers with a dedicated verifier) — so YOU are the adjudicator the quality reviewer's contract assumes downstream. Before acting on any finding it returns, confirm it yourself by reading the `file:line` its `Verify by:` cites; drop any finding you cannot confirm. Then act on the confirmed findings exactly as above (defect → fresh worker; clean → proceed). This is the per-task LOCAL gate; the full end-of-epic review (Step 5) — four reviewers plus that verifier — stays the architectural backstop, so do NOT run the four-dimension review per task.
+This solo dispatch has no verifier behind it (unlike the end-of-epic review, which pairs reviewers with a dedicated verifier) — so YOU are the adjudicator the quality reviewer's contract assumes downstream. Before acting on any finding it returns, confirm it yourself by reading the `file:line` its `Verify by:` cites; drop any finding you cannot confirm. Then act on the confirmed findings exactly as above.
+<!-- gambit-backend:claude -->
+A confirmed defect routes to a fresh worker; clean proceeds.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+A confirmed defect consumes the next unused worker-ladder rung; clean proceeds.
+<!-- /gambit-backend -->
+This is the per-task LOCAL gate; the full end-of-epic review (Step 5) — four reviewers plus that verifier — stays the architectural backstop, so do NOT run the four-dimension review per task.
 
 <!-- gambit-backend:claude -->
 For a single task, mark complete with `TaskUpdate` only after all steps are verified with fresh evidence and the checkpoint quality gate passed. For a ≥2 wave, keep every task in progress until all per-worker quality verdicts clear and `integrate_wave.py` completes the atomic fast-forward after its one combined wave/component gate; then mark the wave's tasks complete together.
@@ -562,7 +599,12 @@ Before retaining any next-wave brief, compare the current result with the last d
 
 - **Positive convergence** means the wave retired at least one approved success criterion or named blocker without unauthorized scope growth. Continue within the approved Delivery Constraints.
 - **Negative convergence circuit breaker:** if two consecutive checkpoints retire no success criterion or named blocker, or remaining work grows at both checkpoints, STOP autonomous continuation. Present the evidence and require explicit user approval to re-scope, change architecture, or extend the delivery budget. Do not silently add another repair wave.
+<!-- gambit-backend:claude -->
 - **Repair circuit breaker:** allow one implementation attempt plus at most two repair attempts for the same defect. If the second repair fails, or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- **Repair circuit breaker:** the ceiling remains one implementation attempt plus at most two repair attempts. Use the fixed ladder exactly once — initial `worker`, one informed same-thread repair, then one fresh `escalation` worker. If escalation fails or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user.
+<!-- /gambit-backend -->
 - **Scope admission:** every new worker must map to an immutable requirement, an open frozen-ledger finding, or a failing declared validation gate. Otherwise report it as proposed scope and exclude it until the user approves it.
 - **Architecture admission:** new cross-component ownership, persistence, recovery, ordering, fencing, or protocol invariants that the approved approach does not settle route back through `gambit:brainstorming` before another implementation wave or release-acceptance spend.
 
@@ -624,7 +666,12 @@ Present the full checkpoint and every complete next-wave worker brief in the roo
 
 ### Quality verdict
 - [Pass + one-line basis, e.g. "Clean — matches Quality Bar, in blast radius, RED/GREEN sound"]
+<!-- gambit-backend:claude -->
 - [Or: the concern found + how it was resolved (fresh worker / escalated reviewer), with `file:line`]
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- [Or: the concern found + how it was resolved (same-thread repair / escalation worker / reviewer), with `file:line`]
+<!-- /gambit-backend -->
 
 ### Learnings
 - [Discoveries during implementation]
@@ -706,90 +753,7 @@ Skill skill="gambit:review"
 
 Do not tell the user to run it manually — invoke it and follow its process immediately. Review validates architecture, security, completeness, dead code, test quality, and code quality across the entire epic before allowing finishing-branch.
 
----
-
-## Examples
-
-### Handling Obstacles Correctly
-
-When blocked, check epic BEFORE switching approaches:
-
-```
-1. Hit obstacle: OAuth library doesn't support PKCE
-2. Re-read epic → "Approaches Considered" shows:
-   "Implicit flow - REJECTED BECAUSE: security risk"
-3. PKCE is different from implicit flow → safe to explore
-4. Ask user before switching: "Library X doesn't support PKCE.
-   Should I try library Y, or use a different approach?"
-```
-
-**Wrong:** "PKCE doesn't work, let me just use implicit flow" (REJECTED approach)
-
-<!-- gambit-backend:claude -->
-### Creating Next Task Based on Learnings
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-### Authoring the Next Worker Brief Based on Learnings
-<!-- /gambit-backend -->
-
-After completing "Set up OAuth config", you discover the framework has built-in session middleware:
-
-```
-<!-- gambit-backend:claude -->
-TaskCreate
-  subject: "Integrate with existing session middleware"
-  description: |
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-Present in the checkpoint as "Worker Brief: Integrate with existing session middleware":
-<!-- /gambit-backend -->
-    ## Goal
-    Use framework's built-in session middleware instead of custom implementation.
-
-    ## Files owned
-    - src/middleware/session.ts
-    - tests/middleware/session.test.ts
-
-    ## Hidden shared surfaces
-    - None (no manifest, generated registry, route table, or snapshot changes)
-
-    ## Neighbors
-    - None (single-task wave)
-
-    ## Implementation
-    1. Study existing middleware: src/middleware/session.ts:15-40
-    2. Write test: auth token stored in session correctly
-    3. Integrate OAuth token storage with existing session
-    4. Verify: session persists across requests
-
-    ## Success Criteria
-    - [ ] OAuth tokens stored via existing session middleware
-    - [ ] No duplicate session logic
-    - [ ] Tests passing
-<!-- gambit-backend:claude -->
-  activeForm: "Integrating session middleware"
-<!-- /gambit-backend -->
-```
-<!-- gambit-backend:codex -->
-
-Then replace the complete ordered plan, preserving prior wave statuses:
-
-```
-SessionPlanWrite
-  plan:
-    - step: "Wave 1: Configure OAuth"
-      status: completed
-    - step: "Wave 2: Integrate existing session middleware"
-      status: pending
-```
-<!-- /gambit-backend -->
-
-<!-- gambit-backend:claude -->
-This task wouldn't have been correct if planned upfront — it reflects what you actually found.
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-This worker brief would not have been correct if drafted upfront — it reflects what you actually found.
-<!-- /gambit-backend -->
+For obstacle handling and checkpoint-brief examples, read `references/examples.md`.
 
 ## Critical Rules
 
@@ -882,34 +846,7 @@ Before closing epic:
 
 ## Integration
 
-**Called by:**
-- User via `/gambit:executing-plans`
+Called by `gambit:brainstorming` or the user. Dispatches contracted workers, uses the checkpoint quality reviewer when triggered, and invokes `gambit:review` after the final wave.
 <!-- gambit-backend:claude -->
-- After `gambit:brainstorming` creates the epic and first task
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-- After `gambit:brainstorming` records the approved contract, complete first-wave briefs, and native plan in this root session
-<!-- /gambit-backend -->
-
-**Calls:**
-- `gambit:test-driven-development` during implementation
-<!-- gambit-backend:claude -->
-- `gambit:verification` before claiming task complete
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-- `gambit:verification` before reporting a wave ready for its durable checkpoint
-<!-- /gambit-backend -->
-- `skills/review/reviewers/quality.md` — dispatched by path at the finder tier as the checkpoint quality gate's escalation reviewer, scoped to one task's diff (only when a trigger fires; the orchestrator judges the diff itself otherwise)
-<!-- gambit-backend:claude -->
-- `gambit:review` (invoked directly when all tasks complete — reviews then calls finishing-branch)
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-- `gambit:review` (invoked directly when every native wave is completed — reviews then calls finishing-branch)
-<!-- /gambit-backend -->
-
-<!-- gambit-backend:claude -->
-**Dispatches** each task through the resolved worker route: native Claude uses a `general-purpose` worker with its model resolved by tier (`contracts/models.md`), while a configured `worker` role uses its MCP executor and concrete registry model. Every worker reads the shared `contracts/worker.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return). See the dispatch step (Step 2) above for composition and the 4-state return.
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-**Dispatches** `default` workers from complete root-transcript briefs; every worker reads the shared `codex-contracts/worker.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return), with the worker role selected through `codex-contracts/models.md`. See the dispatch step (Step 2) above for composition and the 4-state return.
+native Claude uses a `general-purpose` worker with its model resolved by tier (`contracts/models.md`), while a configured `worker` role uses its MCP executor and concrete registry model.
 <!-- /gambit-backend -->

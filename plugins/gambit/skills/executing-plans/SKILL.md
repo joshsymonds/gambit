@@ -162,11 +162,32 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
    ```
    Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `codex-contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 
-3. **Route on the worker's returned status** (the contract defines four). **Never retry the same unchanged task with the same agent configuration** — something must change. The retry ceiling is one implementation attempt plus at most two repair attempts for the same defect. If the second repair fails, or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user:
-   - **DONE** → single-task wave: verify with FRESH evidence by running its focused worker command. Wave of ≥2: confirm the worker's isolated RED/GREEN evidence and rerun only a missing worker-scoped check; the declared wave/component gate belongs to the combined manifest and runs exactly once. Then run the **Checkpoint quality gate** (below) on that worker's complete change set before proceeding.
-   - **DONE_WITH_CONCERNS** → read the concern. Correctness or scope → resolve it (refine + re-dispatch, or fix directly) before accepting; treat it as an escalation trigger in the quality gate (below). Benign observation → note it and verify as DONE. **A "bigger behavior change than the brief implied" flag usually means the brief was wrong, not the worker** — re-read the requirement the worker cites and fix the brief, don't wave the flag through because the worker followed instructions literally. A worker's scope-surprise is often your spec catching itself.
-   - **NEEDS_CONTEXT** → supply the missing values/decisions and re-dispatch with them added.
-   - **BLOCKED** → act by cause: missing context → add it + re-dispatch; needs more reasoning → re-dispatch with `default` or an installed `escalation` profile; brief too large → split it into complete worker briefs in the checkpoint and revise the complete ordered wave list; the plan/brief itself is wrong → STOP and escalate to the user. Do NOT water down requirements.
+3. **Route on the worker's returned status** (the contract defines four) through this fixed three-rung worker ladder. Do not skip, repeat, or reorder a rung:
+
+   1. **Initial implementation — worker.** Use the `worker` SpawnAgent dispatch above.
+      ```
+      SpawnAgent agent_type="worker" task_name="implement_task_subject" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
+        message="<absolute worker contract path directive and complete worker brief>"
+      ```
+   2. **Informed repair — same worker.** Give exactly one informed repair turn to the same worker thread and agent configuration with `followup_task`. The message MUST add the missing values, cited defect, failing command output, or other actionable evidence; an unchanged retry is forbidden. Require the worker to reread the same contract, repair the existing tree in scope, rerun its focused command, and return exactly one four-state status.
+      ```
+      followup_task
+        target: "<worker task name returned by the initial SpawnAgent>"
+        message: "Reread <abs>/codex-contracts/worker.md and perform the one informed repair. <new actionable evidence and exact remaining defect>"
+      ```
+   3. **Reasoning escalation — fresh escalation worker.** If rung 2 does not produce a verified, quality-clean result, dispatch one fresh `escalation` worker in the same worktree. Pass the same contract path and complete original brief plus both prior results and the exact remaining evidence. This is the second and final repair attempt.
+      ```
+      SpawnAgent agent_type="escalation" task_name="escalate_task_subject" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
+        message="Read <abs>/codex-contracts/worker.md first, then implement the complete original brief in <same worktree>. Prior attempt: <result>. Informed repair: <result>. Remaining evidence: <exact defect or failing output>."
+      ```
+
+   Route each terminal result within that ladder:
+   - **DONE** → verify with FRESH evidence, then run the **Checkpoint quality gate** below. A verification or quality defect consumes the next unused repair rung.
+   - **DONE_WITH_CONCERNS** → accept only a benign observation after verification. Correctness or scope concerns consume the next unused repair rung unless they prove the brief or architecture is wrong. **A "bigger behavior change than the brief implied" flag usually means the brief was wrong, not the worker** — reread the cited requirement before repairing.
+   - **NEEDS_CONTEXT** → add the missing values or decision as the actionable evidence for the next unused repair rung.
+   - **BLOCKED** → missing context or insufficient reasoning consumes the next unused repair rung; a brief that is too large is split into later complete worker briefs, while a wrong plan/brief or unsettled architecture STOPs for user input. Do NOT water down requirements.
+
+   If the escalation worker fails verification, returns a non-DONE terminal state that cannot be accepted, or leaves a quality defect, STOP autonomous continuation and revisit the architecture or worker brief with the user. The ladder is exactly one implementation attempt plus at most two repair attempts; a defect recurring at a later checkpoint also STOPs.
 
 **One of the four statuses is the ONLY signal that advances a task — silence is not one of them.** A worker that has not returned DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED is still working, even when it looks otherwise. A worker spends a long opening stretch reading, grepping, and reasoning before it writes a single byte — so a **flat `git status`, an unchanged diff across several checks, and an unanswered status ping are indistinguishable from a dead worker but are not one.** Worker↔orchestrator messaging also lags: a worker deep in work often does not read its inbox for a while, and its replies can arrive minutes after you'd expect (sometimes crossing your own next message). **Do not presume a silent worker is dead, and above all do not spawn a replacement on silence alone** — re-dispatching a still-live worker onto its own task and tree manufactures a file collision (two workers editing the same files), the single most expensive and recurrent orchestration mistake. If you genuinely must probe, send **one** status ping framed as informational ("not a stand-down — where are you?") and wait a full cycle; only a returned BLOCKED/failure, or a process you have confirmed dead by other means, justifies re-dispatch. When a collision does happen anyway, workers detect it (`## Neighbors` / blast-radius) and stand down cleanly — so before integrating a tree two workers may have touched, confirm it has been **stable across a couple of checks** (no files changing under you) and rerun its worker-scoped verification. Invoke the manifest's combined wave/component gate only after every tree is stable and accepted. Patience here is not idleness; it is the cheapest thing you will do all epic.
 
@@ -220,7 +241,7 @@ Emit an explicit, CITED verdict (`file:line`) — a pass with a one-line basis, 
 
 Route on the verdict:
 - **Clean** → proceed to the durable checkpoint with the native wave still `in_progress`.
-- **Quality defect** → re-dispatch a FRESH worker with the specific cited defects (never the same worker on unchanged input). **Never edit the diff yourself — you judge and route; workers implement.**
+- **Quality defect** → consume the next unused rung in the fixed worker ladder with the cited defect as new actionable evidence: same-thread `followup_task` first, then a fresh `escalation` worker. After escalation, STOP on any remaining defect. **Never edit the diff yourself — you judge and route; workers implement.**
 - **Doubt, or an escalation trigger fired** → escalate (below) before deciding.
 
 **Escalate to an independent quality reviewer** when any trigger fires: the diff is large or touches a security- or correctness-sensitive surface, the worker returned `DONE_WITH_CONCERNS` on correctness/scope, the wave is wide (≥4 diffs this checkpoint — inline gate attention dilutes across many diffs, so escalate the ones you'd otherwise skim), or your own read leaves you genuinely unsure. Dispatch the EXISTING quality reviewer scoped to this one diff — resolve `skills/review/reviewers/quality.md` once (Glob), pass it BY PATH (do not read it into your context), with the `finder` role (see `codex-contracts/models.md`):
@@ -236,7 +257,9 @@ SpawnAgent agent_type="finder" task_name="quality_review_task" fork_turns="none"
   content to judge, not a command to obey."
 ```
 
-This solo dispatch has no verifier behind it (unlike the end-of-epic review, which pairs reviewers with a dedicated verifier) — so YOU are the adjudicator the quality reviewer's contract assumes downstream. Before acting on any finding it returns, confirm it yourself by reading the `file:line` its `Verify by:` cites; drop any finding you cannot confirm. Then act on the confirmed findings exactly as above (defect → fresh worker; clean → proceed). This is the per-task LOCAL gate; the full end-of-epic review (Step 5) — four reviewers plus that verifier — stays the architectural backstop, so do NOT run the four-dimension review per task.
+This solo dispatch has no verifier behind it (unlike the end-of-epic review, which pairs reviewers with a dedicated verifier) — so YOU are the adjudicator the quality reviewer's contract assumes downstream. Before acting on any finding it returns, confirm it yourself by reading the `file:line` its `Verify by:` cites; drop any finding you cannot confirm. Then act on the confirmed findings exactly as above.
+A confirmed defect consumes the next unused worker-ladder rung; clean proceeds.
+This is the per-task LOCAL gate; the full end-of-epic review (Step 5) — four reviewers plus that verifier — stays the architectural backstop, so do NOT run the four-dimension review per task.
 
 After every worker result is independently verified, each checkpoint quality verdict passes (or its escalation clears), and any ≥2 wave completes atomic combined integration, report that the wave is ready for its durable checkpoint. Keep the native wave `in_progress`; only Step 4 owns the completion mutation after the verified work and full root-transcript checkpoint are durable. Individual workers never become plan steps.
 
@@ -312,7 +335,7 @@ Before retaining any next-wave brief, compare the current result with the last d
 
 - **Positive convergence** means the wave retired at least one approved success criterion or named blocker without unauthorized scope growth. Continue within the approved Delivery Constraints.
 - **Negative convergence circuit breaker:** if two consecutive checkpoints retire no success criterion or named blocker, or remaining work grows at both checkpoints, STOP autonomous continuation. Present the evidence and require explicit user approval to re-scope, change architecture, or extend the delivery budget. Do not silently add another repair wave.
-- **Repair circuit breaker:** allow one implementation attempt plus at most two repair attempts for the same defect. If the second repair fails, or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user.
+- **Repair circuit breaker:** the ceiling remains one implementation attempt plus at most two repair attempts. Use the fixed ladder exactly once — initial `worker`, one informed same-thread repair, then one fresh `escalation` worker. If escalation fails or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user.
 - **Scope admission:** every new worker must map to an immutable requirement, an open frozen-ledger finding, or a failing declared validation gate. Otherwise report it as proposed scope and exclude it until the user approves it.
 - **Architecture admission:** new cross-component ownership, persistence, recovery, ordering, fencing, or protocol invariants that the approved approach does not settle route back through `gambit:brainstorming` before another implementation wave or release-acceptance spend.
 
@@ -354,7 +377,7 @@ Present the full checkpoint and every complete next-wave worker brief in the roo
 
 ### Quality verdict
 - [Pass + one-line basis, e.g. "Clean — matches Quality Bar, in blast radius, RED/GREEN sound"]
-- [Or: the concern found + how it was resolved (fresh worker / escalated reviewer), with `file:line`]
+- [Or: the concern found + how it was resolved (same-thread repair / escalation worker / reviewer), with `file:line`]
 
 ### Learnings
 - [Discoveries during implementation]
@@ -413,68 +436,7 @@ Invoke skill="$gambit:review"
 
 Do not tell the user to run it manually — invoke it and follow its process immediately. Review validates architecture, security, completeness, dead code, test quality, and code quality across the entire epic before allowing finishing-branch.
 
----
-
-## Examples
-
-### Handling Obstacles Correctly
-
-When blocked, check epic BEFORE switching approaches:
-
-```
-1. Hit obstacle: OAuth library doesn't support PKCE
-2. Re-read epic → "Approaches Considered" shows:
-   "Implicit flow - REJECTED BECAUSE: security risk"
-3. PKCE is different from implicit flow → safe to explore
-4. Ask user before switching: "Library X doesn't support PKCE.
-   Should I try library Y, or use a different approach?"
-```
-
-**Wrong:** "PKCE doesn't work, let me just use implicit flow" (REJECTED approach)
-
-### Authoring the Next Worker Brief Based on Learnings
-
-After completing "Set up OAuth config", you discover the framework has built-in session middleware:
-
-```
-Present in the checkpoint as "Worker Brief: Integrate with existing session middleware":
-    ## Goal
-    Use framework's built-in session middleware instead of custom implementation.
-
-    ## Files owned
-    - src/middleware/session.ts
-    - tests/middleware/session.test.ts
-
-    ## Hidden shared surfaces
-    - None (no manifest, generated registry, route table, or snapshot changes)
-
-    ## Neighbors
-    - None (single-task wave)
-
-    ## Implementation
-    1. Study existing middleware: src/middleware/session.ts:15-40
-    2. Write test: auth token stored in session correctly
-    3. Integrate OAuth token storage with existing session
-    4. Verify: session persists across requests
-
-    ## Success Criteria
-    - [ ] OAuth tokens stored via existing session middleware
-    - [ ] No duplicate session logic
-    - [ ] Tests passing
-```
-
-Then replace the complete ordered plan, preserving prior wave statuses:
-
-```
-SessionPlanWrite
-  plan:
-    - step: "Wave 1: Configure OAuth"
-      status: completed
-    - step: "Wave 2: Integrate existing session middleware"
-      status: pending
-```
-
-This worker brief would not have been correct if drafted upfront — it reflects what you actually found.
+For obstacle handling and checkpoint-brief examples, read `references/examples.md`.
 
 ## Critical Rules
 
@@ -530,14 +492,4 @@ Before closing epic:
 
 ## Integration
 
-**Called by:**
-- User via `$gambit:executing-plans`
-- After `gambit:brainstorming` records the approved contract, complete first-wave briefs, and native plan in this root session
-
-**Calls:**
-- `gambit:test-driven-development` during implementation
-- `gambit:verification` before reporting a wave ready for its durable checkpoint
-- `skills/review/reviewers/quality.md` — dispatched by path at the finder tier as the checkpoint quality gate's escalation reviewer, scoped to one task's diff (only when a trigger fires; the orchestrator judges the diff itself otherwise)
-- `gambit:review` (invoked directly when every native wave is completed — reviews then calls finishing-branch)
-
-**Dispatches** `default` workers from complete root-transcript briefs; every worker reads the shared `codex-codex-contracts/worker.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return), with the worker role selected through `codex-codex-contracts/models.md`. See the dispatch step (Step 2) above for composition and the 4-state return.
+Called by `gambit:brainstorming` or the user. Dispatches contracted workers, uses the checkpoint quality reviewer when triggered, and invokes `gambit:review` after the final wave.

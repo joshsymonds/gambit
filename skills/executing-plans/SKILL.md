@@ -299,7 +299,9 @@ Before this checkpoint quality dispatch, resolve `finder` through `contracts/exe
 
   Require a non-empty string `threadId` containing no CR or LF and a non-empty advisory string `content`, with the advisory content read from that exact-matched artifact; otherwise stop the checkpoint as a configured protocol failure. A terminal wrapper error, malformed envelope, artifact-path mismatch, missing or empty artifact, or MCP tool, protocol, or timeout failure also stops the checkpoint. Ignore the validated `threadId`; the call is fresh, never persisted or resumed. Never use `codex-reply`, cancel, retry, or fall back to the native Agent path. The configured result is advisory content only: the root orchestrator remains the adjudicator and follows the unchanged confirmation and routing below.
 
-This solo dispatch has no verifier behind it (unlike the end-of-epic review, which pairs reviewers with a dedicated verifier) — so YOU are the adjudicator the quality reviewer's contract assumes downstream. Before acting on any finding it returns, confirm it yourself by reading the `file:line` its `Verify by:` cites; drop any finding you cannot confirm. Then act on the confirmed findings exactly as above (defect → fresh worker; clean → proceed). This is the per-task LOCAL gate; the full end-of-epic review (Step 5) — four reviewers plus that verifier — stays the architectural backstop, so do NOT run the four-dimension review per task.
+This solo dispatch has no verifier behind it (unlike the end-of-epic review, which pairs reviewers with a dedicated verifier) — so YOU are the adjudicator the quality reviewer's contract assumes downstream. Before acting on any finding it returns, confirm it yourself by reading the `file:line` its `Verify by:` cites; drop any finding you cannot confirm. Then act on the confirmed findings exactly as above.
+A confirmed defect routes to a fresh worker; clean proceeds.
+This is the per-task LOCAL gate; the full end-of-epic review (Step 5) — four reviewers plus that verifier — stays the architectural backstop, so do NOT run the four-dimension review per task.
 
 For a single task, mark complete with `TaskUpdate` only after all steps are verified with fresh evidence and the checkpoint quality gate passed. For a ≥2 wave, keep every task in progress until all per-worker quality verdicts clear and `integrate_wave.py` completes the atomic fast-forward after its one combined wave/component gate; then mark the wave's tasks complete together.
 
@@ -472,60 +474,7 @@ Skill skill="gambit:review"
 
 Do not tell the user to run it manually — invoke it and follow its process immediately. Review validates architecture, security, completeness, dead code, test quality, and code quality across the entire epic before allowing finishing-branch.
 
----
-
-## Examples
-
-### Handling Obstacles Correctly
-
-When blocked, check epic BEFORE switching approaches:
-
-```
-1. Hit obstacle: OAuth library doesn't support PKCE
-2. Re-read epic → "Approaches Considered" shows:
-   "Implicit flow - REJECTED BECAUSE: security risk"
-3. PKCE is different from implicit flow → safe to explore
-4. Ask user before switching: "Library X doesn't support PKCE.
-   Should I try library Y, or use a different approach?"
-```
-
-**Wrong:** "PKCE doesn't work, let me just use implicit flow" (REJECTED approach)
-
-### Creating Next Task Based on Learnings
-
-After completing "Set up OAuth config", you discover the framework has built-in session middleware:
-
-```
-TaskCreate
-  subject: "Integrate with existing session middleware"
-  description: |
-    ## Goal
-    Use framework's built-in session middleware instead of custom implementation.
-
-    ## Files owned
-    - src/middleware/session.ts
-    - tests/middleware/session.test.ts
-
-    ## Hidden shared surfaces
-    - None (no manifest, generated registry, route table, or snapshot changes)
-
-    ## Neighbors
-    - None (single-task wave)
-
-    ## Implementation
-    1. Study existing middleware: src/middleware/session.ts:15-40
-    2. Write test: auth token stored in session correctly
-    3. Integrate OAuth token storage with existing session
-    4. Verify: session persists across requests
-
-    ## Success Criteria
-    - [ ] OAuth tokens stored via existing session middleware
-    - [ ] No duplicate session logic
-    - [ ] Tests passing
-  activeForm: "Integrating session middleware"
-```
-
-This task wouldn't have been correct if planned upfront — it reflects what you actually found.
+For obstacle handling and checkpoint-brief examples, read `references/examples.md`.
 
 ## Critical Rules
 
@@ -583,14 +532,5 @@ Before closing epic:
 
 ## Integration
 
-**Called by:**
-- User via `/gambit:executing-plans`
-- After `gambit:brainstorming` creates the epic and first task
-
-**Calls:**
-- `gambit:test-driven-development` during implementation
-- `gambit:verification` before claiming task complete
-- `skills/review/reviewers/quality.md` — dispatched by path at the finder tier as the checkpoint quality gate's escalation reviewer, scoped to one task's diff (only when a trigger fires; the orchestrator judges the diff itself otherwise)
-- `gambit:review` (invoked directly when all tasks complete — reviews then calls finishing-branch)
-
-**Dispatches** each task through the resolved worker route: native Claude uses a `general-purpose` worker with its model resolved by tier (`contracts/models.md`), while a configured `worker` role uses its MCP executor and concrete registry model. Every worker reads the shared `contracts/worker.md` by path (blast radius, TDD, fail-fast Stop Triggers, 4-state return). See the dispatch step (Step 2) above for composition and the 4-state return.
+Called by `gambit:brainstorming` or the user. Dispatches contracted workers, uses the checkpoint quality reviewer when triggered, and invokes `gambit:review` after the final wave.
+native Claude uses a `general-purpose` worker with its model resolved by tier (`contracts/models.md`), while a configured `worker` role uses its MCP executor and concrete registry model.

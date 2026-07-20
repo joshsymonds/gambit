@@ -11,7 +11,7 @@ described below. Agent-profile configuration owns model and reasoning settings.
 | `finder` | `default` | Deep review where missed findings are costly |
 | `verifier` | `default` | Independent confirmation or refutation |
 | `worker` | `worker` | Focused implementation from a complete brief |
-| `escalation` | `default` | Retry only after adding context or stronger reasoning |
+| `escalation` | `default` | Fresh final repair after one informed same-thread worker repair |
 | `scout` | `explorer` | Read-only codebase discovery with file:line evidence |
 | `test-runner` | `worker` | Objective test execution and concise reporting |
 
@@ -21,7 +21,9 @@ described below. Agent-profile configuration owns model and reasoning settings.
   executor registry does not participate in native Codex dispatch.
 - Never encode a concrete model ID in a skill or contract.
 - Never encode a concrete reasoning effort in a skill or contract.
-- Never retry the same unchanged prompt with the same agent profile.
+- The worker ladder is initial `worker`, exactly one informed repair in that same thread and
+  profile, then one fresh `escalation` worker. A repair prompt must add actionable evidence;
+  never retry an unchanged prompt.
 - A verifier must be capable of reasoning at least as deeply as the finder.
 - Use read-only sandboxing for steelmen, scouts, finders, and verifiers when the active
   Codex surface supports per-agent sandbox configuration.

@@ -1060,6 +1060,27 @@ class RenderedSkillsTest(unittest.TestCase):
         self.assertLess(commit, checkpoint)
         self.assertLess(checkpoint, completion)
 
+    def test_executing_plans_uses_same_worker_repair_then_escalation(self) -> None:
+        executing = (
+            CODEX_PLUGIN / "skills" / "executing-plans" / "SKILL.md"
+        ).read_text(encoding="utf-8")
+        routing = executing.split("3. **Route on the worker's returned status**", 1)[1]
+        routing = routing.split(
+            "**One of the four statuses is the ONLY signal that advances a task**",
+            1,
+        )[0]
+
+        worker = routing.index('SpawnAgent agent_type="worker"')
+        same_thread_repair = routing.index("followup_task")
+        escalation = routing.index('SpawnAgent agent_type="escalation"')
+        self.assertLess(worker, same_thread_repair)
+        self.assertLess(same_thread_repair, escalation)
+        self.assertIn("same worker thread and agent configuration", routing)
+        self.assertIn("exactly one informed repair turn", routing)
+        self.assertNotIn("re-dispatch a FRESH worker", executing)
+
+        self.assertLess(len(executing.splitlines()), 500)
+
     def test_verification_reports_readiness_without_mutating_wave_completion(self) -> None:
         verification = (
             CODEX_PLUGIN / "skills" / "verification" / "SKILL.md"
