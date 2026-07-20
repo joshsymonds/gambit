@@ -12,8 +12,16 @@ Read all changed files listed in the brief before forming your assessment.
 
 ## Operational Constraints
 
+<!-- gambit-backend:claude -->
+- Native Claude may inspect supplied files with its **Read/Grep** tools only.
 - **DO NOT** run tests, execute commands, or edit any files. You are strictly advisory. All tests are already passing.
 - **DO** use `WebFetch` and `WebSearch` to validate your findings when your local knowledge is insufficient, the code is sensitive or complex, or you want to verify language idioms, linter rules, or framework conventions.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+- Codex may perform only bounded local inspection using `cat`, `sed`, `nl`, or `rg` reads against (a) the single exact absolute reviewer-contract path named in the prompt, even when outside `cwd`, and (b) local files rooted inside the assigned review worktree.
+- **DO** use live web search to validate findings when local knowledge is insufficient, the code is sensitive or complex, or you want to verify language idioms, linter rules, or framework conventions.
+- Do not use redirection, command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration, skills/workflows, nested agents/delegation, task discovery, or scope expansion.
+<!-- /gambit-backend -->
 
 ## Your Dimensions
 

@@ -236,12 +236,12 @@ The prompt value contains only the dimension's absolute reviewer-contract path d
 ```
 conformance Wire arguments:
 {
-  "prompt": "Read <abs>/reviewers/conformance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
+  "prompt": "Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt. Use only bounded `cat`, `sed`, `nl`, or `rg` reads of that path before doing anything else.\nRead <abs>/reviewers/conformance.md — that file is your complete instructions; then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
   "model": "<finder.model>",
   "cwd": "<absolute repository/worktree path>",
   "sandbox": "read-only",
   "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single named reviewer-contract path is REQUIRED and is not repository discovery. The prohibition covers only exploration beyond the supplied brief and that named path. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only those supplied materials and return advisory findings.",
+  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single exact absolute reviewer-contract path named in the prompt is REQUIRED and is not repository discovery. The only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) that exact contract path, even when outside `cwd`, and (b) local files rooted inside the assigned review worktree. All other commands and operations are forbidden, including redirection, command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration, skills/workflows, nested agents/delegation, task discovery, and scope expansion. Analyze only those supplied materials and return advisory findings.",
   "config": {
     "model_reasoning_effort": "<finder.reasoning_effort>",
     "web_search": "live",
@@ -249,17 +249,18 @@ conformance Wire arguments:
     "skills.include_instructions": false,
     "orchestrator.skills.enabled": false,
     "features.collab": false,
-    "features.multi_agent_v2.enabled": false
+    "features.multi_agent_v2.enabled": false,
+    "features.apps": false
   }
 }
 security Wire arguments:
 {
-  "prompt": "Read <abs>/reviewers/security.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
+  "prompt": "Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt. Use only bounded `cat`, `sed`, `nl`, or `rg` reads of that path before doing anything else.\nRead <abs>/reviewers/security.md — that file is your complete instructions; then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
   "model": "<finder.model>",
   "cwd": "<absolute repository/worktree path>",
   "sandbox": "read-only",
   "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single named reviewer-contract path is REQUIRED and is not repository discovery. The prohibition covers only exploration beyond the supplied brief and that named path. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only those supplied materials and return advisory findings.",
+  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single exact absolute reviewer-contract path named in the prompt is REQUIRED and is not repository discovery. The only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) that exact contract path, even when outside `cwd`, and (b) local files rooted inside the assigned review worktree. All other commands and operations are forbidden, including redirection, command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration, skills/workflows, nested agents/delegation, task discovery, and scope expansion. Analyze only those supplied materials and return advisory findings.",
   "config": {
     "model_reasoning_effort": "<finder.reasoning_effort>",
     "web_search": "live",
@@ -267,17 +268,18 @@ security Wire arguments:
     "skills.include_instructions": false,
     "orchestrator.skills.enabled": false,
     "features.collab": false,
-    "features.multi_agent_v2.enabled": false
+    "features.multi_agent_v2.enabled": false,
+    "features.apps": false
   }
 }
 quality Wire arguments:
 {
-  "prompt": "Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
+  "prompt": "Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt. Use only bounded `cat`, `sed`, `nl`, or `rg` reads of that path before doing anything else.\nRead <abs>/reviewers/quality.md — that file is your complete instructions; then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
   "model": "<finder.model>",
   "cwd": "<absolute repository/worktree path>",
   "sandbox": "read-only",
   "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single named reviewer-contract path is REQUIRED and is not repository discovery. The prohibition covers only exploration beyond the supplied brief and that named path. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only those supplied materials and return advisory findings.",
+  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single exact absolute reviewer-contract path named in the prompt is REQUIRED and is not repository discovery. The only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) that exact contract path, even when outside `cwd`, and (b) local files rooted inside the assigned review worktree. All other commands and operations are forbidden, including redirection, command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration, skills/workflows, nested agents/delegation, task discovery, and scope expansion. Analyze only those supplied materials and return advisory findings.",
   "config": {
     "model_reasoning_effort": "<finder.reasoning_effort>",
     "web_search": "live",
@@ -285,17 +287,18 @@ quality Wire arguments:
     "skills.include_instructions": false,
     "orchestrator.skills.enabled": false,
     "features.collab": false,
-    "features.multi_agent_v2.enabled": false
+    "features.multi_agent_v2.enabled": false,
+    "features.apps": false
   }
 }
 performance Wire arguments:
 {
-  "prompt": "Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
+  "prompt": "Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt. Use only bounded `cat`, `sed`, `nl`, or `rg` reads of that path before doing anything else.\nRead <abs>/reviewers/performance.md — that file is your complete instructions; then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
   "model": "<finder.model>",
   "cwd": "<absolute repository/worktree path>",
   "sandbox": "read-only",
   "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single named reviewer-contract path is REQUIRED and is not repository discovery. The prohibition covers only exploration beyond the supplied brief and that named path. Do not orchestrate, invoke skills, spawn nested agents, discover tasks, expand scope, edit files, or execute commands or tests. Analyze only those supplied materials and return advisory findings.",
+  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single exact absolute reviewer-contract path named in the prompt is REQUIRED and is not repository discovery. The only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) that exact contract path, even when outside `cwd`, and (b) local files rooted inside the assigned review worktree. All other commands and operations are forbidden, including redirection, command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration, skills/workflows, nested agents/delegation, task discovery, and scope expansion. Analyze only those supplied materials and return advisory findings.",
   "config": {
     "model_reasoning_effort": "<finder.reasoning_effort>",
     "web_search": "live",
@@ -303,7 +306,8 @@ performance Wire arguments:
     "skills.include_instructions": false,
     "orchestrator.skills.enabled": false,
     "features.collab": false,
-    "features.multi_agent_v2.enabled": false
+    "features.multi_agent_v2.enabled": false,
+    "features.apps": false
   }
 }
 ```
@@ -338,7 +342,12 @@ Each reviewer will:
 - Attach a `**Verify by:**` line to every Gap and Improvement (required — see each reviewer file's "Verification Requirement" section)
 - Return findings as APPROVED or GAPS FOUND
 
+<!-- gambit-backend:claude -->
 **Critical:** Reviewers are strictly advisory. They must NOT run tests, execute commands, or edit files. All tests are already passing by the time review runs — their job is code analysis only. They DO have access to `WebFetch` and `WebSearch` and should use them to validate edge cases, check API documentation, verify security patterns, or confirm language-specific behavior when they aren't confident from code reading alone.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**Critical:** Reviewers are strictly advisory. They must NOT run tests or edit files. Local inspection is limited to the bounded commands and locations in each reviewer contract. Use live web search to validate edge cases, check API documentation, verify security patterns, or confirm language-specific behavior when local knowledge is insufficient.
+<!-- /gambit-backend -->
 
 ### Step 5: Scope-Filter and Dedupe Candidate Findings
 

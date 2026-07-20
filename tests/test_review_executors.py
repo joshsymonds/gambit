@@ -22,6 +22,8 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         cls.codex = (codex_skills / "review" / "SKILL.md").read_text(
             encoding="utf-8"
         )
+        cls.claude_contracts = claude_skills / "review" / "reviewers"
+        cls.codex_contracts = codex_skills / "review" / "reviewers"
 
     @classmethod
     def tearDownClass(cls) -> None:
@@ -60,6 +62,12 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         self.assertIn("finder tier", step)
         self.assertIn("In ONE message, emit exactly four", step)
         self.assertEqual(4, step.count('Agent subagent_type="general-purpose"'))
+        self.assertEqual(
+            4,
+            step.count(
+                "your FIRST action must be to Read it, then follow it exactly."
+            ),
+        )
         for dimension in ("conformance", "security", "quality", "performance"):
             self.assertEqual(1, step.count(f"reviewers/{dimension}.md"))
 
@@ -105,11 +113,15 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         self.assertEqual(4, len(wire_arguments))
         finder_instructions = (
             "You are a subordinate read-only advisory finder. Reading and analyzing "
-            "the material supplied in the frozen Review Brief and the single named "
-            "reviewer-contract path is REQUIRED and is not repository discovery. The "
-            "prohibition covers only exploration beyond the supplied brief and that "
-            "named path. Do not orchestrate, invoke skills, spawn nested agents, "
-            "discover tasks, expand scope, edit files, or execute commands or tests. "
+            "the material supplied in the frozen Review Brief and the single "
+            "exact absolute reviewer-contract path named in the prompt is REQUIRED and "
+            "is not repository discovery. The only permitted local commands are "
+            "bounded `cat`, `sed`, `nl`, or `rg` reads of (a) that exact contract path, "
+            "even when outside `cwd`, and (b) local files rooted inside the assigned "
+            "review worktree. All other commands and operations are forbidden, "
+            "including redirection, command substitution, backgrounding, tests, "
+            "mutation, arbitrary absolute paths, orchestration, skills/workflows, "
+            "nested agents/delegation, task discovery, and scope expansion. "
             "Analyze only those supplied materials and return advisory findings."
         )
         finder_config = {
@@ -120,6 +132,7 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             "orchestrator.skills.enabled": False,
             "features.collab": False,
             "features.multi_agent_v2.enabled": False,
+            "features.apps": False,
         }
         prompts = []
         dimensions = []
@@ -134,6 +147,12 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
                 "<finder.approval_policy>", payload["approval-policy"]
             )
             self.assertEqual(finder_instructions, payload["developer-instructions"])
+            self.assertNotIn(
+                "execute commands or tests", payload["developer-instructions"]
+            )
+            self.assertNotIn(
+                "your FIRST action must be to Read it", payload["prompt"]
+            )
             self.assertIsInstance(payload["config"], dict)
             self.assertEqual(finder_config, payload["config"])
 
@@ -153,6 +172,111 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         self.assertIn("Each call is fresh and distinct", step)
         self.assertIn("omit any `threadId` input", step)
         self.assertNotRegex(step, r"(?m)^<finder\.tool> ")
+
+    def test_four_fresh_finders_use_bounded_dual_location_reads_and_disable_apps(
+        self,
+    ) -> None:
+        step = self.section(
+            self.claude,
+            "#### Configured Codex finder dispatch",
+            "### Step 5: Scope-Filter and Dedupe Candidate Findings",
+        )
+        wire_arguments = re.findall(
+            r'(?ms)^(conformance|security|quality|performance) Wire arguments:\n(\{.*?^\})$',
+            step,
+        )
+        self.assertEqual(4, len(wire_arguments))
+        for dimension, arguments in wire_arguments:
+            with self.subTest(dimension=dimension):
+                payload = json.loads(arguments)
+                self.assertIn("FIRST action is a bounded read-only `exec_command`", payload["prompt"])
+                self.assertNotIn("your FIRST action must be to Read it", payload["prompt"])
+                developer = payload["developer-instructions"]
+                self.assertIn(
+                    "only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) that exact contract path, even when outside `cwd`, and (b) local files rooted inside the assigned review worktree",
+                    developer,
+                )
+                self.assertIn(
+                    "All other commands and operations are forbidden", developer
+                )
+                self.assertNotIn("The prohibition covers only", developer)
+                for forbidden in (
+                    "redirection",
+                    "command substitution",
+                    "backgrounding",
+                    "tests",
+                    "mutation",
+                    "orchestration",
+                    "skills/workflows",
+                    "nested agents/delegation",
+                    "task discovery",
+                    "scope expansion",
+                ):
+                    self.assertIn(forbidden, developer)
+                self.assertIs(payload["config"]["features.apps"], False)
+
+    def test_rendered_reviewer_contracts_keep_backend_native_read_rules(self) -> None:
+        validation_purposes = {
+            "conformance": "API contracts, language semantics, or framework behavior",
+            "security": "API contracts, security advisories, CVE databases, or framework-specific security patterns",
+            "quality": "language idioms, linter rules, or framework conventions",
+            "performance": "algorithmic complexity, database query behavior, or framework performance characteristics",
+        }
+        for dimension, validation_purpose in validation_purposes.items():
+            with self.subTest(dimension=dimension):
+                claude = (
+                    self.claude_contracts / f"{dimension}.md"
+                ).read_text(encoding="utf-8")
+                codex = (
+                    self.codex_contracts / f"{dimension}.md"
+                ).read_text(encoding="utf-8")
+                claude_operational = claude.split(
+                    "## Operational Constraints", 1
+                )[1].split("## ", 1)[0]
+                codex_operational = codex.split(
+                    "## Operational Constraints", 1
+                )[1].split("## ", 1)[0]
+                self.assertIn("Read/Grep", claude_operational)
+                self.assertIn("DO NOT", claude_operational)
+                self.assertIn(
+                    "run tests, execute commands, or edit any files",
+                    claude_operational,
+                )
+                self.assertNotIn("bounded `cat`", claude_operational)
+                self.assertIn("WebFetch", claude_operational)
+                self.assertIn("WebSearch", claude_operational)
+                self.assertIn(validation_purpose, claude_operational)
+                self.assertIn(
+                    "bounded local inspection using `cat`, `sed`, `nl`, or `rg` reads",
+                    codex_operational,
+                )
+                self.assertIn(
+                    "single exact absolute reviewer-contract path named in the prompt",
+                    codex_operational,
+                )
+                self.assertIn(
+                    "local files rooted inside the assigned review worktree",
+                    codex_operational,
+                )
+                self.assertIn("live web search", codex_operational)
+                self.assertNotIn("WebFetch", codex_operational)
+                self.assertNotIn("WebSearch", codex_operational)
+                self.assertIn(validation_purpose, codex_operational)
+                self.assertNotIn("inspection bounded", codex_operational)
+                for forbidden in (
+                    "redirection",
+                    "command substitution",
+                    "backgrounding",
+                    "tests",
+                    "mutation",
+                    "arbitrary absolute paths",
+                    "orchestration",
+                    "skills/workflows",
+                    "nested agents/delegation",
+                    "task discovery",
+                    "scope expansion",
+                ):
+                    self.assertIn(forbidden, codex_operational)
 
     def test_configured_wrapper_batch_prepares_artifacts_and_collects_every_handle(
         self,
@@ -205,14 +329,11 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             "subordinate read-only advisory finder",
             "REQUIRED",
             "is not repository discovery",
-            "only exploration beyond the supplied brief and that named path",
-            "Do not orchestrate",
-            "invoke skills",
-            "spawn nested agents",
-            "discover tasks",
-            "expand scope",
-            "edit files",
-            "execute commands or tests",
+            "All other commands and operations are forbidden",
+            "skills/workflows",
+            "nested agents/delegation",
+            "task discovery",
+            "scope expansion",
         ):
             self.assertIn(required, step)
 
@@ -281,6 +402,10 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         self.assertIn("never route verifier work through `finder.tool`", step)
         self.assertLess(step.index(native_rule), step.index('Agent subagent_type="general-purpose"'))
         self.assertIn("verifier tier", step)
+        self.assertIn(
+            "your FIRST action must be to Read it, then follow it exactly.",
+            step,
+        )
 
     def test_closure_never_reruns_finders_and_preserves_the_ledger(self) -> None:
         closure = self.claude.split("### Step 8: Remediate and Close the Ledger", 1)[1]
@@ -328,6 +453,14 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         self.assertIn("#### Native Codex finder dispatch", self.codex)
         self.assertEqual(4, self.codex.count('SpawnAgent agent_type="finder"'))
         self.assertEqual(2, self.codex.count('SpawnAgent agent_type="verifier"'))
+        self.assertIn(
+            "Local inspection is limited to the bounded commands and locations in each reviewer contract",
+            self.codex,
+        )
+        self.assertIn("Use live web search", self.codex)
+        self.assertNotIn("execute commands", self.codex)
+        self.assertNotIn("WebFetch", self.codex)
+        self.assertNotIn("WebSearch", self.codex)
 
 
 if __name__ == "__main__":

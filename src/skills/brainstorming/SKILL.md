@@ -216,6 +216,7 @@ registry rather than a guessed alias:
 ```
 Call <configured fully qualified MCP tool>
   prompt: |
+    Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt. Use only bounded `cat`, `sed`, `nl`, or `rg` reads of that path before doing anything else.
     Read <abs>/contracts/steelman.md first and follow it exactly.
 
     Mode: <Discovery or Closure>
@@ -226,8 +227,12 @@ Call <configured fully qualified MCP tool>
   sandbox: <configured sandbox>
   approval-policy: <configured approval_policy>
   developer-instructions: |
-    You are a subordinate read-only Steelman. This role forbids orchestration, skills, nested
-    agents, task discovery, and scope expansion. Do not invoke workflows or delegate work.
+    You are a subordinate read-only Steelman. The only permitted local commands are bounded
+    `cat`, `sed`, `nl`, or `rg` reads of (a) the single exact absolute contract path named in the
+    prompt, even when outside `cwd`, and (b) local files rooted inside the assigned
+    repository/worktree. All other commands and operations are forbidden, including redirection,
+    command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration,
+    skills/workflows, nested agents/delegation, task discovery, and scope expansion.
   config:
     model_reasoning_effort: <configured reasoning_effort>
     web_search: "live"
@@ -236,6 +241,7 @@ Call <configured fully qualified MCP tool>
     orchestrator.skills.enabled: false
     features.collab: false
     features.multi_agent_v2.enabled: false
+    features.apps: false
 ```
 
 Map the configured `reasoning_effort` to `config.model_reasoning_effort` and the configured

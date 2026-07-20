@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import tempfile
 import unittest
 from pathlib import Path
@@ -112,6 +113,7 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
                 '"orchestrator.skills.enabled": false',
                 '"features.collab": false',
                 '"features.multi_agent_v2.enabled": false',
+                '"features.apps": false',
                 '"developer-instructions"',
                 "subordinate worker",
                 "Do not orchestrate, load skills, use nested agents, discover tasks, expand scope",
@@ -223,6 +225,63 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         self.assertIn("Never embed either prior result's whole `content`", rung_3)
         self.assertNotIn("Ignore the validated `threadId`", configured)
 
+    def test_fresh_worker_escalation_and_checkpoint_configs_disable_apps(self) -> None:
+        rung_1 = bounded_section(self.configured_worker, "## Rung 1", "## Rung 2")
+        rung_3 = self.configured_worker.split("## Rung 3", 1)[1]
+        self.assertIs(json.loads(self.worker_wire)["config"]["features.apps"], False)
+        self.assertIs(
+            json.loads(code_fence(rung_3, "json"))["config"]["features.apps"],
+            False,
+        )
+        self.assertRegex(
+            self.configured_worker,
+            r"inherits the initial\s+worker's model, reasoning, service tier, cwd, sandbox, approval, and isolation configuration",
+        )
+        rung_2 = bounded_section(self.configured_worker, "## Rung 2", "## Rung 3")
+        self.assertNotIn('"features.apps"', rung_2)
+
+        finder_payload = json.loads(self.finder_wire)
+        self.assertIs(finder_payload["config"]["features.apps"], False)
+        self.assertIn(
+            "FIRST action is a bounded read-only `exec_command`",
+            finder_payload["prompt"],
+        )
+        self.assertNotIn("your FIRST action must be to read it", finder_payload["prompt"])
+        self.assertNotIn("The prohibition covers only", finder_payload["prompt"])
+        self.assertEqual(
+            (
+                "You are a subordinate read-only advisory finder assigned exactly one "
+                "quality review. Reading and analyzing the material supplied in the "
+                "frozen review brief and the single exact absolute quality-contract "
+                "path named in the prompt is required and is not repository discovery. "
+                "The only permitted local commands are bounded `cat`, `sed`, `nl`, or "
+                "`rg` reads of (a) that exact contract path, even when outside "
+                "`cwd`, and (b) local files rooted inside the assigned review worktree. "
+                "All other commands and operations are forbidden, including "
+                "redirection, command substitution, backgrounding, tests, mutation, "
+                "arbitrary absolute paths, orchestration, skills/workflows, nested "
+                "agents/delegation, task discovery, scope expansion, commits, merges, "
+                "worktree creation, plan mutation, and task assignment. Use live search "
+                "only to validate advisory quality findings, then return the review "
+                "content."
+            ),
+            finder_payload["developer-instructions"],
+        )
+        for forbidden in (
+            "redirection",
+            "command substitution",
+            "backgrounding",
+            "tests",
+            "mutation",
+            "arbitrary absolute paths",
+            "orchestration",
+            "skills/workflows",
+            "nested agents/delegation",
+            "task discovery",
+            "scope expansion",
+        ):
+            self.assertIn(forbidden, self.finder_wire)
+
     def test_checkpoint_finder_resolves_registry_and_remains_advisory(self) -> None:
         self.assertContainsAll(
             self.checkpoint_finder,
@@ -262,8 +321,6 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
                 "actual frozen diff hunks",
                 "empty or missing hunk set",
                 "composition failure before dispatch",
-                "Reading the material supplied in this brief and the single named quality-contract path is required and is not repository discovery",
-                "only exploration beyond the supplied brief and that single named path",
                 "`contracts/async-dispatch.md`",
                 "anonymous background `Agent` wrapper",
                 "never pass `name:`",
@@ -308,8 +365,7 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
             self.finder_wire,
             (
                 "subordinate read-only advisory finder",
-                "Do not perform orchestration",
-                "Do not edit files or run tests",
+                "All other commands and operations are forbidden",
                 "Use live search only to validate advisory quality findings",
             ),
         )

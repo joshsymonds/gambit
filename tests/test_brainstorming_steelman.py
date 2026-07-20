@@ -141,12 +141,47 @@ class BrainstormingSteelmanTest(unittest.TestCase):
             "features.collab: false",
             "features.multi_agent_v2.enabled: false",
             "subordinate read-only Steelman",
-            "forbids orchestration, skills, nested agents, task discovery, and scope expansion",
+            "orchestration, skills/workflows, nested agents/delegation, task discovery, and scope expansion",
         ):
             self.assertIn(required, prose)
 
         self.assertRegex(prose, r"configured `reasoning_effort`.*model_reasoning_effort")
         self.assertRegex(prose, r"configured `web_search`.*web_search")
+
+    def test_configured_steelman_is_bounded_and_apps_disabled(self) -> None:
+        steelman = self.claude.split("### 3a. Steelman the Agreed Design", 1)[1]
+        steelman = steelman.split("### 4. Create the Epic Task", 1)[0]
+        prose = " ".join(steelman.split())
+        self.assertIn(
+            "FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt",
+            prose,
+        )
+        self.assertNotIn("your FIRST action must be to Read it", prose)
+        self.assertIn(
+            "only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) the single exact absolute contract path named in the prompt, even when outside `cwd`, and (b) local files rooted inside the assigned repository/worktree",
+            prose,
+        )
+        self.assertIn("All other commands and operations are forbidden", prose)
+        for forbidden in (
+            "redirection",
+            "command substitution",
+            "backgrounding",
+            "tests",
+            "mutation",
+            "orchestration",
+            "skills/workflows",
+            "nested agents/delegation",
+            "task discovery",
+            "scope expansion",
+        ):
+            self.assertIn(forbidden, prose)
+        configured = steelman.split("For configured Codex", 1)[1].split(
+            "Map the configured", 1
+        )[0]
+        self.assertIn("```\nCall <configured fully qualified MCP tool>\n", configured)
+        self.assertEqual(1, configured.count("features.apps: false"))
+        self.assertEqual(0, prose.count("This role forbids"))
+        self.assertNotIn("Do not invoke workflows or delegate work.", configured)
 
     def test_configured_codex_calls_are_fresh_and_validate_supported_output(
         self,

@@ -51,7 +51,8 @@ Launch `worker.tool` with this opaque argument object. Map `approval_policy` to 
     "skills.include_instructions": false,
     "orchestrator.skills.enabled": false,
     "features.collab": false,
-    "features.multi_agent_v2.enabled": false
+    "features.multi_agent_v2.enabled": false,
+    "features.apps": false
   }
 }
 ```
@@ -97,7 +98,8 @@ Launch `escalation.tool` as a fresh call in the same worktree:
     "skills.include_instructions": false,
     "orchestrator.skills.enabled": false,
     "features.collab": false,
-    "features.multi_agent_v2.enabled": false
+    "features.multi_agent_v2.enabled": false,
+    "features.apps": false
   }
 }
 ```

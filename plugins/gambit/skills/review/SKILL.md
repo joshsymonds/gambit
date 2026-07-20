@@ -154,7 +154,7 @@ Each reviewer will:
 - Attach a `**Verify by:**` line to every Gap and Improvement (required — see each reviewer file's "Verification Requirement" section)
 - Return findings as APPROVED or GAPS FOUND
 
-**Critical:** Reviewers are strictly advisory. They must NOT run tests, execute commands, or edit files. All tests are already passing by the time review runs — their job is code analysis only. They DO have access to `WebFetch` and `WebSearch` and should use them to validate edge cases, check API documentation, verify security patterns, or confirm language-specific behavior when they aren't confident from code reading alone.
+**Critical:** Reviewers are strictly advisory. They must NOT run tests or edit files. Local inspection is limited to the bounded commands and locations in each reviewer contract. Use live web search to validate edge cases, check API documentation, verify security patterns, or confirm language-specific behavior when local knowledge is insufficient.
 
 ### Step 5: Scope-Filter and Dedupe Candidate Findings
 
