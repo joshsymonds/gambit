@@ -109,7 +109,18 @@ The transient per-worker worktrees of a ≥2 wave (`references/wave-dispatch.md`
 2. `TaskUpdate` → mark each wave task in_progress
 3. `TaskGet` → load each task's full details
 
-**Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. Glob `**/contracts/scout.md`, dispatch `subagent_type: "Explore"` with `model:` at the scout tier (default cheap-or-standard; `contracts/models.md`), and prompt it to Read `contracts/scout.md` first, then ask your question. The scout returns `file:line` evidence or `NOT FOUND` — never a guess. This is optional per task; skip it when the brief is already clear.
+**Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. This is optional per task; skip it when the brief is already clear.
+
+Glob `**/contracts/scout.md`, read `contracts/executors.md`, and resolve `scout` through
+`contracts/executors.md` before dispatch. Missing registry or a valid registry with no `scout` role
+selects native Claude: dispatch `subagent_type: "Explore"` with `model:` at the scout tier (default
+cheap-or-standard; `contracts/models.md`) and prompt it to Read `contracts/scout.md` first, then ask
+the bounded question. A configured `scout` role uses the Configured scout wire in
+`contracts/executors.md` with that same question and the task's repository/worktree root. An
+invalid registry or configured call failure is terminal: report it and do not retry or fall back
+natively.
+
+The scout returns `file:line` evidence or `NOT FOUND` — never a guess.
 
 **Settle architecture before dispatching.** A worker implements; it does not decide cross-file design. If a task carries an unresolved architectural question, resolve it first — scout it, record the decision in the brief, or decompose the task — then dispatch. A design question tangled into an implementation task is what produces same-pass-TDD drift.
 

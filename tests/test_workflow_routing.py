@@ -183,26 +183,89 @@ class WorkflowRoutingTest(unittest.TestCase):
                     self.assertNotIn("Announce at start", body)
                     self.assertNotIn(f"I'm using gambit:{mechanic}", body)
 
-    def test_debugging_uses_the_contracted_native_scout_dispatch(self) -> None:
+    def test_claude_scout_sites_resolve_configured_executor_fail_closed(self) -> None:
+        for skill in ("brainstorming", "executing-plans", "debugging"):
+            for skill_root in (
+                ROOT / "src" / "skills",
+                ROOT / "skills",
+                self.rendered_skill_roots[0],
+            ):
+                text = (skill_root / skill / "SKILL.md").read_text(
+                    encoding="utf-8"
+                )
+                prose = " ".join(text.split())
+                with self.subTest(skill=skill, root=skill_root):
+                    self.assertIn(
+                        "resolve `scout` through `contracts/executors.md`",
+                        prose,
+                    )
+                    self.assertIn(
+                        "Missing registry or a valid registry with no `scout` role selects native Claude",
+                        prose,
+                    )
+                    self.assertIn(
+                        "configured `scout` role uses the Configured scout wire",
+                        prose,
+                    )
+                    self.assertIn(
+                        "invalid registry or configured call failure is terminal",
+                        prose,
+                    )
+
+    def test_claude_test_runner_sites_resolve_configured_executor_fail_closed(
+        self,
+    ) -> None:
+        for skill in ("verification", "refactoring"):
+            for skill_root in (
+                ROOT / "src" / "skills",
+                ROOT / "skills",
+                self.rendered_skill_roots[0],
+            ):
+                text = (skill_root / skill / "SKILL.md").read_text(
+                    encoding="utf-8"
+                )
+                prose = " ".join(text.split())
+                with self.subTest(skill=skill, root=skill_root):
+                    self.assertIn(
+                        "resolve `test-runner` through `contracts/executors.md`",
+                        prose,
+                    )
+                    self.assertIn(
+                        "Missing registry or a valid registry with no `test-runner` role selects native Claude",
+                        prose,
+                    )
+                    self.assertIn(
+                        "configured `test-runner` role uses the Configured test-runner wire",
+                        prose,
+                    )
+                    self.assertIn(
+                        "invalid registry or configured call failure is terminal",
+                        prose,
+                    )
+
+    def test_debugging_uses_the_contracted_scout_dispatch(self) -> None:
         for text in self.claude_debugging_texts:
             investigation = text.split("### 2. Investigate Root Cause", 1)[1]
             investigation = investigation.split("**Find a working neighbor", 1)[0]
+            prose = " ".join(investigation.split())
             with self.subTest(backend="claude"):
-                self.assertIn("**/contracts/scout.md", investigation)
-                self.assertIn('subagent_type: "Explore"', investigation)
-                self.assertIn("`model:` at the scout tier", investigation)
-                self.assertIn("Read `contracts/scout.md` first", investigation)
+                self.assertIn("contracts/executors.md", prose)
+                self.assertIn("**/contracts/scout.md", prose)
+                self.assertIn('subagent_type: "Explore"', prose)
+                self.assertIn("`model:` at the scout tier", prose)
+                self.assertIn("Read `contracts/scout.md` first", prose)
 
         for text in self.codex_debugging_texts:
             investigation = text.split("### 2. Investigate Root Cause", 1)[1]
             investigation = investigation.split("**Find a working neighbor", 1)[0]
+            prose = " ".join(investigation.split())
             with self.subTest(backend="codex"):
-                self.assertIn("**/codex-contracts/scout.md", investigation)
+                self.assertIn("**/codex-contracts/scout.md", prose)
                 self.assertIn(
                     "dispatch the `scout` role using `explorer`",
-                    investigation,
+                    prose,
                 )
-                self.assertIn("Read `codex-contracts/scout.md` first", investigation)
+                self.assertIn("Read `codex-contracts/scout.md` first", prose)
 
     def test_retired_parallel_workflow_is_absent_from_active_surfaces(self) -> None:
         retired_identifiers = ("parallel-agents", "parallel_agents")

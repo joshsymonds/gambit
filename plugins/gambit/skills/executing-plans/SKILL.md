@@ -120,7 +120,11 @@ The transient per-worker worktrees of a ≥2 wave (`references/wave-dispatch.md`
 2. `SessionContextRead` → load every worker's complete self-contained brief from this root transcript or latest checkpoint. Individual worker state comes from native subagent threads and checkpoint results, never plan records.
 3. `SessionPlanWrite` → replace the complete ordered plan, preserving every other step and marking only that single wave `in_progress`. At most one wave may be in progress.
 
-**Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. Glob `**/codex-contracts/scout.md`, dispatch the `scout` role using `explorer` (see `codex-contracts/models.md`), and prompt it to Read `codex-contracts/scout.md` first, then ask your question. The scout returns `file:line` evidence or `NOT FOUND` — never a guess. This is optional per task; skip it when the brief is already clear.
+**Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. This is optional per task; skip it when the brief is already clear.
+
+Glob `**/codex-contracts/scout.md`, dispatch the `scout` role using `explorer`, and prompt it to Read `codex-contracts/scout.md` first, then ask the bounded question.
+
+The scout returns `file:line` evidence or `NOT FOUND` — never a guess.
 
 **Settle architecture before dispatching.** A worker implements; it does not decide cross-file design. If a task carries an unresolved architectural question, resolve it first — scout it, record the decision in the brief, or decompose the task — then dispatch. A design question tangled into an implementation task is what produces same-pass-TDD drift.
 

@@ -72,6 +72,8 @@ Do NOT write any code, invoke any implementation skill, or take any implementati
 
 **Research existing context first:**
 
+Resolve the absolute path to `codex-contracts/scout.md`, then dispatch the contracted `scout` class:
+
 ```
 SpawnAgent
   task_name: "scout"

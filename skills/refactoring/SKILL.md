@@ -53,6 +53,16 @@ Violating the cycle is violating the skill. "I'll test at the end" means you're 
 
 ## The Process
 
+### Test-runner executor selection
+
+Before the first test dispatch, read `contracts/executors.md` and resolve `test-runner` through
+`contracts/executors.md`; retain that selection for every test-runner call in this refactoring.
+Missing registry or a valid registry with no `test-runner` role selects native Claude and the
+tier-resolved `general-purpose` Task examples below. A configured `test-runner` role uses the
+Configured test-runner wire in `contracts/executors.md` for each example's exact command and
+current repository/worktree root. An invalid registry or configured call failure is terminal:
+report it and do not retry, repair, run the command inline, or fall back natively.
+
 ### Step 1: Verify Tests Pass
 
 **BEFORE any refactoring:**
@@ -334,7 +344,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 **This skill requires:**
 - Tests exist (use `gambit:test-driven-development` to write tests first if none exist)
 - `gambit:verification` (for final verification)
-- a test-runner-tier `general-purpose` agent (run + report, no edits — `contracts/models.md`) for running tests
+- a configured or native test-runner executor (run + report, no source edits — `contracts/executors.md` and `contracts/models.md`) for running tests
 
 **Called by:**
 - When improving code structure after features complete

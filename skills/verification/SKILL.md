@@ -106,7 +106,14 @@ Never promote a worker or wave claim to release acceptance. Verification runs th
 
 Execute the COMPLETE command for the declared validation tier. Not a partial command within that tier. Not a cached result.
 
-**For verbose output:** Dispatch a general-purpose agent:
+**For verbose output:** use the contracted test-runner.
+
+Read `contracts/executors.md` and resolve `test-runner` through `contracts/executors.md` before
+dispatch. Missing registry or a valid registry with no `test-runner` role selects native Claude
+and the tier-resolved `general-purpose` Task below. A configured `test-runner` role uses the
+Configured test-runner wire in `contracts/executors.md`, substituting the complete command and
+repository/worktree root. An invalid registry or configured call failure is terminal: report the
+failure and do not retry, repair, run the command inline, or fall back natively.
 
 ```
 Task
@@ -264,7 +271,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 - ALL skills before completion claims
 
 **This skill calls:**
-- a test-runner-tier `general-purpose` agent (run + report, no edits — `contracts/models.md`) for running verbose commands
+- the configured or native test-runner executor (run + report, no source edits — `contracts/executors.md` and `contracts/models.md`) for running verbose commands
 
 **Called by:**
 - Any skill before marking work complete

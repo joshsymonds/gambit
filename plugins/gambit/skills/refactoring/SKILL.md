@@ -65,6 +65,10 @@ Violating the cycle is violating the skill. "I'll test at the end" means you're 
 
 ## The Process
 
+### Test-runner dispatch
+
+Use the native `test-runner` class for every test dispatch below.
+
 ### Step 1: Verify Tests Pass
 
 **BEFORE any refactoring:**
@@ -342,7 +346,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 **This skill requires:**
 - Tests exist (use `gambit:test-driven-development` to write tests first if none exist)
 - `gambit:verification` (for final verification)
-- a test-runner-tier `default` agent (run + report, no edits — `codex-contracts/models.md`) for running tests
+- a configured or native test-runner executor (run + report, no source edits — `codex-contracts/executors.md` and `codex-contracts/models.md`) for running tests
 
 **Called by:**
 - When improving code structure after features complete

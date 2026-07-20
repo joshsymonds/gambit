@@ -119,7 +119,9 @@ Never promote a worker or wave claim to release acceptance. Verification runs th
 
 Execute the COMPLETE command for the declared validation tier. Not a partial command within that tier. Not a cached result.
 
-**For verbose output:** Dispatch a default agent:
+**For verbose output:** use the contracted test-runner.
+
+Dispatch the native `test-runner` class:
 
 ```
 SpawnAgent
@@ -280,7 +282,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 - ALL skills before completion claims
 
 **This skill calls:**
-- a test-runner-tier `default` agent (run + report, no edits — `codex-contracts/models.md`) for running verbose commands
+- the configured or native test-runner executor (run + report, no source edits — `codex-contracts/executors.md` and `codex-contracts/models.md`) for running verbose commands
 
 **Called by:**
 - Any skill before marking work complete

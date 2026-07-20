@@ -216,7 +216,8 @@ The ledger is immutable: closure may change only an entry's status from open to 
 
 In initial mode, implement every confirmed improvement. Confirmed gaps become fix work through the owning workflow. A suggestion may be skipped only with code evidence that the reviewer misunderstood it; record that as a verifier-calibration issue, not a new finding.
 
-After any remediation, enter closure mode. **Do not dispatch the four finders again.** Dispatch the verifier with only open ledger entries:
+After any remediation, enter closure mode. **Do not dispatch the four finders again.** Dispatch the verifier with only open ledger entries.
+
 
 ```
 SpawnAgent agent_type="verifier" task_name="close_review_ledger" message="Read <abs>/reviewers/verifier.md and follow it exactly.\n\nmode: closure\nreview_base: [revision]\nreview_snapshot: [original reviewed revision]\ncurrent_revision: [current HEAD]\n\n## Open Ledger Findings\n\n[original candidate fields for open IDs only]" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
@@ -306,7 +307,7 @@ Never create work from refuted, gap-classified-in-initial-mode, boundary-rejecte
 - `reviewers/quality.md` — language idioms, linter circumvention, test quality
 - `reviewers/performance.md` — scaling, N+1, resource management
 
-**Dispatches one verification agent at the verifier tier (`codex-contracts/models.md`), also by path:**
+**Dispatches one verifier through the configured or native verifier executor, also by path:**
 - `reviewers/verifier.md` — initial kill-or-keep classification; later bounded closure of the frozen ledger
 
 **Call chain (epic context):**

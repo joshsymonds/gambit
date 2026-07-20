@@ -1,13 +1,14 @@
 <!-- gambit-backend:claude -->
 # External executor registry
 
-Claude-backed Gambit may override the native executor for exactly four contracted classes by
+Claude-backed Gambit may override the native executor for all seven contracted execution roles by
 reading `~/.claude/gambit/executors.json`. The registry is optional. It selects an executor only;
 the class contract, authority, model tier, and workflow semantics remain unchanged.
 
-Only `steelman`, `worker`, `escalation`, and `finder` may be configured. `scout`, `test-runner`, and
-`verifier` always use native execution. A configured `worker` requires a configured `escalation` so
-the executing-plans repair ladder cannot silently change executor families at its final rung.
+All seven contracted execution roles may be configured: `steelman`, `worker`, `escalation`,
+`scout`, `finder`, `verifier`, and `test-runner`. A configured `worker` requires a configured
+`escalation` so the executing-plans repair ladder cannot silently change executor families at its
+final rung.
 
 ## Canonical schema
 
@@ -75,6 +76,62 @@ role:
         "sandbox",
         "approval_policy",
         "web_search"
+      ],
+      "additionalProperties": false
+    },
+    "scout": {
+      "type": "object",
+      "properties": {
+        "executor": { "const": "codex" },
+        "tool": {
+          "type": "string",
+          "pattern": "^mcp__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+$"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!.*[<>])\\S+$",
+          "not": {
+            "enum": [
+              "inherit",
+              "default",
+              "haiku",
+              "sonnet",
+              "opus",
+              "fable",
+              "cheap",
+              "cheap-or-standard",
+              "standard",
+              "most-capable"
+            ]
+          }
+        },
+        "reasoning_effort": {
+          "type": "string",
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+            "ultra"
+          ]
+        },
+        "sandbox": { "const": "read-only" },
+        "approval_policy": {
+          "type": "string",
+          "enum": ["untrusted", "on-request", "never"]
+        }
+      },
+      "required": [
+        "executor",
+        "tool",
+        "model",
+        "reasoning_effort",
+        "sandbox",
+        "approval_policy"
       ],
       "additionalProperties": false
     },
@@ -265,6 +322,121 @@ role:
         "web_search"
       ],
       "additionalProperties": false
+    },
+    "verifier": {
+      "type": "object",
+      "properties": {
+        "executor": { "const": "codex" },
+        "tool": {
+          "type": "string",
+          "pattern": "^mcp__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+$"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!.*[<>])\\S+$",
+          "not": {
+            "enum": [
+              "inherit",
+              "default",
+              "haiku",
+              "sonnet",
+              "opus",
+              "fable",
+              "cheap",
+              "cheap-or-standard",
+              "standard",
+              "most-capable"
+            ]
+          }
+        },
+        "reasoning_effort": {
+          "type": "string",
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+            "ultra"
+          ]
+        },
+        "sandbox": { "const": "read-only" },
+        "approval_policy": {
+          "type": "string",
+          "enum": ["untrusted", "on-request", "never"]
+        }
+      },
+      "required": [
+        "executor",
+        "tool",
+        "model",
+        "reasoning_effort",
+        "sandbox",
+        "approval_policy"
+      ],
+      "additionalProperties": false
+    },
+    "test-runner": {
+      "type": "object",
+      "properties": {
+        "executor": { "const": "codex" },
+        "tool": {
+          "type": "string",
+          "pattern": "^mcp__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+$"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!.*[<>])\\S+$",
+          "not": {
+            "enum": [
+              "inherit",
+              "default",
+              "haiku",
+              "sonnet",
+              "opus",
+              "fable",
+              "cheap",
+              "cheap-or-standard",
+              "standard",
+              "most-capable"
+            ]
+          }
+        },
+        "reasoning_effort": {
+          "type": "string",
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+            "ultra"
+          ]
+        },
+        "sandbox": {
+          "type": "string",
+          "enum": ["read-only", "workspace-write", "danger-full-access"]
+        },
+        "approval_policy": {
+          "type": "string",
+          "enum": ["untrusted", "on-request", "never"]
+        }
+      },
+      "required": [
+        "executor",
+        "tool",
+        "model",
+        "reasoning_effort",
+        "sandbox",
+        "approval_policy"
+      ],
+      "additionalProperties": false
     }
   },
   "dependentRequired": { "worker": ["escalation"] },
@@ -277,15 +449,15 @@ a concrete external-config model value, never a placeholder, inherited value, or
 alias. `reasoning_effort` accepts exactly `none`, `minimal`, `low`, `medium`, `high`, `xhigh`,
 `max`, or `ultra`; `approval_policy` accepts exactly `untrusted`, `on-request`, or `never`.
 Worker `reply_tool` names the same Codex MCP server's `codex-reply` tool, and `service_tier` is a
-concrete Codex configuration value such as `fast`. Worker and escalation `sandbox` accept exactly
-`read-only`, `workspace-write`, or `danger-full-access`. Steelman and finder require
-`web_search: "live"` and `sandbox: "read-only"`; worker and escalation forbid `web_search` through
-`additionalProperties: false`.
+concrete Codex configuration value such as `fast`. Worker, escalation, and test-runner `sandbox`
+accept exactly `read-only`, `workspace-write`, or `danger-full-access`. Steelman and finder require
+`web_search: "live"` and `sandbox: "read-only"`; scout and verifier require `sandbox:
+"read-only"`. Worker, escalation, scout, verifier, and test-runner forbid `web_search` through
+`additionalProperties: false`; their configured wires disable it explicitly.
 
 ## Validation and resolution
 
-For `scout`, `test-runner`, or `verifier`, select native execution without reading the
-registry. For `steelman`, `worker`, `escalation`, or `finder`, use this deterministic sequence:
+For every contracted execution role, use this deterministic sequence:
 
 1. Missing registry file: use native execution.
 2. JSON parse or duplicate-key failure: stop immediately. Reject duplicate JSON object keys before
@@ -315,6 +487,99 @@ Executor selection is independent of model-tier selection. Native execution reso
 tier through [models.md](models.md). Configured Codex execution uses the concrete model stored in
 this external registry. No provider-specific concrete model ID belongs in Gambit skills or
 contracts.
+
+## Configured scout wire
+
+When a workflow resolves a configured `scout`, invoke `scout.tool` exactly once with this argument
+object. The call is fresh: omit prior turns and `threadId`. Substitute only the absolute scout
+contract path, bounded question, repository root, and validated registry values:
+
+```json
+{
+  "prompt": "Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named here. Use only bounded `cat`, `sed`, `nl`, or `rg` reads before doing anything else. Read <abs>/contracts/scout.md first and follow it exactly.\n\nQuestion: <bounded investigation question>",
+  "model": "<scout.model>",
+  "cwd": "<absolute repository root>",
+  "sandbox": "read-only",
+  "approval-policy": "<scout.approval_policy>",
+  "developer-instructions": "You are a subordinate read-only scout. The only permitted local commands are bounded cat, sed, nl, or rg reads of the exact contract path and files rooted inside the assigned repository. All other commands and operations are forbidden, including network calls, tests, mutation, arbitrary absolute paths, orchestration, skills, and nested agents. Return only the contracted evidence report.",
+  "config": {
+    "model_reasoning_effort": "<scout.reasoning_effort>",
+    "web_search": "disabled",
+    "plugins.\"gambit@personal\".enabled": false,
+    "skills.include_instructions": false,
+    "orchestrator.skills.enabled": false,
+    "features.collab": false,
+    "features.multi_agent_v2.enabled": false,
+    "features.apps": false
+  }
+}
+```
+
+Require a supported response with non-empty string `threadId` and `content`; use `content` as the
+scout report and discard `threadId`. Missing fields, non-string fields, empty output, tool errors,
+or malformed responses are configured call failures. Never invoke `codex-reply`.
+
+## Configured verifier wire
+
+When review resolves a configured `verifier`, invoke `verifier.tool` exactly once per initial or
+closure pass with this argument object. Each call is fresh: omit prior turns and `threadId`.
+
+```json
+{
+  "prompt": "Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute verifier-contract path named here. Use only bounded `cat`, `sed`, `nl`, or `rg` reads before doing anything else. Read <abs>/reviewers/verifier.md first and follow it exactly.\n\nmode: <initial or closure>\n<the exact frozen revisions, boundary, and candidate or open-ledger fields required by the review workflow>",
+  "model": "<verifier.model>",
+  "cwd": "<absolute review worktree>",
+  "sandbox": "read-only",
+  "approval-policy": "<verifier.approval_policy>",
+  "developer-instructions": "You are a subordinate read-only verifier. Inspect only the supplied candidates, frozen boundary, exact verifier contract, and repository files needed to execute each verify_by step. Use only bounded cat, sed, nl, or rg reads. Do not mutate, run tests, browse the network, orchestrate, load skills, delegate, discover new review work, or add observations outside the supplied IDs. Return only the contract classifications.",
+  "config": {
+    "model_reasoning_effort": "<verifier.reasoning_effort>",
+    "web_search": "disabled",
+    "plugins.\"gambit@personal\".enabled": false,
+    "skills.include_instructions": false,
+    "orchestrator.skills.enabled": false,
+    "features.collab": false,
+    "features.multi_agent_v2.enabled": false,
+    "features.apps": false
+  }
+}
+```
+
+Require a supported response with non-empty string `threadId` and `content`; use `content` as the
+verifier result and discard `threadId`. The result must satisfy the verifier contract for every
+supplied ID. Missing or extra classifications, missing fields, non-string fields, empty output,
+tool errors, or malformed responses are configured call failures. Never invoke `codex-reply`.
+
+## Configured test-runner wire
+
+When a skill resolves a configured `test-runner`, invoke `test-runner.tool` exactly once for the
+requested command with this argument object. The call is fresh: omit prior turns and `threadId`.
+
+```json
+{
+  "prompt": "Run exactly this verification command once from the configured working directory: <complete command>. Make no source edits. Report the command, exit code, pass/fail counts when available, and the relevant failure output exactly.",
+  "model": "<test-runner.model>",
+  "cwd": "<absolute repository or worktree root>",
+  "sandbox": "<test-runner.sandbox>",
+  "approval-policy": "<test-runner.approval_policy>",
+  "developer-instructions": "You are a subordinate test runner. Run only the exact requested verification command once. Do not edit source files, repair failures, run additional commands, orchestrate, load skills, delegate, discover tasks, or expand scope. Generated build and test artifacts are permitted only when the command itself creates them. Return the exact verification result and relevant failure evidence.",
+  "config": {
+    "model_reasoning_effort": "<test-runner.reasoning_effort>",
+    "web_search": "disabled",
+    "plugins.\"gambit@personal\".enabled": false,
+    "skills.include_instructions": false,
+    "orchestrator.skills.enabled": false,
+    "features.collab": false,
+    "features.multi_agent_v2.enabled": false,
+    "features.apps": false
+  }
+}
+```
+
+Require a supported response with non-empty string `threadId` and `content`; use `content` as the
+test report and discard `threadId`. The report must state the exact command and exit code; missing
+or ambiguous command evidence, missing fields, non-string fields, empty output, tool errors, or
+malformed responses are configured call failures. Never invoke `codex-reply`.
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 # Executor registry on native Codex

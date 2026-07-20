@@ -390,27 +390,39 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         )
         self.assertIn("build a side-table keyed by `id`", step5)
 
-    def test_verifier_is_always_native_claude_and_never_resolves_an_executor(self) -> None:
+    def test_verifier_resolves_once_before_native_or_configured_dispatch(self) -> None:
         step = self.section(
             self.claude,
             "### Step 6: Dispatch Verifier Sub-Agent",
             "### Step 7: Assemble Findings From Verifier Output",
         )
-        native_rule = "The verifier always dispatches as a native Claude agent"
-        self.assertIn(native_rule, step)
-        self.assertIn("Never read the executor registry for `verifier`", step)
-        self.assertIn("never route verifier work through `finder.tool`", step)
-        self.assertLess(step.index(native_rule), step.index('Agent subagent_type="general-purpose"'))
+        prose = " ".join(step.split())
+        resolution = "Resolve `verifier` exactly once through `contracts/executors.md`"
+        self.assertEqual(1, step.count(resolution))
+        self.assertIn(
+            "Missing registry or a valid registry with no `verifier` role selects native Claude",
+            prose,
+        )
+        self.assertIn("#### Native Claude verifier dispatch", step)
+        self.assertIn("#### Configured Codex verifier dispatch", step)
+        self.assertLess(step.index(resolution), step.index("#### Native Claude verifier dispatch"))
+        self.assertLess(step.index(resolution), step.index("#### Configured Codex verifier dispatch"))
         self.assertIn("verifier tier", step)
         self.assertIn(
             "your FIRST action must be to Read it, then follow it exactly.",
             step,
         )
+        configured = step.split("#### Configured Codex verifier dispatch", 1)[1]
+        self.assertIn("Configured verifier wire", configured)
+        self.assertIn("verifier.tool", configured)
+        self.assertIn("invalid registry or configured call failure is terminal", step)
+        self.assertIn("never route verifier work through `finder.tool`", step)
 
     def test_closure_never_reruns_finders_and_preserves_the_ledger(self) -> None:
         closure = self.claude.split("### Step 8: Remediate and Close the Ledger", 1)[1]
         self.assertIn("Do not dispatch the four finders again", closure)
         self.assertIn("only open ledger entries", closure)
+        self.assertIn("reuse the verifier executor selected in Step 6", closure)
         self.assertIn("The ledger is immutable", self.claude)
         self.assertNotIn("#### Configured Codex finder dispatch", closure)
 
@@ -442,7 +454,9 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             "contracts/executors.md",
             "~/.claude/gambit/executors.json",
             "Configured Codex finder dispatch",
+            "Configured Codex verifier dispatch",
             "finder.tool",
+            "verifier.tool",
             "approval-policy",
             "developer-instructions",
             "codex-reply",

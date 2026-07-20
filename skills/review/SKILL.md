@@ -256,7 +256,7 @@ As the wrappers launch, record every handle using the complete `task_id → disp
 
 For each terminal result, require the exact envelope from `contracts/async-dispatch.md`; require that the envelope contains a non-empty string `threadId` containing no CR or LF and that the envelope's artifact path matches its stored expected artifact path exactly. Only after that match may you read only that exact-matched artifact; require a non-empty string `content`, then delete it after successful validation. The exact artifact content is that dimension's advisory reviewer report; discard its `threadId` after validation, never persist it, pass it to another call, or use it again. Feed all four advisory reports unchanged into Step 5.
 
-A terminal wrapper error, malformed envelope, artifact-path mismatch, missing or empty artifact, non-string `threadId` or `content`, tool error, protocol error, timeout, empty response, missing or empty response field, non-string field, or malformed response is a configured call failure. After satisfying the collection barrier, stop and report the complete batch outcome; never retry natively or fall back to native execution. Never call `codex-reply`. Configured Codex output otherwise receives the same frozen-boundary filtering, byte-identical deduplication, candidate side-table handling, and native verifier adjudication as native output.
+A terminal wrapper error, malformed envelope, artifact-path mismatch, missing or empty artifact, non-string `threadId` or `content`, tool error, protocol error, timeout, empty response, missing or empty response field, non-string field, or malformed response is a configured call failure. After satisfying the collection barrier, stop and report the complete batch outcome; never retry natively or fall back to native execution. Never call `codex-reply`. Configured Codex output otherwise receives the same frozen-boundary filtering, byte-identical deduplication, candidate side-table handling, and selected-verifier adjudication as native output.
 
 Each reviewer will:
 - Read the changed files independently
@@ -283,13 +283,33 @@ The deduped list and frozen boundary go to the verifier in Step 6.
 
 ### Step 6: Dispatch Verifier Sub-Agent
 
-The verifier always dispatches as a native Claude agent at the verifier tier. Never read the executor registry for `verifier`, and never route verifier work through `finder.tool`, even when the four finder reports came from configured Codex calls.
+Resolve `verifier` exactly once through `contracts/executors.md` before dispatch and retain the
+selected executor for closure. Missing registry or a valid registry with no `verifier` role selects
+native Claude. A configured role selects configured Codex independently of the finder executor;
+never route verifier work through `finder.tool`. An invalid registry or configured call failure is
+terminal: stop and report it without native retry or fallback.
 
-Dispatch ONE `general-purpose` agent at the **verifier tier** (`model:` per `contracts/models.md` — default most-capable; a cheap verifier is forbidden for code/security review, where verifying a subtle finding is as hard as finding it). As with the reviewers, **pass the path — do NOT read `verifier.md` into this context.** The candidate list IS passed inline (it's dynamic):
+#### Native Claude verifier dispatch
+
+When native Claude is selected, dispatch ONE `general-purpose` agent at the **verifier tier**
+(`model:` per `contracts/models.md` — default most-capable; a cheap verifier is forbidden for
+code/security review, where verifying a subtle finding is as hard as finding it). As with the
+reviewers, **pass the path — do NOT read `verifier.md` into this context.** The candidate list IS
+passed inline (it's dynamic):
 
 ```
 Agent subagent_type="general-purpose" model="<verifier tier — see contracts/models.md>" description="Verify candidates" prompt="Read <abs>/reviewers/verifier.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\nmode: initial\nreview_base: [revision]\nreview_snapshot: [revision]\n\n## Candidate Findings\n\n[deduped list with ids]"
 ```
+
+#### Configured Codex verifier dispatch
+
+When configured Codex is selected, invoke `verifier.tool` once using the Configured verifier wire
+in `contracts/executors.md`. Supply the same absolute verifier path, `mode: initial`, frozen
+`review_base`, `review_snapshot`, review boundary, and deduped candidate fields byte-for-byte. Use
+the returned `content` as the verifier report and retain only the selected executor identity for
+closure; discard the fresh `threadId`. An invalid registry or configured call failure is terminal,
+including malformed output or a missing, extra, or incomplete candidate classification.
+
 
 **Do NOT include reviewer severity, category (Gap vs. Improvement), or reasoning chain in the candidate list.** The verifier receives the mode, frozen revisions, and only `id`, `path`, `line_range`, `body`, `verify_by` per candidate. Fresh context prevents anchoring. Retain stripped fields in the Step 5 side-table.
 
@@ -329,7 +349,14 @@ The ledger is immutable: closure may change only an entry's status from open to 
 
 In initial mode, implement every confirmed improvement. Confirmed gaps become fix work through the owning workflow. A suggestion may be skipped only with code evidence that the reviewer misunderstood it; record that as a verifier-calibration issue, not a new finding.
 
-After any remediation, enter closure mode. **Do not dispatch the four finders again.** Dispatch the verifier with only open ledger entries:
+After any remediation, enter closure mode. **Do not dispatch the four finders again.** Dispatch the verifier with only open ledger entries.
+
+During closure, reuse the verifier executor selected in Step 6; do not reread the registry or switch executor
+families during closure. Native Claude uses the contracted Agent call below. Configured Codex uses
+another fresh `verifier.tool` call through the Configured verifier wire, with `mode: closure`, the
+original frozen revisions and boundary, `current_revision`, and only the original fields for open
+ledger IDs. Require one complete classification per supplied open ID; a configured failure remains
+fail-closed. Never call `codex-reply`.
 
 ```
 Agent subagent_type="general-purpose" model="<verifier tier — see contracts/models.md>" description="Close review ledger" prompt="Read <abs>/reviewers/verifier.md and follow it exactly.\n\nmode: closure\nreview_base: [revision]\nreview_snapshot: [original reviewed revision]\ncurrent_revision: [current HEAD]\n\n## Open Ledger Findings\n\n[original candidate fields for open IDs only]"
@@ -419,7 +446,7 @@ Never create work from refuted, gap-classified-in-initial-mode, boundary-rejecte
 - `reviewers/quality.md` — language idioms, linter circumvention, test quality
 - `reviewers/performance.md` — scaling, N+1, resource management
 
-**Dispatches one verification agent at the verifier tier (`contracts/models.md`), also by path:**
+**Dispatches one verifier through the configured or native verifier executor, also by path:**
 - `reviewers/verifier.md` — initial kill-or-keep classification; later bounded closure of the frozen ledger
 
 **Call chain (epic context):**

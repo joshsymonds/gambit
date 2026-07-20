@@ -83,12 +83,31 @@ Do NOT write any code, invoke any implementation skill, or take any implementati
 
 **Research existing context first:**
 
+<!-- gambit-backend:claude -->
+Resolve the absolute paths to `contracts/scout.md` and `contracts/executors.md`, then resolve
+`scout` through `contracts/executors.md` before dispatch. Missing registry or a valid registry with
+no `scout` role selects native Claude and the contracted `Explore` dispatch below. A configured
+`scout` role uses the Configured scout wire in `contracts/executors.md`, with the bounded pattern
+question and repository root substituted exactly. An invalid registry or configured call failure
+is terminal: report it and do not retry or fall back natively.
+
 ```
 Task
   subagent_type: "Explore"          # the read-only scout class
   model: "<scout tier — default cheap-or-standard; contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
   prompt: "Read <abs>/contracts/scout.md first (your binding scout contract), then: Find existing [relevant] implementation patterns in this codebase. Report with file:line evidence; say NOT FOUND if absent."
 ```
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+Resolve the absolute path to `contracts/scout.md`, then dispatch the contracted `scout` class:
+
+```
+Task
+  subagent_type: "Explore"
+  model: "<scout tier — default cheap-or-standard; contracts/models.md>"
+  prompt: "Read <abs>/contracts/scout.md first (your binding scout contract), then: Find existing [relevant] implementation patterns in this codebase. Report with file:line evidence; say NOT FOUND if absent."
+```
+<!-- /gambit-backend -->
 
 **Check scope before refining.** If the request spans multiple independent subsystems (e.g., "a platform with chat, billing, and analytics"), STOP and decompose before asking detail questions — don't refine something that should be several epics. Identify the independent pieces, how they relate, and what order to build them. Then brainstorm the FIRST piece through the normal flow; each piece gets its own epic → tasks cycle. Refining an over-large project wastes questions and produces a brittle epic.
 

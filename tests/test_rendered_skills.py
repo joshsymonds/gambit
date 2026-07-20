@@ -390,7 +390,15 @@ class RenderedSkillsTest(unittest.TestCase):
         source = " ".join(source_text.split())
 
         self.assertEqual(
-            {"steelman", "worker", "finder", "escalation"},
+            {
+                "steelman",
+                "worker",
+                "scout",
+                "finder",
+                "verifier",
+                "test-runner",
+                "escalation",
+            },
             set(schema["properties"]),
         )
         self.assertEqual("object", schema["type"])
@@ -407,6 +415,9 @@ class RenderedSkillsTest(unittest.TestCase):
         expected_keys = {
             "worker": worker_keys | {"reply_tool", "service_tier"},
             "escalation": worker_keys,
+            "scout": worker_keys,
+            "verifier": worker_keys,
+            "test-runner": worker_keys,
             "steelman": worker_keys | {"web_search"},
             "finder": worker_keys | {"web_search"},
         }
@@ -428,7 +439,7 @@ class RenderedSkillsTest(unittest.TestCase):
                 )
                 for field in string_fields:
                     self.assertEqual("string", entry["properties"][field]["type"])
-                if role in ("worker", "escalation"):
+                if role in ("worker", "escalation", "test-runner"):
                     self.assertEqual(
                         "string", entry["properties"]["sandbox"]["type"]
                     )
@@ -440,10 +451,16 @@ class RenderedSkillsTest(unittest.TestCase):
             self.assertEqual("live", entry["properties"]["web_search"]["const"])
             self.assertIn("web_search", entry["required"])
 
-        self.assertNotIn("web_search", schema["properties"]["worker"]["properties"])
-        self.assertNotIn(
-            "web_search", schema["properties"]["escalation"]["properties"]
-        )
+        for role in ("scout", "verifier"):
+            entry = schema["properties"][role]
+            self.assertEqual(
+                "read-only", entry["properties"]["sandbox"]["const"]
+            )
+
+        for role in ("worker", "escalation", "scout", "verifier", "test-runner"):
+            self.assertNotIn(
+                "web_search", schema["properties"][role]["properties"]
+            )
         self.assertRegex(
             "mcp__codex__codex-reply",
             schema["properties"]["worker"]["properties"]["reply_tool"]["pattern"],
@@ -488,7 +505,14 @@ class RenderedSkillsTest(unittest.TestCase):
 
         for required in (
             "~/.claude/gambit/executors.json",
-            "For `scout`, `test-runner`, or `verifier`, select native execution without reading the registry",
+            "All seven contracted execution roles may be configured",
+            "Configured scout wire",
+            '"model_reasoning_effort": "<scout.reasoning_effort>"',
+            "Configured verifier wire",
+            '"model_reasoning_effort": "<verifier.reasoning_effort>"',
+            "Configured test-runner wire",
+            '"model_reasoning_effort": "<test-runner.reasoning_effort>"',
+            '"web_search": "disabled"',
             "Reject duplicate JSON object keys before schema validation",
             "Unknown roles, unknown fields, missing fields, and invalid values invalidate the entire registry",
             "split `worker.tool` and `worker.reply_tool` at their final `__`",
@@ -637,7 +661,8 @@ class RenderedSkillsTest(unittest.TestCase):
         for coverage in (
             "`tests/test_brainstorming_steelman.py` covers Steelman executor resolution and call wiring",
             "`tests/test_executing_plans_executors.py` covers worker and checkpoint-finder routing",
-            "`tests/test_review_executors.py` covers review-finder routing and the native verifier boundary",
+            "`tests/test_review_executors.py` covers finder and verifier routing",
+            "`tests/test_workflow_routing.py` covers scout and test-runner routing",
         ):
             self.assertIn(coverage, normalized)
 

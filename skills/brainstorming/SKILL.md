@@ -61,6 +61,13 @@ Do NOT write any code, invoke any implementation skill, or take any implementati
 
 **Research existing context first:**
 
+Resolve the absolute paths to `contracts/scout.md` and `contracts/executors.md`, then resolve
+`scout` through `contracts/executors.md` before dispatch. Missing registry or a valid registry with
+no `scout` role selects native Claude and the contracted `Explore` dispatch below. A configured
+`scout` role uses the Configured scout wire in `contracts/executors.md`, with the bounded pattern
+question and repository root substituted exactly. An invalid registry or configured call failure
+is terminal: report it and do not retry or fall back natively.
+
 ```
 Task
   subagent_type: "Explore"          # the read-only scout class
