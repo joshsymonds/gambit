@@ -213,67 +213,20 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
 **Resolve the contract path once.** Glob `**/contracts/worker.md` at the start of the epic to get its absolute path and pass that path to the worker — **do NOT Read `worker.md` into your own context**, and **do NOT hardcode or reuse a stale absolute path from an earlier session** (plugin store paths change; re-Glob). The worker reads it in its fresh context (exactly as the `review` skill passes `reviewers/*.md` by path); reading it yourself loads ~1.4k tokens into the long-lived orchestrator context on every epic, for nothing. The worker re-reads it on every dispatch, including retries — keep `worker.md` lean.
 
 <!-- gambit-backend:claude -->
-1. **Resolve the worker executor.** Before every initial worker dispatch and every retry except the native needs-more-reasoning escalation defined in step 3, resolve `worker` through `contracts/executors.md` using its complete validation and resolution sequence.
+1. **Resolve the worker executor.** Before initial dispatch, resolve `worker` through `contracts/executors.md` using its complete validation and resolution sequence.
    - **Missing registry file or valid registry with no `worker` role** → preserve native Claude dispatch. Resolve the worker model by tier through `contracts/models.md`: default `worker → standard`, with `~/.claude/gambit/models.json` overrides and `escalation` for a re-dispatch. **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — native resolution is config/alias only.
    - **Invalid registry** → stop and report the registry error without dispatching.
-   - **Configured Codex** → use only the configured call below. Any configured Codex call failure stops and is reported; do not retry through native Claude.
+   - **Configured Codex** → read **`references/configured-workers.md`** completely and follow its fixed external ladder. Its validated `worker` and required `escalation` entries own every implementation and repair rung. Any configured transport or protocol failure stops and is reported; do not retry through native Claude.
 
 2. **Dispatch the wave** — emit every native worker or all configured worker wrapper launches together in one message so a ≥2 wave runs concurrently.
 
-   **Native Claude:** preserve the current Agent path and explicit tier resolution:
+   **Native Claude:** preserve the Agent path and explicit tier resolution. The prompt starts with the absolute worker-contract directive, then contains the complete constructed brief and its exact `## Files owned`, `## Hidden shared surfaces`, `## Context`, and `## Neighbors`; the focused command, exact worktree and branch, and correct wave base; never session history:
    ```
    Agent subagent_type="general-purpose" model="<resolved worker model>" description="Implement: <task subject>"
-     prompt="Read <abs>/contracts/worker.md — that file is your binding worker contract; your FIRST action must be to Read it, then follow it exactly.
-
-     ## Task
-     <constructed from the task's Goal + Implementation + Success Criteria, exact values verbatim — never paste session history>
-
-     ## Files owned
-     <exact repository-relative path allowlist, including every new/untracked/binary artifact, deletion, mode change, and symlink>
-
-     ## Hidden shared surfaces
-     <lockfiles, generated indexes, registries, snapshots, and other implicit collision surfaces checked; `None` only after checking>
-
-     ## Context
-     <where this task fits + any cross-task interfaces/decisions the brief can't know>
-
-     ## Neighbors
-     <for each concurrent task: its subject + exact Files owned allowlist, all off-limits; or `None (single-task wave)`>
-
-     Test command: <the task's focused worker command>.
-     Workspace: <the worker's own worktree path> on branch <branch>; baseline is <the wave's fork-point SHA — the prior task's commit for a single-task wave, or the shared wave-start HEAD for a ≥2 wave>."
+     prompt="Read <abs>/contracts/worker.md first and follow it exactly. <complete constructed brief and dispatch fields described above>"
    ```
 
-   **Configured Codex:** Configured Codex workers are fresh calls. Dispatch each call through the anonymous-wrapper mechanics in **`contracts/async-dispatch.md`**; never invoke `worker.tool` synchronously in the orchestrator context. The wrapper receives the fully qualified `worker.tool` name, the complete wire arguments below as one opaque JSON object, and the generated artifact path. Map registry snake-case `approval_policy` to `approval-policy` and put `reasoning_effort` in `config.model_reasoning_effort`:
-   ```json
-   {
-     "prompt": "Read <absolute worker contract path> — that file is your binding worker contract; your FIRST action must be to read it, then follow it exactly.\n\n## Task\n<complete constructed brief from Goal + Implementation + Success Criteria, with exact values verbatim>\n\n## Files owned\n<exact task allowlist, including every untracked/binary artifact, deletion, mode change, and symlink>\n\n## Hidden shared surfaces\n<exact checked hidden surfaces>\n\n## Context\n<where this task fits and the cross-task interfaces or decisions it needs>\n\n## Neighbors\n<exact subjects and owned-file allowlists for every concurrent neighbor, or None for a single-task wave>\n\nEpic requirements and Quality Bar needed by this brief: <verbatim relevant requirements and Quality Bar>\nTest command: <the task's focused test command>\nWorkspace: <the task's exact worker worktree path>; shared base: <prior commit for a single task or shared wave-start base for a parallel wave>\nReturn exactly one worker status under the four-state return requirement: DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, or BLOCKED.",
-     "model": "<worker.model>",
-     "cwd": "<the task's exact worker worktree path>",
-     "sandbox": "<worker.sandbox>",
-     "approval-policy": "<worker.approval_policy>",
-     "developer-instructions": "You are a subordinate worker assigned exactly one implementation brief. Do not perform orchestration, skill loading, nested agents, task discovery, scope expansion, commits, merges, worktree creation, plan mutation, or task assignment. Do not discover or adopt more work. Edit only owned files and return one required worker status.",
-     "config": {
-       "model_reasoning_effort": "<worker.reasoning_effort>",
-       "web_search": "disabled",
-       "plugins.\"gambit@personal\".enabled": false,
-       "skills.include_instructions": false,
-       "orchestrator.skills.enabled": false,
-       "features.collab": false,
-       "features.multi_agent_v2.enabled": false
-     }
-   }
-   ```
-
-   Thus every configured call applies `web_search = "disabled"`, `plugins."gambit@personal".enabled = false`, `skills.include_instructions = false`, `orchestrator.skills.enabled = false`, `features.collab = false`, and `features.multi_agent_v2.enabled = false`.
-
-   The configured prompt contains only the absolute worker contract path, the complete constructed brief, exact `## Files owned`, `## Hidden shared surfaces`, and `## Neighbors`, task context, epic requirements and Quality Bar needed by this brief, the exact worktree, shared wave-start base, focused test command, and four-state return requirement. Never paste session history. Use the task's exact worktree as `cwd`; isolation and `integrate_wave.py` stay unchanged.
-
-   Before launching the batch, expand `~/.claude/gambit/async-results/` to an absolute path, ensure the directory exists, and generate one collision-resistant unique artifact path per worker. Stop before any launch if preparation fails. Launch one anonymous background `Agent` wrapper per worker at the wrapper tier, using `Agent subagent_type="gambit:gambit-wrapper"`; never pass `name:`, and give it a unique `description` identifying the executing-plans worker site and task. Give each wrapper only the exact relay prompt from `contracts/async-dispatch.md`, substituting the fully qualified MCP tool name, that worker's one opaque JSON object, and its expected artifact path. Prepare each mapping before launch and record the complete handle mapping (`task_id → dispatch site → task/dimension → worktree → expected artifact path`) as the handles return. Emit all configured worker wrapper launches together in one message.
-
-   After launch, perform the mandated overlap work: scout and brief the next wave rather than idling. Then collect each wrapper with repeated bounded `TaskOutput block=true` calls on its recorded handle. A nonterminal timeout means continue waiting on that same handle; it is neither failure nor permission to retry. Never send messages to a wrapper. Apply the collection barrier from `contracts/async-dispatch.md`: drain and validate every launched handle before judging the batch, even after one sibling fails.
-
-   Validate the wrapper's exact three-line terminal envelope before touching its artifact. Only after the returned artifact path matches the stored expected artifact path exactly may you read that path; delete it after successful validation. Require the MCP response to have a non-empty string `threadId` containing no CR or LF and a non-empty string `content`; validate the worker status only in `content` read from that exact-matched artifact. Only content containing exactly one worker status advances into step 3; that status must be exactly one of `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, or `BLOCKED`. Count total worker-status markers, not distinct values: repeating the same status is multi-status failure too. Empty, malformed, missing-status, multi-status, tool, protocol, or timeout failure is a configured failure: stop and report the complete batch outcome without native fallback. Here timeout failure means a terminal wrapper or MCP failure, not a nonterminal bounded `TaskOutput` timeout. Ignore the validated `threadId`; configured calls are fresh and have no thread persistence. Never use `codex-reply`, cancel, retry, or fall back to native Claude.
+   **Configured Codex:** use `references/configured-workers.md` for the exact initial wire, per-call fast service tier, retained `threadId`, one informed `worker.reply_tool` continuation, fresh `escalation.tool` call, async wrapper lifecycle, validation, and failure routing. Emit every ready wrapper in each rung together so a wave remains concurrent. Worktree isolation and `integrate_wave.py` are unchanged.
 
    Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 <!-- /gambit-backend -->
@@ -307,7 +260,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
 <!-- /gambit-backend -->
 
 <!-- gambit-backend:claude -->
-3. **Route on the worker's returned status** (the contract defines four). **Never retry the same model on the same unchanged task** — something must change. The retry ceiling is one implementation attempt plus at most two repair attempts for the same defect. If the second repair fails, or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user:
+3. **Route on the worker's returned status** (the contract defines four). If configured Codex was selected, follow the fixed status routing and exact ceiling in `references/configured-workers.md` and skip the native rules below. For native Claude, never retry the same model on the same unchanged task—something must change. The retry ceiling is one implementation attempt plus at most two repair attempts for the same defect. If the second repair fails, or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user:
    - **DONE** → single-task wave: verify with FRESH evidence by running its focused worker command. Wave of ≥2: confirm the worker's isolated RED/GREEN evidence and rerun only a missing worker-scoped check; the declared wave/component gate belongs to the combined manifest and runs exactly once. Then run the **Checkpoint quality gate** (below) on that worker's complete change set before proceeding.
    - **DONE_WITH_CONCERNS** → read the concern. Correctness or scope → resolve it (refine + re-dispatch, or fix directly) before accepting; treat it as an escalation trigger in the quality gate (below). Benign observation → note it and verify as DONE. **A "bigger behavior change than the brief implied" flag usually means the brief was wrong, not the worker** — re-read the requirement the worker cites and fix the brief, don't wave the flag through because the worker followed instructions literally. A worker's scope-surprise is often your spec catching itself.
    - **NEEDS_CONTEXT** → supply the missing values/decisions and re-dispatch with them added.
@@ -480,7 +433,8 @@ Agent subagent_type="general-purpose" model="<finder tier — see contracts/mode
 
 This solo dispatch has no verifier behind it (unlike the end-of-epic review, which pairs reviewers with a dedicated verifier) — so YOU are the adjudicator the quality reviewer's contract assumes downstream. Before acting on any finding it returns, confirm it yourself by reading the `file:line` its `Verify by:` cites; drop any finding you cannot confirm. Then act on the confirmed findings exactly as above.
 <!-- gambit-backend:claude -->
-A confirmed defect routes to a fresh worker; clean proceeds.
+A confirmed defect consumes the next configured ladder rung when configured Codex was selected;
+otherwise it routes to a fresh native worker. Clean proceeds.
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 A confirmed defect consumes the next unused worker-ladder rung; clean proceeds.

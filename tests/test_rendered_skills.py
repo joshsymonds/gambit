@@ -338,8 +338,14 @@ class RenderedSkillsTest(unittest.TestCase):
         executing_plans = (
             CLAUDE_SKILLS / "executing-plans" / "SKILL.md"
         ).read_text(encoding="utf-8")
+        configured_workers = (
+            CLAUDE_SKILLS
+            / "executing-plans"
+            / "references"
+            / "configured-workers.md"
+        ).read_text(encoding="utf-8")
         self.assertEqual(
-            executing_plans.count(
+            (executing_plans + configured_workers).count(
                 "non-empty string `threadId` containing no CR or LF"
             ),
             2,
@@ -384,7 +390,7 @@ class RenderedSkillsTest(unittest.TestCase):
         source = " ".join(source_text.split())
 
         self.assertEqual(
-            {"steelman", "worker", "finder"},
+            {"steelman", "worker", "finder", "escalation"},
             set(schema["properties"]),
         )
         self.assertEqual("object", schema["type"])
@@ -399,7 +405,8 @@ class RenderedSkillsTest(unittest.TestCase):
             "approval_policy",
         }
         expected_keys = {
-            "worker": worker_keys,
+            "worker": worker_keys | {"reply_tool", "service_tier"},
+            "escalation": worker_keys,
             "steelman": worker_keys | {"web_search"},
             "finder": worker_keys | {"web_search"},
         }
@@ -421,7 +428,7 @@ class RenderedSkillsTest(unittest.TestCase):
                 )
                 for field in string_fields:
                     self.assertEqual("string", entry["properties"][field]["type"])
-                if role == "worker":
+                if role in ("worker", "escalation"):
                     self.assertEqual(
                         "string", entry["properties"]["sandbox"]["type"]
                     )
@@ -434,6 +441,16 @@ class RenderedSkillsTest(unittest.TestCase):
             self.assertIn("web_search", entry["required"])
 
         self.assertNotIn("web_search", schema["properties"]["worker"]["properties"])
+        self.assertNotIn(
+            "web_search", schema["properties"]["escalation"]["properties"]
+        )
+        self.assertRegex(
+            "mcp__codex__codex-reply",
+            schema["properties"]["worker"]["properties"]["reply_tool"]["pattern"],
+        )
+        self.assertEqual(
+            {"worker": ["escalation"]}, schema.get("dependentRequired")
+        )
 
         resolution_match = re.search(
             r"use this deterministic sequence:\n\n(?P<steps>.*?)(?:\n\nNever infer)",
@@ -471,7 +488,7 @@ class RenderedSkillsTest(unittest.TestCase):
 
         for required in (
             "~/.claude/gambit/executors.json",
-            "For `scout`, `test-runner`, `escalation`, or `verifier`, select native execution without reading the registry",
+            "For `scout`, `test-runner`, or `verifier`, select native execution without reading the registry",
             "Reject duplicate JSON object keys before schema validation",
             "Unknown roles, unknown fields, missing fields, and invalid values invalidate the entire registry",
             "Missing registry file: use native execution",
@@ -589,6 +606,15 @@ class RenderedSkillsTest(unittest.TestCase):
         for value in invalid_values:
             with self.subTest(field="worker.sandbox", rejected=value):
                 self.assertNotIn(value, worker_sandbox["enum"])
+
+        service_tier = schema["properties"]["worker"]["properties"][
+            "service_tier"
+        ]
+        self.assertEqual("string", service_tier["type"])
+        self.assertRegex("fast", service_tier["pattern"])
+        for value in ("", "<service-tier>", "external service tier"):
+            with self.subTest(field="worker.service_tier", rejected=value):
+                self.assertIsNone(re.search(service_tier["pattern"], value))
 
         normalized = " ".join(source_text.split())
         for accepted_values in allowed_values.values():

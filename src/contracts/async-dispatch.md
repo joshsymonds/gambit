@@ -105,8 +105,10 @@ Treat any of the following as the dispatching site's existing configured-call fa
 wrapper error; a malformed envelope; an envelope artifact-path mismatch; a missing or empty
 artifact; a non-string `threadId` or `content`; a `threadId` containing CR (`\r`) or LF (`\n`); or an
 MCP tool, protocol, or timeout failure inside the wrapper. Stop the site, report the failure, and
-fail closed. Do not fall back to native execution, automatically retry the wrapper, or invoke
-`codex-reply`.
+fail closed. Do not fall back to native execution or automatically retry the wrapper. Never invoke
+`codex-reply` as transport recovery. A dispatch site may name a configured reply tool only when its
+own workflow explicitly requires one semantic continuation using a previously validated thread ID;
+that continuation is a new wrapper dispatch, not a retry of a failed wrapper.
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 # Async configured-executor dispatch on native Codex

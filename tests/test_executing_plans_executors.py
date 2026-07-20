@@ -36,15 +36,16 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         cls.codex = (codex_skills / "executing-plans" / "SKILL.md").read_text(
             encoding="utf-8"
         )
+        cls.configured_worker = (
+            claude_skills
+            / "executing-plans"
+            / "references"
+            / "configured-workers.md"
+        ).read_text(encoding="utf-8")
         cls.worker_dispatch = bounded_section(
             cls.claude,
             "**Dispatch the wave to workers:**",
             "3. **Route on the worker's returned status**",
-        )
-        cls.configured_worker = bounded_section(
-            cls.worker_dispatch,
-            "**Configured Codex:** Configured Codex workers are fresh calls.",
-            "Pass the contract by path and the task as **constructed text**",
         )
         cls.worker_wire = code_fence(cls.configured_worker, "json")
         cls.claude_status_routing = bounded_section(
@@ -82,10 +83,11 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         self.assertContainsAll(
             self.worker_dispatch,
             (
-                "Before every initial worker dispatch and every retry except the native needs-more-reasoning escalation defined in step 3",
+                "Before initial dispatch, resolve `worker`",
                 "Missing registry file or valid registry with no `worker` role",
                 "Invalid registry",
-                "configured Codex call failure",
+                "`references/configured-workers.md`",
+                "configured transport or protocol failure",
                 "do not retry through native Claude",
                 "Resolve the worker model by tier",
                 'Agent subagent_type="general-purpose" model="<resolved worker model>"',
@@ -101,7 +103,7 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
             self.worker_wire,
             (
                 '"model": "<worker.model>"',
-                '"cwd": "<the task\'s exact worker worktree path>"',
+                '"cwd": "<exact worker worktree>"',
                 '"sandbox": "<worker.sandbox>"',
                 '"approval-policy": "<worker.approval_policy>"',
                 '"model_reasoning_effort": "<worker.reasoning_effort>"',
@@ -112,14 +114,13 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
                 '"features.multi_agent_v2.enabled": false',
                 '"developer-instructions"',
                 "subordinate worker",
-                "orchestration, skill loading, nested agents, task discovery, scope expansion",
-                "commits, merges, worktree creation, plan mutation, or task assignment",
+                "Do not orchestrate, load skills, use nested agents, discover tasks, expand scope",
+                "commit, merge, create worktrees, mutate plans, or assign work",
             ),
         )
 
     def test_f05_configured_worker_explicitly_disables_web_search(self) -> None:
         self.assertIn('"web_search": "disabled"', self.worker_wire)
-        self.assertIn('`web_search = "disabled"`', self.configured_worker)
         self.assertNotIn("worker.web_search", self.configured_worker)
 
     def test_configured_worker_uses_async_wrapper_artifact_collection(self) -> None:
@@ -127,27 +128,23 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
             self.configured_worker,
             (
                 "`contracts/async-dispatch.md`",
-                "anonymous background `Agent` wrapper",
-                "never pass `name:`",
-                "executing-plans worker site and task",
-                "fully qualified `worker.tool` name",
-                "one opaque JSON object",
+                "new anonymous `gambit:gambit-wrapper` Agent",
+                "opaque argument object",
                 "`~/.claude/gambit/async-results/`",
-                "one collision-resistant unique artifact path per worker",
-                "record the complete handle mapping",
-                "scout and brief the next wave",
+                "one collision-resistant artifact path per call",
+                "record the complete handle",
+                "do useful overlap work",
                 "`TaskOutput block=true`",
-                "nonterminal timeout means continue waiting",
-                "drain and validate every launched handle before judging the batch",
-                "matches the stored expected artifact path exactly",
-                "read from that exact-matched artifact",
+                "nonterminal wait timeout as failure",
+                "drain the whole batch before judgment",
+                "exact artifact-path match",
             ),
         )
         self.assertIn(
-            "all configured worker wrapper launches together in one message",
+            "Emit every ready wrapper in each rung together",
             self.worker_dispatch,
         )
-        self.assertIn('Agent subagent_type="gambit:gambit-wrapper"', self.configured_worker)
+        self.assertIn("`gambit:gambit-wrapper` Agent", self.configured_worker)
         self.assertNotIn(
             'Agent subagent_type="general-purpose"', self.configured_worker
         )
@@ -183,21 +180,35 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         self.assertContainsAll(
             self.configured_worker,
             (
-                "Configured Codex workers are fresh calls",
-                "Never paste session history",
+                "never session history",
                 "absolute worker contract path",
-                "exact `## Files owned`, `## Hidden shared surfaces`, and `## Neighbors`",
-                "epic requirements and Quality Bar needed by this brief",
-                "shared wave-start base",
-                "focused test command",
-                "four-state return requirement",
+                "## Files owned",
+                "## Hidden shared surfaces",
+                "## Neighbors",
+                "Epic requirements and Quality Bar needed by this brief",
+                "wave-start base",
+                "focused command",
                 "non-empty string `threadId` containing no CR or LF",
-                "exactly one of `DONE`, `DONE_WITH_CONCERNS`, `NEEDS_CONTEXT`, or `BLOCKED`",
-                "Empty, malformed, missing-status, multi-status, tool, protocol, or timeout failure",
-                "Ignore the validated `threadId`",
-                "Never use `codex-reply`",
+                "Require exactly one worker status in `content`",
+                "Empty, malformed, missing-status, multi-status, terminal timeout, tool, or protocol",
             ),
         )
+
+    def test_configured_worker_reuses_thread_then_fresh_escalation(self) -> None:
+        configured = self.configured_worker
+
+        initial = configured.index("worker.tool")
+        reply = configured.index("worker.reply_tool")
+        escalation = configured.index("escalation.tool")
+        self.assertLess(initial, reply)
+        self.assertLess(reply, escalation)
+        self.assertIn('"service_tier": "<worker.service_tier>"', configured)
+        self.assertIn('"threadId": "<validated initial worker threadId>"', configured)
+        self.assertIn('"model": "<escalation.model>"', configured)
+        self.assertIn('"model_reasoning_effort": "<escalation.reasoning_effort>"', configured)
+        self.assertIn("exactly one informed same-thread repair", configured.lower())
+        self.assertIn("second and final repair attempt", configured)
+        self.assertNotIn("Ignore the validated `threadId`", configured)
 
     def test_checkpoint_finder_resolves_registry_and_remains_advisory(self) -> None:
         self.assertContainsAll(

@@ -4,7 +4,7 @@
 
 The executor and steelman contracts and their wired workflow routing have structural regression
 coverage. `tests/test_rendered_skills.py` parses the executor registry schema, proves that only
-steelman, worker, and finder are configurable, checks every required and role-specific field, and
+steelman, worker, escalation, and finder are configurable, checks every required and role-specific field, and
 locks the missing/invalid/failure resolution rules. `tests/test_brainstorming_steelman.py` covers
 Steelman executor resolution and call wiring; `tests/test_executing_plans_executors.py` covers
 worker and checkpoint-finder routing; and `tests/test_review_executors.py` covers review-finder

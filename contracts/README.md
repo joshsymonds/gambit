@@ -5,7 +5,7 @@ bare `general-purpose` agent improvised without one. When a skill needs a subage
 one of these classes, passes the class contract by path, and sets an explicit `model:` at the
 class's tier (see [models.md](models.md)).
 
-For the three externally executable classes, [executors.md](executors.md) defines executor
+For the four externally executable classes, [executors.md](executors.md) defines executor
 selection independently from class and model-tier selection. A selected executor never changes
 the class contract or its authority.
 
