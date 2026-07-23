@@ -76,9 +76,9 @@ Draft for user review as "Epic: [Feature Name]":
       retire no success criterion or named blocker, or when remaining work grows at both
       checkpoints. Report the evidence and require explicit user approval before changing scope,
       architecture, or the delivery budget.
-    - Repair ceiling: one implementation attempt plus at most two repair attempts for the same
-      defect. If the second repair fails, or the same defect recurs at a later checkpoint, STOP and
-      revisit the architecture or worker brief with the user.
+    - Repair ladder: one implementation attempt, one informed repair, one fresh escalation, then
+      terminal escalation attempts repeated with updated evidence until the defect clears. A
+      defect recurring at a later checkpoint re-enters at the terminal escalation rung.
     - Scope growth: every newly discovered worker must map to an immutable requirement, an open
       review-ledger finding, or a failing declared validation gate. Anything else is proposed scope,
       not automatically authorized work.

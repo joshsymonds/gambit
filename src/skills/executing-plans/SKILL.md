@@ -146,7 +146,7 @@ Before executing ANY wave, use `SessionContextRead` to reread the complete appro
 
 **Why:** Requirements prevent rationalizing shortcuts when implementation gets hard.
 
-For a legacy epic that lacks Delivery Constraints or Validation Strategy, do not guess silently. Before implementation, propose the conservative defaults from this skill — the two-checkpoint convergence circuit breaker, one implementation attempt plus at most two repair attempts, focused and wave/component commands from repository policy, and one fresh release acceptance run after architecture/scope preflight — then obtain explicit user approval. This records delivery policy without changing immutable product requirements.
+For a legacy epic that lacks Delivery Constraints or Validation Strategy, do not guess silently. Before implementation, propose the conservative defaults from this skill — the two-checkpoint convergence circuit breaker, the repair ladder ending in terminal escalation attempts repeated with updated evidence, focused and wave/component commands from repository policy, and one fresh release acceptance run after architecture/scope preflight — then obtain explicit user approval. This records delivery policy without changing immutable product requirements.
 
 **Enter the epic worktree.** All epic work happens in a worktree — never directly on main. Working on main risks orphaned commits and a corrupted mainline while waves land.
 
@@ -232,7 +232,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
 1. **Resolve the worker executor.** Before initial dispatch, resolve `worker` through `contracts/executors.md` using its complete validation and resolution sequence.
    - **Missing registry file or valid registry with no `worker` role** → preserve native Claude dispatch. Resolve the worker model by tier through `contracts/models.md`: default `worker → standard`, with `~/.claude/gambit/models.json` overrides and `escalation` for a re-dispatch. **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — native resolution is config/alias only.
    - **Invalid registry** → stop and report the registry error without dispatching.
-   - **Configured Codex** → read **`references/configured-workers.md`** completely and follow its fixed external ladder. Its validated `worker` and required `escalation` entries own every implementation and repair rung. Any configured transport or protocol failure stops and is reported; do not retry through native Claude.
+   - **Configured Codex** → read **`references/configured-workers.md`** completely and follow its fixed external ladder. Its validated `worker` and required `escalation` and `escalation-final` entries own every implementation and repair rung. Any configured transport or protocol failure stops and is reported; do not retry through native Claude.
 
 2. **Dispatch the wave** — emit every native worker or all configured worker wrapper launches together in one message so a ≥2 wave runs concurrently.
 
@@ -242,7 +242,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
      prompt="Read <abs>/contracts/worker.md first and follow it exactly. <complete constructed brief and dispatch fields described above>"
    ```
 
-   **Configured Codex:** use `references/configured-workers.md` for the exact initial wire, per-call fast service tier, retained `threadId`, one informed `worker.reply_tool` continuation, fresh `escalation.tool` call, async wrapper lifecycle, validation, and failure routing. Emit every ready wrapper in each rung together so a wave remains concurrent. Worktree isolation and `integrate_wave.py` are unchanged.
+   **Configured Codex:** use `references/configured-workers.md` for the exact initial wire, per-call fast service tier, retained `threadId`, one informed `worker.reply_tool` continuation, fresh `escalation.tool` call, repeated terminal `escalation-final.tool` calls, async wrapper lifecycle, validation, and failure routing. Emit every ready wrapper in each rung together so a wave remains concurrent. Worktree isolation and `integrate_wave.py` are unchanged.
 
    Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 <!-- /gambit-backend -->
@@ -276,7 +276,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
 <!-- /gambit-backend -->
 
 <!-- gambit-backend:claude -->
-3. **Route on the worker's returned status** (the contract defines four). If configured Codex was selected, follow the fixed status routing and exact ceiling in `references/configured-workers.md` and skip the native rules below. For native Claude, never retry the same model on the same unchanged task—something must change. The retry ceiling is one implementation attempt plus at most two repair attempts for the same defect. If the second repair fails, or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user:
+3. **Route on the worker's returned status** (the contract defines four). If configured Codex was selected, follow the fixed status routing and exact ladder in `references/configured-workers.md` and skip the native rules below. For native Claude, never retry the same model on the same unchanged task—something must change. The ladder is one implementation attempt, one informed repair, then `escalation`-tier re-dispatches — each carrying updated actionable evidence — repeated until the defect clears; a defect recurring at a later checkpoint re-enters at the escalation tier with its recurrence as the new evidence:
    - **DONE** → single-task wave: verify with FRESH evidence by running its focused worker command. Wave of ≥2: confirm the worker's isolated RED/GREEN evidence and rerun only a missing worker-scoped check; the declared wave/component gate belongs to the combined manifest and runs exactly once. Then run the **Checkpoint quality gate** (below) on that worker's complete change set before proceeding.
    - **DONE_WITH_CONCERNS** → read the concern. Correctness or scope → resolve it (refine + re-dispatch, or fix directly) before accepting; treat it as an escalation trigger in the quality gate (below). Benign observation → note it and verify as DONE. **A "bigger behavior change than the brief implied" flag usually means the brief was wrong, not the worker** — re-read the requirement the worker cites and fix the brief, don't wave the flag through because the worker followed instructions literally. A worker's scope-surprise is often your spec catching itself.
    - **NEEDS_CONTEXT** → supply the missing values/decisions and re-dispatch with them added.
@@ -289,7 +289,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
      ```
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
-3. **Route on the worker's returned status** (the contract defines four) through this fixed three-rung worker ladder. Do not skip, repeat, or reorder a rung:
+3. **Route on the worker's returned status** (the contract defines four) through this fixed four-rung worker ladder. Do not skip or reorder a rung; only rung 4 repeats:
 
    1. **Initial implementation — worker.** Use the `worker` SpawnAgent dispatch above.
       ```
@@ -302,10 +302,15 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
         target: "<worker task name returned by the initial SpawnAgent>"
         message: "Reread <abs>/contracts/worker.md and perform the one informed repair. <new actionable evidence and exact remaining defect>"
       ```
-   3. **Reasoning escalation — fresh escalation worker.** If rung 2 does not produce a verified, quality-clean result, dispatch one fresh `escalation` worker in the same worktree. Pass the same contract path and complete original brief plus both prior results and the exact remaining evidence. This is the second and final repair attempt.
+   3. **Reasoning escalation — fresh escalation worker.** If rung 2 does not produce a verified, quality-clean result, dispatch one fresh `escalation` worker in the same worktree. Pass the same contract path and complete original brief plus both prior results and the exact remaining evidence.
       ```
       SpawnAgent role="escalation" description="Escalate: <task subject>"
         prompt="Read <abs>/contracts/worker.md first, then implement the complete original brief in <same worktree>. Prior attempt: <result>. Informed repair: <result>. Remaining evidence: <exact defect or failing output>."
+      ```
+   4. **Terminal escalation — repeated maximum-reasoning workers.** If rung 3 does not produce a verified, quality-clean result, dispatch a fresh `escalation-final` worker in the same worktree, carrying the bounded history of every prior attempt and the updated remaining evidence. Repeat this rung — never with unchanged evidence — until the result verifies clean.
+      ```
+      SpawnAgent role="escalation-final" description="Escalate (terminal): <task subject>"
+        prompt="Read <abs>/contracts/worker.md first, then implement the complete original brief in <same worktree>. Prior attempts: <bounded summaries with cited excerpts>. Remaining evidence: <exact defect or failing output>."
       ```
 
    Route each terminal result within that ladder:
@@ -314,7 +319,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
    - **NEEDS_CONTEXT** → add the missing values or decision as the actionable evidence for the next unused repair rung.
    - **BLOCKED** → missing context or insufficient reasoning consumes the next unused repair rung; a brief that is too large is split into later complete worker briefs, while a wrong plan/brief or unsettled architecture STOPs for user input. Do NOT water down requirements.
 
-   If the escalation worker fails verification, returns a non-DONE terminal state that cannot be accepted, or leaves a quality defect, STOP autonomous continuation and revisit the architecture or worker brief with the user. The ladder is exactly one implementation attempt plus at most two repair attempts; a defect recurring at a later checkpoint also STOPs.
+   A defect recurring at a later checkpoint re-enters rung 4 with its recurrence as the new evidence. There is no human rung; the ladder ends only in a verified, quality-clean result. The epic-level negative-convergence circuit breaker still applies.
 <!-- /gambit-backend -->
 
 <!-- gambit-backend:claude -->
@@ -383,7 +388,7 @@ Route on the verdict:
 - **Quality defect** → re-dispatch a FRESH worker with the specific cited defects (never the same worker on unchanged input). **Never edit the diff yourself — you judge and route; workers implement.**
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
-- **Quality defect** → consume the next unused rung in the fixed worker ladder with the cited defect as new actionable evidence: same-thread `followup_task` first, then a fresh `escalation` worker. After escalation, STOP on any remaining defect. **Never edit the diff yourself — you judge and route; workers implement.**
+- **Quality defect** → consume the next unused rung in the fixed worker ladder with the cited defect as new actionable evidence: same-thread `followup_task` first, then a fresh `escalation` worker, then repeated `escalation-final` workers with updated evidence until the defect clears. **Never edit the diff yourself — you judge and route; workers implement.**
 <!-- /gambit-backend -->
 - **Doubt, or an escalation trigger fired** → escalate (below) before deciding.
 
@@ -571,10 +576,10 @@ Before retaining any next-wave brief, compare the current result with the last d
 - **Positive convergence** means the wave retired at least one approved success criterion or named blocker without unauthorized scope growth. Continue within the approved Delivery Constraints.
 - **Negative convergence circuit breaker:** if two consecutive checkpoints retire no success criterion or named blocker, or remaining work grows at both checkpoints, STOP autonomous continuation. Present the evidence and require explicit user approval to re-scope, change architecture, or extend the delivery budget. Do not silently add another repair wave.
 <!-- gambit-backend:claude -->
-- **Repair circuit breaker:** allow one implementation attempt plus at most two repair attempts for the same defect. If the second repair fails, or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user.
+- **Repair ladder terminal rung:** one implementation attempt, one informed repair, then escalation-tier re-dispatches repeated with updated evidence until the defect clears. A defect recurring at a later checkpoint re-enters at the escalation tier. The negative-convergence circuit breaker above is the only autonomous stop.
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
-- **Repair circuit breaker:** the ceiling remains one implementation attempt plus at most two repair attempts. Use the fixed ladder exactly once — initial `worker`, one informed same-thread repair, then one fresh `escalation` worker. If escalation fails or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user.
+- **Repair ladder terminal rung:** the fixed ladder is initial `worker`, one informed same-thread repair, one fresh `escalation` worker, then `escalation-final` workers repeated with updated evidence until the defect clears. A defect recurring at a later checkpoint re-enters at `escalation-final`. The negative-convergence circuit breaker above is the only autonomous stop.
 <!-- /gambit-backend -->
 - **Scope admission:** every new worker must map to an immutable requirement, an open frozen-ledger finding, or a failing declared validation gate. Otherwise report it as proposed scope and exclude it until the user approves it.
 - **Architecture admission:** new cross-component ownership, persistence, recovery, ordering, fencing, or protocol invariants that the approved approach does not settle route back through `gambit:brainstorming` before another implementation wave or release-acceptance spend.

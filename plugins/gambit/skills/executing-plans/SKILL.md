@@ -96,7 +96,7 @@ Before executing ANY wave, use `SessionContextRead` to reread the complete appro
 
 **Why:** Requirements prevent rationalizing shortcuts when implementation gets hard.
 
-For a legacy epic that lacks Delivery Constraints or Validation Strategy, do not guess silently. Before implementation, propose the conservative defaults from this skill — the two-checkpoint convergence circuit breaker, one implementation attempt plus at most two repair attempts, focused and wave/component commands from repository policy, and one fresh release acceptance run after architecture/scope preflight — then obtain explicit user approval. This records delivery policy without changing immutable product requirements.
+For a legacy epic that lacks Delivery Constraints or Validation Strategy, do not guess silently. Before implementation, propose the conservative defaults from this skill — the two-checkpoint convergence circuit breaker, the repair ladder ending in terminal escalation attempts repeated with updated evidence, focused and wave/component commands from repository policy, and one fresh release acceptance run after architecture/scope preflight — then obtain explicit user approval. This records delivery policy without changing immutable product requirements.
 
 **Enter the epic worktree.** All epic work happens in a worktree — never directly on main. Working on main risks orphaned commits and a corrupted mainline while waves land.
 
@@ -166,7 +166,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
    ```
    Pass the contract by path and the task as **constructed text** — never paste your session history into the worker prompt. **Optional project briefs:** gambit ships no per-language briefs. If a project provides a `codex-contracts/<lang>.md` for the task's language, add a line telling the worker to read it too — optional, never required; dispatch is fully functional with `worker.md` alone.
 
-3. **Route on the worker's returned status** (the contract defines four) through this fixed three-rung worker ladder. Do not skip, repeat, or reorder a rung:
+3. **Route on the worker's returned status** (the contract defines four) through this fixed four-rung worker ladder. Do not skip or reorder a rung; only rung 4 repeats:
 
    1. **Initial implementation — worker.** Use the `worker` SpawnAgent dispatch above.
       ```
@@ -179,10 +179,15 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
         target: "<worker task name returned by the initial SpawnAgent>"
         message: "Reread <abs>/codex-contracts/worker.md and perform the one informed repair. <new actionable evidence and exact remaining defect>"
       ```
-   3. **Reasoning escalation — fresh escalation worker.** If rung 2 does not produce a verified, quality-clean result, dispatch one fresh `escalation` worker in the same worktree. Pass the same contract path and complete original brief plus both prior results and the exact remaining evidence. This is the second and final repair attempt.
+   3. **Reasoning escalation — fresh escalation worker.** If rung 2 does not produce a verified, quality-clean result, dispatch one fresh `escalation` worker in the same worktree. Pass the same contract path and complete original brief plus both prior results and the exact remaining evidence.
       ```
       SpawnAgent agent_type="escalation" task_name="escalate_task_subject" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
         message="Read <abs>/codex-contracts/worker.md first, then implement the complete original brief in <same worktree>. Prior attempt: <result>. Informed repair: <result>. Remaining evidence: <exact defect or failing output>."
+      ```
+   4. **Terminal escalation — repeated maximum-reasoning workers.** If rung 3 does not produce a verified, quality-clean result, dispatch a fresh `escalation-final` worker in the same worktree, carrying the bounded history of every prior attempt and the updated remaining evidence. Repeat this rung — never with unchanged evidence — until the result verifies clean.
+      ```
+      SpawnAgent agent_type="escalation-final" task_name="escalate_terminal_task_subject" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
+        message="Read <abs>/codex-contracts/worker.md first, then implement the complete original brief in <same worktree>. Prior attempts: <bounded summaries with cited excerpts>. Remaining evidence: <exact defect or failing output>."
       ```
 
    Route each terminal result within that ladder:
@@ -191,7 +196,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
    - **NEEDS_CONTEXT** → add the missing values or decision as the actionable evidence for the next unused repair rung.
    - **BLOCKED** → missing context or insufficient reasoning consumes the next unused repair rung; a brief that is too large is split into later complete worker briefs, while a wrong plan/brief or unsettled architecture STOPs for user input. Do NOT water down requirements.
 
-   If the escalation worker fails verification, returns a non-DONE terminal state that cannot be accepted, or leaves a quality defect, STOP autonomous continuation and revisit the architecture or worker brief with the user. The ladder is exactly one implementation attempt plus at most two repair attempts; a defect recurring at a later checkpoint also STOPs.
+   A defect recurring at a later checkpoint re-enters rung 4 with its recurrence as the new evidence. There is no human rung; the ladder ends only in a verified, quality-clean result. The epic-level negative-convergence circuit breaker still applies.
 
 **One of the four statuses is the ONLY signal that advances a task — silence is not one of them.** A worker that has not returned DONE / DONE_WITH_CONCERNS / NEEDS_CONTEXT / BLOCKED is still working, even when it looks otherwise. A worker spends a long opening stretch reading, grepping, and reasoning before it writes a single byte — so a **flat `git status`, an unchanged diff across several checks, and an unanswered status ping are indistinguishable from a dead worker but are not one.** Worker↔orchestrator messaging also lags: a worker deep in work often does not read its inbox for a while, and its replies can arrive minutes after you'd expect (sometimes crossing your own next message). **Do not presume a silent worker is dead, and above all do not spawn a replacement on silence alone** — re-dispatching a still-live worker onto its own task and tree manufactures a file collision (two workers editing the same files), the single most expensive and recurrent orchestration mistake. If you genuinely must probe, send **one** status ping framed as informational ("not a stand-down — where are you?") and wait a full cycle; only a returned BLOCKED/failure, or a process you have confirmed dead by other means, justifies re-dispatch. When a collision does happen anyway, workers detect it (`## Neighbors` / blast-radius) and stand down cleanly — so before integrating a tree two workers may have touched, confirm it has been **stable across a couple of checks** (no files changing under you) and rerun its worker-scoped verification. Invoke the manifest's combined wave/component gate only after every tree is stable and accepted. Patience here is not idleness; it is the cheapest thing you will do all epic.
 
@@ -245,7 +250,7 @@ Emit an explicit, CITED verdict (`file:line`) — a pass with a one-line basis, 
 
 Route on the verdict:
 - **Clean** → proceed to the durable checkpoint with the native wave still `in_progress`.
-- **Quality defect** → consume the next unused rung in the fixed worker ladder with the cited defect as new actionable evidence: same-thread `followup_task` first, then a fresh `escalation` worker. After escalation, STOP on any remaining defect. **Never edit the diff yourself — you judge and route; workers implement.**
+- **Quality defect** → consume the next unused rung in the fixed worker ladder with the cited defect as new actionable evidence: same-thread `followup_task` first, then a fresh `escalation` worker, then repeated `escalation-final` workers with updated evidence until the defect clears. **Never edit the diff yourself — you judge and route; workers implement.**
 - **Doubt, or an escalation trigger fired** → escalate (below) before deciding.
 
 **Escalate to an independent quality reviewer** when any trigger fires: the diff is large or touches a security- or correctness-sensitive surface, the worker returned `DONE_WITH_CONCERNS` on correctness/scope, the wave is wide (≥4 diffs this checkpoint — inline gate attention dilutes across many diffs, so escalate the ones you'd otherwise skim), or your own read leaves you genuinely unsure. Dispatch the EXISTING quality reviewer scoped to this one diff — resolve `skills/review/reviewers/quality.md` once (Glob), pass it BY PATH (do not read it into your context), with the `finder` role (see `codex-contracts/models.md`):
@@ -339,7 +344,7 @@ Before retaining any next-wave brief, compare the current result with the last d
 
 - **Positive convergence** means the wave retired at least one approved success criterion or named blocker without unauthorized scope growth. Continue within the approved Delivery Constraints.
 - **Negative convergence circuit breaker:** if two consecutive checkpoints retire no success criterion or named blocker, or remaining work grows at both checkpoints, STOP autonomous continuation. Present the evidence and require explicit user approval to re-scope, change architecture, or extend the delivery budget. Do not silently add another repair wave.
-- **Repair circuit breaker:** the ceiling remains one implementation attempt plus at most two repair attempts. Use the fixed ladder exactly once — initial `worker`, one informed same-thread repair, then one fresh `escalation` worker. If escalation fails or the defect recurs at a later checkpoint, STOP autonomous continuation and revisit the architecture or worker brief with the user.
+- **Repair ladder terminal rung:** the fixed ladder is initial `worker`, one informed same-thread repair, one fresh `escalation` worker, then `escalation-final` workers repeated with updated evidence until the defect clears. A defect recurring at a later checkpoint re-enters at `escalation-final`. The negative-convergence circuit breaker above is the only autonomous stop.
 - **Scope admission:** every new worker must map to an immutable requirement, an open frozen-ledger finding, or a failing declared validation gate. Otherwise report it as proposed scope and exclude it until the user approves it.
 - **Architecture admission:** new cross-component ownership, persistence, recovery, ordering, fencing, or protocol invariants that the approved approach does not settle route back through `gambit:brainstorming` before another implementation wave or release-acceptance spend.
 

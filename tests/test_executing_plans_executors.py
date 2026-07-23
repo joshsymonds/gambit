@@ -200,9 +200,10 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         configured = self.configured_worker
         rung_1 = bounded_section(configured, "## Rung 1", "## Rung 2")
         rung_2 = bounded_section(configured, "## Rung 2", "## Rung 3")
-        rung_3 = configured.split("## Rung 3", 1)[1]
+        rung_3 = bounded_section(configured, "## Rung 3", "## Rung 4")
+        rung_4 = configured.split("## Rung 4", 1)[1]
 
-        self.assertEqual(3, configured.count("## Rung "))
+        self.assertEqual(4, configured.count("## Rung "))
         self.assertEqual(1, rung_1.count("`worker.tool`"))
         self.assertNotIn("`worker.reply_tool`", rung_1)
         self.assertNotIn("`escalation.tool`", rung_1)
@@ -217,7 +218,15 @@ class ExecutingPlansExecutorRoutingTest(unittest.TestCase):
         self.assertIn('"model": "<escalation.model>"', rung_3)
         self.assertIn('"model_reasoning_effort": "<escalation.reasoning_effort>"', rung_3)
         self.assertIn("exactly one informed same-thread repair", configured.lower())
-        self.assertIn("second and final repair attempt", configured)
+        self.assertIn("only rung 4 repeats", configured)
+        self.assertNotIn("There is no fourth attempt", configured)
+        self.assertEqual(1, rung_4.count("`escalation-final.tool`"))
+        self.assertNotIn("`worker.tool`", rung_4)
+        self.assertNotIn("`worker.reply_tool`", rung_4)
+        self.assertIn('"model": "<escalation-final.model>"', rung_4)
+        self.assertIn('"model_reasoning_effort": "<escalation-final.reasoning_effort>"', rung_4)
+        self.assertIn("Never repeat with unchanged evidence", rung_4)
+        self.assertIn("There is no\nhuman rung", rung_4)
         self.assertIn("at most 2,000 characters", rung_2)
         self.assertNotIn("Original brief: <complete brief>", rung_2)
         self.assertNotIn("Prior result: <initial content>", rung_2)

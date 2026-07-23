@@ -358,8 +358,9 @@ TaskCreate
     DO NOT REVISIT UNLESS: [condition]
 
     ## Delivery Constraints
-    - Stop after two consecutive non-converging checkpoints or the allowed repair ceiling;
-      require explicit user approval before expanding scope, architecture, or budget.
+    - Stop after two consecutive non-converging checkpoints; require explicit user approval
+      before expanding scope, architecture, or budget. Repairs ladder up to terminal
+      escalation attempts repeated with updated evidence until the defect clears.
 
     ## Validation Strategy
     - Focused worker command: [fast exact command]

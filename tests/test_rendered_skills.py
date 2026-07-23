@@ -398,6 +398,7 @@ class RenderedSkillsTest(unittest.TestCase):
                 "verifier",
                 "test-runner",
                 "escalation",
+                "escalation-final",
             },
             set(schema["properties"]),
         )
@@ -415,6 +416,7 @@ class RenderedSkillsTest(unittest.TestCase):
         expected_keys = {
             "worker": worker_keys | {"reply_tool", "service_tier"},
             "escalation": worker_keys,
+            "escalation-final": worker_keys,
             "scout": worker_keys,
             "verifier": worker_keys,
             "test-runner": worker_keys,
@@ -439,7 +441,7 @@ class RenderedSkillsTest(unittest.TestCase):
                 )
                 for field in string_fields:
                     self.assertEqual("string", entry["properties"][field]["type"])
-                if role in ("worker", "escalation", "test-runner"):
+                if role in ("worker", "escalation", "escalation-final", "test-runner"):
                     self.assertEqual(
                         "string", entry["properties"]["sandbox"]["type"]
                     )
@@ -457,7 +459,7 @@ class RenderedSkillsTest(unittest.TestCase):
                 "read-only", entry["properties"]["sandbox"]["const"]
             )
 
-        for role in ("worker", "escalation", "scout", "verifier", "test-runner"):
+        for role in ("worker", "escalation", "escalation-final", "scout", "verifier", "test-runner"):
             self.assertNotIn(
                 "web_search", schema["properties"][role]["properties"]
             )
@@ -466,7 +468,7 @@ class RenderedSkillsTest(unittest.TestCase):
             schema["properties"]["worker"]["properties"]["reply_tool"]["pattern"],
         )
         self.assertEqual(
-            {"worker": ["escalation"]}, schema.get("dependentRequired")
+            {"worker": ["escalation", "escalation-final"]}, schema.get("dependentRequired")
         )
 
         resolution_match = re.search(
@@ -505,7 +507,7 @@ class RenderedSkillsTest(unittest.TestCase):
 
         for required in (
             "~/.claude/gambit/executors.json",
-            "All seven contracted execution roles may be configured",
+            "All eight contracted execution roles may be configured",
             "Configured scout wire",
             '"model_reasoning_effort": "<scout.reasoning_effort>"',
             "Configured verifier wire",
@@ -1127,13 +1129,17 @@ class RenderedSkillsTest(unittest.TestCase):
         worker = routing.index('SpawnAgent agent_type="worker"')
         same_thread_repair = routing.index("followup_task")
         escalation = routing.index('SpawnAgent agent_type="escalation"')
+        escalation_final = routing.index(
+            'SpawnAgent agent_type="escalation-final"'
+        )
         self.assertLess(worker, same_thread_repair)
         self.assertLess(same_thread_repair, escalation)
+        self.assertLess(escalation, escalation_final)
         self.assertIn("same worker thread and agent configuration", routing)
         self.assertIn("exactly one informed repair turn", routing)
         self.assertNotIn("re-dispatch a FRESH worker", executing)
 
-        self.assertLess(len(executing.splitlines()), 500)
+        self.assertLess(len(executing.splitlines()), 520)
 
     def test_verification_reports_readiness_without_mutating_wave_completion(self) -> None:
         verification = (
@@ -1184,7 +1190,7 @@ class RenderedSkillsTest(unittest.TestCase):
 
         for required in (
             "two consecutive checkpoints",
-            "one implementation attempt plus at most two repair attempts",
+            "terminal escalation attempts repeated with updated evidence",
             "explicit user approval",
             "Focused worker command",
             "Wave/component gate",
@@ -1205,7 +1211,7 @@ class RenderedSkillsTest(unittest.TestCase):
             "retire no success criterion or named blocker",
             "remaining work grows",
             "STOP autonomous continuation",
-            "one implementation attempt plus at most two repair attempts",
+            "`escalation-final` workers repeated with updated evidence",
             "explicit user approval",
         ):
             self.assertIn(required, convergence)
