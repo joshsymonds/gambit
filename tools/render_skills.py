@@ -66,6 +66,7 @@ CODEX_AGENT_CLASSES = frozenset(
         "explorer",
         "test-runner",
         "escalation",
+        "escalation-final",
     }
 )
 

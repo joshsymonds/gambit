@@ -1,13 +1,13 @@
 # External executor registry
 
-Claude-backed Gambit may override the native executor for all seven contracted execution roles by
+Claude-backed Gambit may override the native executor for all eight contracted execution roles by
 reading `~/.claude/gambit/executors.json`. The registry is optional. It selects an executor only;
 the class contract, authority, model tier, and workflow semantics remain unchanged.
 
-All seven contracted execution roles may be configured: `steelman`, `worker`, `escalation`,
-`scout`, `finder`, `verifier`, and `test-runner`. A configured `worker` requires a configured
-`escalation` so the executing-plans repair ladder cannot silently change executor families at its
-final rung.
+All eight contracted execution roles may be configured: `steelman`, `worker`, `escalation`,
+`escalation-final`, `scout`, `finder`, `verifier`, and `test-runner`. A configured `worker`
+requires configured `escalation` and `escalation-final` entries so the executing-plans repair
+ladder cannot silently change executor families at its later rungs.
 
 ## Canonical schema
 
@@ -264,6 +264,65 @@ role:
       ],
       "additionalProperties": false
     },
+    "escalation-final": {
+      "type": "object",
+      "properties": {
+        "executor": { "const": "codex" },
+        "tool": {
+          "type": "string",
+          "pattern": "^mcp__[A-Za-z0-9_-]+__[A-Za-z0-9_-]+$"
+        },
+        "model": {
+          "type": "string",
+          "minLength": 1,
+          "pattern": "^(?!.*[<>])\\S+$",
+          "not": {
+            "enum": [
+              "inherit",
+              "default",
+              "haiku",
+              "sonnet",
+              "opus",
+              "fable",
+              "cheap",
+              "cheap-or-standard",
+              "standard",
+              "most-capable"
+            ]
+          }
+        },
+        "reasoning_effort": {
+          "type": "string",
+          "enum": [
+            "none",
+            "minimal",
+            "low",
+            "medium",
+            "high",
+            "xhigh",
+            "max",
+            "ultra"
+          ]
+        },
+        "sandbox": {
+          "type": "string",
+          "enum": ["read-only", "workspace-write", "danger-full-access"]
+        },
+        "approval_policy": {
+          "type": "string",
+          "enum": ["untrusted", "on-request", "never"]
+        }
+      },
+      "required": [
+        "executor",
+        "tool",
+        "model",
+        "reasoning_effort",
+        "sandbox",
+        "approval_policy"
+      ],
+      "additionalProperties": false
+    },
     "finder": {
       "type": "object",
       "properties": {
@@ -438,7 +497,7 @@ role:
       "additionalProperties": false
     }
   },
-  "dependentRequired": { "worker": ["escalation"] },
+  "dependentRequired": { "worker": ["escalation", "escalation-final"] },
   "additionalProperties": false
 }
 ```
@@ -448,11 +507,11 @@ a concrete external-config model value, never a placeholder, inherited value, or
 alias. `reasoning_effort` accepts exactly `none`, `minimal`, `low`, `medium`, `high`, `xhigh`,
 `max`, or `ultra`; `approval_policy` accepts exactly `untrusted`, `on-request`, or `never`.
 Worker `reply_tool` names the same Codex MCP server's `codex-reply` tool, and `service_tier` is a
-concrete Codex configuration value such as `fast`. Worker, escalation, and test-runner `sandbox`
-accept exactly `read-only`, `workspace-write`, or `danger-full-access`. Steelman and finder require
+concrete Codex configuration value such as `fast`. Worker, escalation, escalation-final, and
+test-runner `sandbox` accept exactly `read-only`, `workspace-write`, or `danger-full-access`. Steelman and finder require
 `web_search: "live"` and `sandbox: "read-only"`; scout and verifier require `sandbox:
-"read-only"`. Worker, escalation, scout, verifier, and test-runner forbid `web_search` through
-`additionalProperties: false`; their configured wires disable it explicitly.
+"read-only"`. Worker, escalation, escalation-final, scout, verifier, and test-runner forbid `web_search`
+through `additionalProperties: false`; their configured wires disable it explicitly.
 
 ## Validation and resolution
 

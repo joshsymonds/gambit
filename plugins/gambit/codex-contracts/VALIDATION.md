@@ -3,7 +3,7 @@
 ## Contract-surface validation: executor registry and steelman
 
 The executor and steelman contracts and their wired workflow routing have structural regression
-coverage. `tests/test_rendered_skills.py` parses the executor registry schema, proves that all seven
+coverage. `tests/test_rendered_skills.py` parses the executor registry schema, proves that all eight
 contracted execution roles are configurable, checks every required and role-specific field, and
 locks the missing/invalid/failure resolution rules. `tests/test_brainstorming_steelman.py` covers
 Steelman executor resolution and call wiring; `tests/test_executing_plans_executors.py` covers
