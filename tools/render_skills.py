@@ -35,6 +35,10 @@ OUTPUTS = {
 
 TEXT_SUFFIXES = {".md", ".txt", ".json", ".toml", ".yaml", ".yml", ".sh", ".py"}
 
+# The harness caps each skill-listing entry's combined description + when_to_use
+# text and truncates past it, which would silently drop trailing trigger phrases.
+LISTING_MAX_CHARS = 1536
+
 # Backend-specific source prose uses paired, line-oriented markers:
 #   <!-- gambit-backend:claude -->
 #   Claude-only prose
@@ -169,6 +173,16 @@ def strip_codex_frontmatter_fields(text: str) -> str:
         return text
     frontmatter = text[4:end]
 
+    # Block scalars would leave their indented continuation lines orphaned once
+    # the indicator is folded into a quoted string, emitting invalid YAML. Both
+    # fields must be single-line so the merge below is lossless.
+    block = re.search(r"(?m)^(description|when_to_use):\s*[|>]", frontmatter)
+    if block:
+        raise ValueError(
+            f"`{block.group(1)}` uses a YAML block scalar; keep it on one line so"
+            " the Codex description merge stays lossless"
+        )
+
     when = re.search(r"(?m)^when_to_use:\s*(.+)$", frontmatter)
     if when:
         trigger = when.group(1).strip().strip("\"'")
@@ -177,6 +191,15 @@ def strip_codex_frontmatter_fields(text: str) -> str:
         def _merge(m: "re.Match[str]") -> str:
             existing = m.group(1).strip().strip("\"'")
             joined = f"{existing.rstrip()} {trigger}".strip()
+            # The skill listing truncates each entry's combined text, which would
+            # silently drop trailing triggers — the half that drives routing.
+            # Fail the build instead of shipping a quietly-clipped description.
+            if len(joined) > LISTING_MAX_CHARS:
+                raise ValueError(
+                    f"merged description is {len(joined)} chars, over the"
+                    f" {LISTING_MAX_CHARS}-char skill-listing cap; shorten"
+                    " description or when_to_use"
+                )
             return f"description: {yaml_quote(joined)}"
 
         frontmatter, count = re.subn(
