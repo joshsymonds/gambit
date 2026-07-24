@@ -13,11 +13,19 @@ the expensive orchestrator model.
 | `verifier` (review verifier) | most-capable | code/security verification is as hard as finding; a cheap verifier rubber-stamps coherent-but-wrong findings and over-refutes real ones |
 | `worker` (implementation) | standard | mechanical work from a clear brief |
 | `escalation` (blocked worker) | most-capable | re-dispatch a worker that blocked needing more reasoning |
-| `scout` (read-only Explore) | cheap-or-standard | output is cheaply checkable — the orchestrator spot-checks the cited `file:line` |
+| `escalation-final` (last repair rung) | most-capable | final repair attempt before the defect routes back to the user |
+| `scout` (read-only Explore) | cheap | output is cheaply checkable — the orchestrator spot-checks the cited `file:line` |
 | `wrapper` (async transport relay) | standard | pure transport relay, zero judgment — one configured MCP call plus one artifact write, and failure handling that must stay honest rather than fabricate an envelope |
 | `test-runner` | cheap | objective oracle (exit code) |
 
-Tier words map to the harness model **aliases**: most-capable → `"opus"`, standard → `"sonnet"`,
+**Scout escalation.** Dispatch `scout` at `standard` instead of `cheap` when the question is about
+code flow, architectural intent, or "where else does this pattern appear" — anything where a
+confident but incomplete `NOT FOUND` would be acted on as if it were exhaustive. Citation
+spot-checks catch a wrong answer; they do not catch an omitted path. A single-fact lookup stays
+cheap.
+
+The tier enum is exactly three values: **`most-capable`**, **`standard`**, **`cheap`**. They map to
+the harness model **aliases**: most-capable → `"opus"`, standard → `"sonnet"`,
 cheap → `"haiku"`. The orchestrator is the session model (often `"fable"`) and is never named here.
 
 ## Resolution at dispatch

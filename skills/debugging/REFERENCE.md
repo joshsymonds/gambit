@@ -133,9 +133,9 @@ Use Read and Grep to trace through the code directly:
 Dispatch an Explore agent to map the system:
 
 ```
-Task
+Agent
   subagent_type: "Explore"          # the read-only scout class
-  model: "<scout tier — default cheap-or-standard; contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
+  model: "<scout tier — default cheap; contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
   description: "Map data flow for [feature]"
   prompt: |
     Read <abs>/contracts/scout.md first (your binding scout contract), then trace the request flow for [operation]:

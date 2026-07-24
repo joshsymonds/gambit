@@ -1,6 +1,6 @@
 ---
 name: review
-description: Use after every native wave in the current root session is complete, after refactoring verifies, or before merging to main. Triggers when independent validation is needed that code meets requirements, has no security gaps, passes quality standards, and has no performance regressions. User phrases like "review this", "is this ready to merge", "validate the implementation".
+description: Runs an independent multi-dimension review of completed work and adversarially verifies every finding before reporting it. Use after every native wave in the current root session is complete, after refactoring verifies, or before merging to main. Triggers when independent validation is needed that code meets requirements, has no security gaps, passes quality standards, and has no performance regressions. User phrases like "review this", "is this ready to merge", "validate the implementation".
 ---
 
 <!-- Generated backend adapter: edit src/backends/codex/, not plugins/gambit/. -->
@@ -17,6 +17,8 @@ literal shell commands.
 
 # Review
 
+**Freedom: LOW** — dispatch all four reviewers for the initial audit, then freeze scope and the finding ledger.
+
 ## Overview
 
 Dispatch four specialized reviewer agents to independently audit completed work once, then dispatch a dedicated verifier sub-agent to kill-or-keep each finding and freeze the survivors into a review ledger. Remediation closes that ledger; it does not restart an open-ended audit.
@@ -30,10 +32,6 @@ Works in epic or standalone workflow context; either context has an initial-audi
 **Core principle:** Review is adversarial and broad once; closure is adversarial and narrow until the frozen findings are resolved.
 
 **Announce at start:** "I'm using gambit:review to validate this implementation before finishing."
-
-## Rigidity Level
-
-LOW FREEDOM — Dispatch all four reviewers for the initial audit. Freeze its scope and confirmed-finding ledger. Never run a fresh audit to close that ledger unless the user explicitly expands requirements or implementation scope.
 
 ## Quick Reference
 
@@ -144,7 +142,7 @@ SpawnAgent agent_type="finder" task_name="quality_review"     message="Read <abs
 SpawnAgent agent_type="finder" task_name="performance_review" message="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]" fork_turns="none"  # Profile-aware: requires hide_spawn_agent_metadata = false and a non-reserved tool_namespace.
 ```
 
-**Parallelism is structural, not a reminder.** That single message contains four SpawnAgent calls and nothing else — no `Read` calls, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself using `Read` on a reviewer file, you've reverted to the old serializing pattern — stop and dispatch by path.
+**Parallelism is structural, not a reminder.** That single message contains four calls through the once-selected finder executor — native SpawnAgent calls or configured anonymous background wrapper calls — and nothing else: no `Read` calls, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself using `Read` on a reviewer file, you've reverted to the old serializing pattern — stop and dispatch by path.
 
 
 Each reviewer will:
@@ -242,54 +240,6 @@ If entries remain open, report only those IDs with their evidence and complete f
 Write complete fix worker briefs for the open IDs only in the root checkpoint. Update the existing native wave plan with concise fix-wave summaries, preserving completed waves, then STOP and return to `gambit:executing-plans` (or the owning standalone workflow). The ledger remains in the transcript, never in plan text.
 
 Never create work from refuted, gap-classified-in-initial-mode, boundary-rejected, or newly noticed closure observations. Never replace closure with another full review merely because the verifier or tests found an open ledger item.
-
-## Critical Rules
-
-1. **All four reviewers dispatched once** — no skipping in initial mode; never dispatch them in closure mode
-2. **Parallel dispatch, by path** — one message, four SpawnAgent calls, each pointed at its reviewer file by path. Never read reviewer/verifier files into main context or paste their contents into prompts: the read-before-each-dispatch is what serializes the agents and wastes ~18k tokens/review
-3. **No self-review** — main context prepares brief and assembles, does NOT review or verify code
-4. **Verifier is the single source of truth for classification** — do NOT override confirmed/refuted/gap verdicts; do NOT verify in the main context
-5. **Any open ledger entry blocks** — closure must refute every original claim with evidence
-6. **Brief is neutral** — don't include opinions or justifications in what you send reviewers
-7. **Verifier sees no severity / no reasoning** — only `id`, `path`, `line_range`, `body`, `verify_by`; fresh context prevents anchoring
-8. **All confirmed findings freeze** — the initial confirmed set is the complete ledger; later observations cannot join it
-9. **Gap findings surface, not drop** — keep them in the report with the verifier's specific gap_reason so the user can investigate
-10. **Refuted findings drop** — don't author fix worker briefs for verdicts the verifier returned refuted
-11. **Dedupe byte-identical, never semantic** — collapsing similar-looking findings silently drops true positives
-12. **Context detection is automatic** — epic if epic exists, task otherwise
-13. **Retain the ledger** — preserve its boundary and full finding fields across fix waves; plan summaries are not storage
-14. **Closure is terminal** — all IDs resolved + original gates green means APPROVED, not another audit
-
-**Common rationalizations:**
-
-| Excuse | Reality |
-|--------|---------|
-| "I already reviewed during implementation" | You're biased — that's why agents exist |
-| "Security isn't relevant here" | Every project has an attack surface |
-| "Performance review is overkill" | Dispatch it anyway — it's parallel, costs nothing |
-| "These are non-blocking suggestions" | Improvements are work items — implement them |
-| "It's just a small debugging fix" | Small fixes can introduce regressions. Review anyway |
-| "The verifier refuted this but I think it's real" | Refuted is refuted. If you disagree, that's a prompt-calibration signal, not a gate-override |
-| "A fresh review is safer after fixes" | It reopens the search space. Close the frozen ledger instead |
-| "We missed this in round one" | Report it outside the frozen boundary; it cannot become closure work |
-| "The checkpoint/commits aren't ideal" | Process artifacts do not block without an explicit approved requirement |
-
-## Verification Checklist
-
-- [ ] Context and open-ledger state detected before dispatch
-- [ ] Initial boundary freezes requirements, revisions, files, and changed hunks
-- [ ] All four reviewers dispatched once, in one message, for initial mode only
-- [ ] All four reviewer reports collected with `Verify by:` on every finding
-- [ ] Out-of-boundary candidates rejected; eligible candidates byte-identical deduped
-- [ ] Side-table keyed by `id` built before verifier dispatch (category + verify_by + reviewer)
-- [ ] Verifier sub-agent dispatched with candidate list (no severity, no reasoning chain)
-- [ ] Verifier returned one verdict per candidate (confirmed / refuted / gap) with quoted evidence
-- [ ] Confirmed findings frozen into the complete Review Closure Ledger
-- [ ] Closure dispatched only the verifier with open ledger IDs
-- [ ] Every original criterion, targeted fix check, and full project gate freshly passes
-- [ ] Outside-boundary observations reported without creating work
-- [ ] If APPROVED: invoked finishing-branch via Codex skill invocation
-- [ ] If OPEN: presented complete fix briefs for open ledger IDs only, updated wave state, and STOPPED
 
 ## Integration
 

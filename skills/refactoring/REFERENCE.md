@@ -36,7 +36,7 @@ Extract validate_name() → test → commit ✓
 
 # Step 3 (test fails!)
 Move validation to new file → test → FAIL
-Undo: git checkout -- .
+Undo: git restore --source=HEAD --worktree -- path/you/modified   (delete any file the step created)
 Try smaller: Just move one function → test → pass → commit ✓
 
 # Step 4

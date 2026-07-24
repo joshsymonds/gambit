@@ -1,10 +1,13 @@
 ---
 name: brainstorming
-description: Use when user has a new feature idea, rough concept, or unexplored approach. Include when planning before code, breaking a design into tasks, creating an implementation plan, laying out tasks and dependencies, exploring architectural options, or requirements are vague. User phrases like "I want to build X", "should we do this", "let's think through Y", "explore approaches", "break this into tasks", "make an implementation plan". Do NOT use for executing existing plans, fixing bugs, refactoring, or when requirements and an epic already exist.
+description: Turns a rough idea into an approved epic contract with immutable requirements, anti-patterns, and a first wave of executable tasks.
+when_to_use: Use when user has a new feature idea, rough concept, or unexplored approach. Include when planning before code, breaking a design into tasks, creating an implementation plan, laying out tasks and dependencies, exploring architectural options, or requirements are vague. User phrases like "I want to build X", "should we do this", "let's think through Y", "explore approaches", "break this into tasks", "make an implementation plan". Do NOT use for executing existing plans, fixing bugs, refactoring, or when requirements and an epic already exist.
 user_invokable: true
 ---
 
 # Brainstorming Ideas Into Designs
+
+**Freedom: HIGH** — adapt the questioning to context. Fixed: design approved before code, first wave only, questions in prose.
 
 ## Overview
 
@@ -18,20 +21,6 @@ Turn rough ideas into validated designs captured as immutable epic contracts in 
 **Core principle:** Ask questions to understand, research before proposing, document decisions for future reference.
 
 **Announce at start:** "I'm using gambit:brainstorming to refine your idea into a design."
-
-## Rigidity Level
-
-HIGH FREEDOM - Adapt questioning to context. But always:
-<!-- gambit-backend:claude -->
-- Create immutable epic before code
-- Create only the first wave — independently pluckable tasks, never the full tree
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-- Present the immutable epic contract before code
-- Author only the first wave — complete independently pluckable worker briefs, never a full tree
-<!-- /gambit-backend -->
-- Ask every question in prose with context and a recommendation — never the AskUserQuestion tool
-- Apply task refinement before handoff
 
 ## Quick Reference
 
@@ -84,7 +73,9 @@ Do NOT write any code, invoke any implementation skill, or take any implementati
 **Research existing context first:**
 
 <!-- gambit-backend:claude -->
-Resolve the absolute paths to `contracts/scout.md` and `contracts/executors.md`, then resolve
+Resolve the absolute path to `contracts/scout.md`. If `~/.claude/gambit/executors.json` does not
+exist, use native execution and do NOT read `contracts/executors.md` — the registry is optional and
+its absence is the common case. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise read `contracts/executors.md` and resolve
 `scout` through `contracts/executors.md` before dispatch. Missing registry or a valid registry with
 no `scout` role selects native Claude and the contracted `Explore` dispatch below. A configured
 `scout` role uses the Configured scout wire in `contracts/executors.md`, with the bounded pattern
@@ -92,9 +83,9 @@ question and repository root substituted exactly. An invalid registry or configu
 is terminal: report it and do not retry or fall back natively.
 
 ```
-Task
+Agent
   subagent_type: "Explore"          # the read-only scout class
-  model: "<scout tier — default cheap-or-standard; contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
+  model: "<scout tier — default cheap; contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
   prompt: "Read <abs>/contracts/scout.md first (your binding scout contract), then: Find existing [relevant] implementation patterns in this codebase. Report with file:line evidence; say NOT FOUND if absent."
 ```
 <!-- /gambit-backend -->
@@ -102,9 +93,9 @@ Task
 Resolve the absolute path to `contracts/scout.md`, then dispatch the contracted `scout` class:
 
 ```
-Task
+Agent
   subagent_type: "Explore"
-  model: "<scout tier — default cheap-or-standard; contracts/models.md>"
+  model: "<scout tier — default cheap; contracts/models.md>"
   prompt: "Read <abs>/contracts/scout.md first (your binding scout contract), then: Find existing [relevant] implementation patterns in this codebase. Report with file:line evidence; say NOT FOUND if absent."
 ```
 <!-- /gambit-backend -->
@@ -202,9 +193,12 @@ must stand alone without inherited conversation.
 #### Resolve and dispatch the Steelman
 
 <!-- gambit-backend:claude -->
-Resolve the absolute paths to `contracts/steelman.md` and `contracts/executors.md`. Read the
-executor contract completely and resolve `steelman` through
-`~/.claude/gambit/executors.json` exactly as it specifies:
+Resolve the absolute path to `contracts/steelman.md`, then check whether
+`~/.claude/gambit/executors.json` exists. If it does not, use native execution and do NOT read
+`contracts/executors.md`. If the check itself errors (permission denied, unreadable path, tool
+failure), that is NOT absence — stop and report the probe failure without dispatching. Only when
+that file exists, read the executor contract completely and
+resolve `steelman` through `~/.claude/gambit/executors.json` exactly as it specifies:
 
 - A missing registry file or a valid registry where the requested `steelman` role is absent uses
   the current native Claude dispatch at the most-capable tier.
@@ -217,7 +211,7 @@ executor contract completely and resolve `steelman` through
 The native Claude discovery dispatch is fresh and contracted:
 
 ```
-Task
+Agent
   subagent_type: "general-purpose"
   model: "<steelman tier — most-capable; contracts/models.md>"
   prompt: |
@@ -401,6 +395,10 @@ After design is validated, author the immutable contract and present it in full 
 | Approaches Considered | Rejected alternatives with DO NOT REVISIT conditions |
 | Delivery Constraints | Circuit breakers for non-convergence, repeated repairs, and scope growth |
 | Validation Strategy | Focused worker command, wave/component gate, release acceptance, freshness, and acceptance budget |
+| Scope Boundaries | What this epic does and does not cover — read by `executing-plans` at the release architecture/scope preflight |
+
+[TEMPLATES.md](TEMPLATES.md) is canonical for both templates. The skeletons below are abbreviated
+for reading; emit from TEMPLATES.md so no required section is dropped.
 
 **The Quality Bar is fixed — write it verbatim, don't elicit it.** Every epic carries the same bar: the highest professional standard, the code a master engineer would ship — elegant, complete, built on a superb foundation. It is not a per-project preference and is never negotiated down. Copy it verbatim from [TEMPLATES.md](TEMPLATES.md) into the epic so the checkpoint gate and reviewers have it locally. It governs *craftsmanship, not scope* — how well the required work is built, never how much of it; project-specific prohibitions go in Anti-Patterns. It sits on top of the mechanical floor the worker contract enforces (no suppression, no weakened tests, no dead code).
 
@@ -479,6 +477,15 @@ Present in the root transcript as "Worker Brief: Add [specific deliverable]":
     ## Goal
     [One clear outcome]
 
+    ## Files owned
+    [Exact repository-relative allowlist — no globs, no directories]
+
+    ## Hidden shared surfaces
+    [Implicit collision surfaces checked, or `None` only after checking]
+
+    ## Neighbors
+    [Concurrent workers' subjects and allowlists, or `None (single-task wave)`]
+
     ## Implementation
     1. Study existing code: [file.ts:line]
     2. Write tests first (TDD)
@@ -489,6 +496,8 @@ Present in the root transcript as "Worker Brief: Add [specific deliverable]":
     - [ ] [specific measurable outcome]
     - [ ] Tests passing
     - [ ] Pre-commit hooks passing
+
+    Test command: [focused command]
 <!-- gambit-backend:claude -->
   activeForm: "Adding [deliverable]"
 <!-- /gambit-backend -->
@@ -682,59 +691,6 @@ Present "Epic: OAuth" in the root transcript:
 # Explicit reasoning prevents watering down under pressure
 ```
 <!-- /gambit-backend -->
-
-## Critical Rules
-
-1. **Decompose multi-subsystem requests** — several subsystems = several epics, before refining
-2. **Questions in prose, with context** — never AskUserQuestion; every question states why you're asking and your recommendation
-3. **Research BEFORE proposing** — use Explore agent for codebase context
-4. **Propose 2-3 approaches** — don't jump to a single solution
-5. **Decompose for isolation, apply YAGNI** — well-bounded units, no unrequested scope
-6. **Steelman before epic drafting** — one mandatory discovery pass after design agreement
-7. **Freeze and show every finding** — disposition the complete ledger, then yield to the user
-8. **Bound closure** — at most one discovery and one closure call without an explicitly authorized reset
-9. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
-10. **Include anti-patterns** — prevents watering down under pressure
-11. **Author only the first wave** — independently pluckable tasks; the rest created iteratively
-12. **Apply task refinement** — before handoff
-13. **Confirm the contract before handoff** — user locks immutable requirements first
-14. **Invoke next skill directly** — don't tell user to run it manually
-
-**Common rationalizations (all mean STOP, follow the process):**
-- "Requirements obvious" → Questions reveal hidden complexity
-- "I know this pattern" → Research might show a better way
-- "The design already looks solid" → The contracted discovery pass is still mandatory
-- "Closure can happen immediately" → Show the frozen ledger and yield to the user first
-- "One more pass will settle it" → No automatic third call; only an explicit architecture reset renews the budget
-<!-- gambit-backend:claude -->
-- "Can plan all tasks upfront" → Plans become brittle as you learn
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-- "Can plan every worker upfront" → Worker briefs become brittle as you learn
-<!-- /gambit-backend -->
-- "It's one project" → Independent subsystems are separate epics; decompose first
-- "They'll want this feature too" → YAGNI; propose minimal, let them ask for more
-
-## Verification Checklist
-
-- [ ] Scope-checked: decomposed if multiple independent subsystems
-- [ ] All questions asked in prose with context and a recommendation (no AskUserQuestion)
-- [ ] Researched codebase patterns (Explore agent)
-- [ ] Proposed 2-3 approaches with trade-offs
-- [ ] Design decomposed into well-bounded, independently testable units
-- [ ] YAGNI applied — no scope the requirements don't demand
-- [ ] Sent the complete eight-field Design Packet through mandatory Steelman discovery
-- [ ] Reflected every finding in the visible frozen Design Ledger and yielded to the user
-- [ ] Ran closure when required, with no automatic third call or inferred reset
-- [ ] Created epic with all required sections
-- [ ] Anti-patterns include reasoning
-- [ ] Quality Bar present in the epic — gambit's fixed maximal standard, copied verbatim (not elicited, not weakened)
-- [ ] Rejected approaches have DO NOT REVISIT UNLESS
-- [ ] Created only the first wave (pluckable tasks, not full tree)
-- [ ] Task refined: scoped, self-contained, explicit, testable
-- [ ] User confirmed immutable requirements and the complete first wave before handoff
-- [ ] Offered next step in prose (execute/refine)
-- [ ] Invoked chosen skill directly via Skill tool
 
 ## Integration
 

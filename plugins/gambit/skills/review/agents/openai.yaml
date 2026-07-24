@@ -1,6 +1,6 @@
 interface:
   display_name: "Review"
-  short_description: "Use after every native wave in the current root session is complete, after refactoring verifies,..."
+  short_description: "Runs an independent multi-dimension review of completed work and adversarially verifies every fin..."
   default_prompt: "Use $gambit:review for this task."
 policy:
   allow_implicit_invocation: true

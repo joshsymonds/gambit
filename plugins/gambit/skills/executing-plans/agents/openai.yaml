@@ -1,6 +1,6 @@
 interface:
   display_name: "Executing Plans"
-  short_description: "Use when an approved epic contract and native wave plan exist in the current root session, when r..."
+  short_description: "Executes an approved epic one wave at a time, dispatching a worker per task and stopping at a che..."
   default_prompt: "Use $gambit:executing-plans for this task."
 policy:
   allow_implicit_invocation: true

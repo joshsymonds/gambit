@@ -153,12 +153,38 @@ def select_backend_conditionals(text: str, backend: str) -> str:
 
 
 def strip_codex_frontmatter_fields(text: str) -> str:
+    """Adapt Claude frontmatter for Codex.
+
+    Claude Code has a dedicated `when_to_use` field that is appended to the
+    description in the skill listing, so gambit splits WHAT (description) from
+    WHEN (when_to_use). Codex has no such field — it decides whether to load a
+    skill body from the description alone — so the two are merged back into one
+    description here. Dropping `when_to_use` instead would strip every trigger
+    phrase from the Codex build and silently break discovery.
+    """
     if not text.startswith("---\n"):
         return text
     end = text.find("\n---\n", 4)
     if end < 0:
         return text
     frontmatter = text[4:end]
+
+    when = re.search(r"(?m)^when_to_use:\s*(.+)$", frontmatter)
+    if when:
+        trigger = when.group(1).strip().strip("\"'")
+        frontmatter = re.sub(r"(?m)^when_to_use:\s*.*\n?", "", frontmatter)
+
+        def _merge(m: "re.Match[str]") -> str:
+            existing = m.group(1).strip().strip("\"'")
+            joined = f"{existing.rstrip()} {trigger}".strip()
+            return f"description: {yaml_quote(joined)}"
+
+        frontmatter, count = re.subn(
+            r"(?m)^description:\s*(.+)$", _merge, frontmatter, count=1
+        )
+        if count != 1:
+            raise ValueError("when_to_use present but no description to merge into")
+
     frontmatter = re.sub(r"(?m)^user_invokable:\s*.*\n?", "", frontmatter)
     return f"---\n{frontmatter.rstrip()}\n---\n{text[end + 5:]}"
 
@@ -343,7 +369,9 @@ def codex_transform(text: str, relative: Path) -> str:
     text = text.replace(" model=", " agent_profile=")
 
     if relative.suffix.lower() == ".md":
-        text = re.sub(r"(?m)^Task$", "SpawnAgent", text)
+        # Bare dispatch-block opener. The Claude source token is `Agent` (the real
+        # subagent tool); `Task` is accepted for older sources that predate the rename.
+        text = re.sub(r"(?m)^(?:Agent|Task)$", "SpawnAgent", text)
 
     if relative.name == "SKILL.md":
         text = strip_codex_frontmatter_fields(text)

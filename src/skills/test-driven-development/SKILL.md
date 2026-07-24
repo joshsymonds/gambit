@@ -1,21 +1,18 @@
 ---
 name: test-driven-development
-description: Use this implementation mechanic for new behavior or bug fixes requiring test coverage only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
+description: Drives new behavior or a bug fix through the RED-GREEN-REFACTOR cycle, test first.
+when_to_use: Use this implementation mechanic for new behavior or bug fixes requiring test coverage only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
 ---
 
 # Test-Driven Development
+
+**Freedom: LOW** — follow the cycle in order; do not adapt, skip, or reorder.
 
 ## Overview
 
 Write the test first. Watch it fail. Write minimal code to pass. Refactor. Commit.
 
 **Core principle:** If you didn't watch the test fail, you don't know if it tests the right thing.
-
-## Rigidity Level
-
-LOW FREEDOM — Follow these exact steps in order. Do not adapt, skip, or reorder.
-
-Violating the letter of the rules is violating the spirit of the rules.
 
 ## Quick Reference
 
@@ -126,10 +123,18 @@ Do NOT add behavior during refactoring. No new features, no new edge cases. Thos
 
 ### 4. COMMIT — Capture the Increment
 
-```bash
-git add [test file] [implementation file]
-git commit -m "feat(module): [behavior description]"
-```
+**Whoever owns commits captures it — and if you are a dispatched worker, that is not you.**
+
+- **Dispatched worker** (running under `contracts/worker.md`, the common case when this skill is
+  reached from `executing-plans`): do NOT commit. Leave the increment in the working tree and
+  report it with your RED/GREEN evidence. The orchestrator owns single-task commits and the wave
+  integrator owns parallel-wave commits. Committing here is a Stop Trigger, not a shortcut.
+- **Direct invocation** (the user ran this skill themselves, no orchestrator above you):
+
+  ```bash
+  git add [test file] [implementation file]
+  git commit -m "feat(module): [behavior description]"
+  ```
 
 Commit message describes the **behavior**, not the test.
 
@@ -244,37 +249,9 @@ Before mocking any dependency:
 
 **All of these mean: Delete code. Start over with RED.**
 
-## Common Rationalizations
-
-| Excuse | Reality |
-|--------|---------|
-| "Too simple to test" | Simple code breaks. Test takes 30 seconds. |
-| "I'll test after" | Tests passing immediately prove nothing. |
-| "Already manually tested" | Ad-hoc ≠ systematic. Can't re-run. |
-| "Deleting X hours is wasteful" | Sunk cost. Unverified code is debt. |
-| "Need to explore first" | Fine. Throw away exploration, start with RED. |
-| "Test is hard to write" | Hard to test = hard to use. Simplify the design. |
-| "TDD slows me down" | TDD is faster than debugging in production. |
-| "This is different because..." | It's not. RED-GREEN-REFACTOR. |
-
 ## Language-Specific Commands
 
 See [REFERENCE.md](REFERENCE.md) for test runner commands by language (Go, TypeScript, Rust, Python, Ruby, etc.).
-
-## Verification Checklist
-
-Before marking work complete:
-
-- [ ] Every new function/method has a test
-- [ ] Watched each test **fail** before implementing
-- [ ] Each test failed for expected reason (feature missing, not typo)
-- [ ] Wrote minimal code to pass each test (no extras)
-- [ ] All tests pass with no warnings
-- [ ] Tests use real code (mocks only if unavoidable)
-- [ ] Edge cases covered as separate RED-GREEN cycles
-- [ ] Changes committed after each green cycle
-
-**Can't check all boxes?** You skipped TDD. Start over.
 
 ## Integration
 

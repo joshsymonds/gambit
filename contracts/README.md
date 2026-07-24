@@ -5,13 +5,14 @@ bare `general-purpose` agent improvised without one. When a skill needs a subage
 one of these classes, passes the class contract by path, and sets an explicit `model:` at the
 class's tier (see [models.md](models.md)).
 
-For all eight externally executable roles, [executors.md](executors.md) defines executor
-selection independently from class and model-tier selection. A selected executor never changes
-the class contract or its authority.
+**The role enum is defined here and nowhere else.** There are six dispatch classes — `steelman`,
+`worker`, `scout`, `finder`, `verifier`, `test-runner` — plus two worker re-dispatch roles,
+`escalation` and `escalation-final`, which reuse the **worker** contract at a higher tier rather
+than defining classes of their own. That is the eight externally executable roles
+[executors.md](executors.md) configures. A selected executor never changes the class contract or
+its authority.
 
 > **Rule: dispatch a contracted class; never spawn a bare generic agent without a contract.**
-> A contractless agent has no blast-radius limit, no return protocol, and no tier — the disciplines
-> these contracts encode simply evaporate.
 
 > **Transport exception — `wrapper` only:** The async configured-executor wrapper defined by
 > [async-dispatch.md](async-dispatch.md) is pure transport, not a contracted class. It reads no
@@ -25,11 +26,13 @@ the class contract or its authority.
 |-------|----------|-------------|-------------|
 | **steelman** | [steelman.md](steelman.md) | most-capable | fresh read-only design collaboration during bounded discovery and closure |
 | **worker** | [worker.md](worker.md) | standard | implementing a task's code for executing-plans |
-| **scout** | [scout.md](scout.md) | cheap-or-standard | read-only investigation — find code/patterns/answers and return evidence (brainstorming, executing-plans, debugging) |
+| **scout** | [scout.md](scout.md) | cheap | read-only investigation — find code/patterns/answers and return evidence (brainstorming, executing-plans, debugging) |
 | **finder** | `skills/review/reviewers/{conformance,security,quality,performance}.md` | most-capable | reviewing changed code for issues — all four at end-of-epic review; the `quality` finder alone, scoped to one diff, as the `executing-plans` checkpoint gate's escalation reviewer |
 | **verifier** | `skills/review/reviewers/verifier.md` | most-capable | kill-or-keep verifying candidate findings |
 | **test-runner** | (none — a command + report) | cheap | running a test/build command and reporting its exact output + exit code |
 
-Each contract is read by the subagent in its own fresh context: the dispatcher resolves the path
-and passes it, and does **not** read the contract into its own context. Model tiers and the
-`~/.claude/gambit/models.json` override are defined once in [models.md](models.md).
+`escalation` and `escalation-final` re-dispatch the **worker** contract at the most-capable tier;
+they are executor-configurable roles, not separate classes.
+
+Model tiers and the `~/.claude/gambit/models.json` override are defined once in
+[models.md](models.md).

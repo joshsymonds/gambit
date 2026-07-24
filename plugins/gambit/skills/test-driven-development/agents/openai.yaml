@@ -1,6 +1,6 @@
 interface:
   display_name: "Test-Driven Development"
-  short_description: "Use this implementation mechanic for new behavior or bug fixes requiring test coverage only when..."
+  short_description: "Drives new behavior or a bug fix through the RED-GREEN-REFACTOR cycle, test first. Use this imple..."
   default_prompt: "Use $gambit:test-driven-development for this task."
 policy:
   allow_implicit_invocation: false

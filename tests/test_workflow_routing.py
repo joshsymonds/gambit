@@ -160,25 +160,33 @@ class WorkflowRoutingTest(unittest.TestCase):
                     encoding="utf-8"
                 )
                 frontmatter, body = text.split("\n---\n", 1)
-                description = re.search(
-                    r"(?m)^description:\s*(.+)$", frontmatter
-                ).group(1)
+                # The routing decision sees the skill LISTING, which is
+                # `description` plus `when_to_use` concatenated. Claude builds
+                # split WHAT/WHEN across both fields; Codex builds merge them
+                # back into `description`. Assert on what the model actually
+                # reads, not on which field happens to hold it.
+                listing = " ".join(
+                    m.group(1)
+                    for m in re.finditer(
+                        r"(?m)^(?:description|when_to_use):\s*(.+)$", frontmatter
+                    )
+                )
                 with self.subTest(root=skill_root, mechanic=mechanic):
                     self.assertIn(
                         "explicitly invoked by name",
-                        description,
+                        listing,
                     )
                     self.assertIn(
                         "called by an active Gambit workflow owner",
-                        description,
+                        listing,
                     )
                     self.assertIn(
                         "do not select it implicitly as a peer workflow",
-                        description,
+                        listing,
                     )
                     self.assertIsNone(
-                        re.search(r"(?i)\buser(?:s|'s)?\b", description),
-                        description,
+                        re.search(r"(?i)\buser(?:s|'s)?\b", listing),
+                        listing,
                     )
                     self.assertNotIn("Announce at start", body)
                     self.assertNotIn(f"I'm using gambit:{mechanic}", body)

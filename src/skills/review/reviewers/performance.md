@@ -88,7 +88,7 @@ Every Gap and Improvement you report MUST be about code the branch actually chan
 
 ## Verification Requirement (Critical)
 
-Every Gap and Improvement you report MUST include a `**Verify by:**` line describing the concrete steps a second reviewer could follow to independently confirm your claim. A dedicated verifier sub-agent runs these steps on every finding and classifies each one as confirmed, refuted, or gap; findings without a specific, actionable `Verify by:` are judged **refuted** and dropped.
+Every Gap and Improvement you report MUST include a `**Verify by:**` line describing the concrete steps a second reviewer could follow to independently confirm your claim. A dedicated verifier sub-agent runs these steps on every finding and classifies each one as confirmed, refuted, or gap; findings without a specific, actionable `Verify by:` are judged **refuted** and dropped. Express every step as **static inspection** — Read, Grep, Glob, WebFetch, WebSearch. The verifier does not run code, scanners, or test suites, so a step it cannot perform only wastes the finding.
 
 **Good `Verify by:` examples:**
 

@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Use when user has a new feature idea, rough concept, or unexplored approach. Include when planning before code, breaking a design into tasks, creating an implementation plan, laying out tasks and dependencies, exploring architectural options, or requirements are vague. User phrases like "I want to build X", "should we do this", "let's think through Y", "explore approaches", "break this into tasks", "make an implementation plan". Do NOT use for executing existing plans, fixing bugs, refactoring, or when requirements and an epic already exist.
+description: "Turns a rough idea into an approved epic contract with immutable requirements, anti-patterns, and a first wave of executable tasks. Use when user has a new feature idea, rough concept, or unexplored approach. Include when planning before code, breaking a design into tasks, creating an implementation plan, laying out tasks and dependencies, exploring architectural options, or requirements are vague. User phrases like \"I want to build X\", \"should we do this\", \"let's think through Y\", \"explore approaches\", \"break this into tasks\", \"make an implementation plan\". Do NOT use for executing existing plans, fixing bugs, refactoring, or when requirements and an epic already exist."
 ---
 
 <!-- Generated backend adapter: edit src/backends/codex/, not plugins/gambit/. -->
@@ -17,6 +17,8 @@ literal shell commands.
 
 # Brainstorming Ideas Into Designs
 
+**Freedom: HIGH** — adapt the questioning to context. Fixed: design approved before code, first wave only, questions in prose.
+
 ## Overview
 
 Turn rough ideas into validated designs captured as immutable epic contracts in the root transcript. Complete worker briefs are authored iteratively as you learn, not upfront.
@@ -24,14 +26,6 @@ Turn rough ideas into validated designs captured as immutable epic contracts in 
 **Core principle:** Ask questions to understand, research before proposing, document decisions for future reference.
 
 **Announce at start:** "I'm using gambit:brainstorming to refine your idea into a design."
-
-## Rigidity Level
-
-HIGH FREEDOM - Adapt questioning to context. But always:
-- Present the immutable epic contract before code
-- Author only the first wave — complete independently pluckable worker briefs, never a full tree
-- Ask every question in prose with context and a recommendation — never the GambitAskUser tool
-- Apply task refinement before handoff
 
 ## Quick Reference
 
@@ -282,6 +276,10 @@ After design is validated, author the immutable contract and present it in full 
 | Approaches Considered | Rejected alternatives with DO NOT REVISIT conditions |
 | Delivery Constraints | Circuit breakers for non-convergence, repeated repairs, and scope growth |
 | Validation Strategy | Focused worker command, wave/component gate, release acceptance, freshness, and acceptance budget |
+| Scope Boundaries | What this epic does and does not cover — read by `executing-plans` at the release architecture/scope preflight |
+
+[TEMPLATES.md](TEMPLATES.md) is canonical for both templates. The skeletons below are abbreviated
+for reading; emit from TEMPLATES.md so no required section is dropped.
 
 **The Quality Bar is fixed — write it verbatim, don't elicit it.** Every epic carries the same bar: the highest professional standard, the code a master engineer would ship — elegant, complete, built on a superb foundation. It is not a per-project preference and is never negotiated down. Copy it verbatim from [TEMPLATES.md](TEMPLATES.md) into the epic so the checkpoint gate and reviewers have it locally. It governs *craftsmanship, not scope* — how well the required work is built, never how much of it; project-specific prohibitions go in Anti-Patterns. It sits on top of the mechanical floor the worker contract enforces (no suppression, no weakened tests, no dead code).
 
@@ -336,6 +334,15 @@ Present in the root transcript as "Worker Brief: Add [specific deliverable]":
     ## Goal
     [One clear outcome]
 
+    ## Files owned
+    [Exact repository-relative allowlist — no globs, no directories]
+
+    ## Hidden shared surfaces
+    [Implicit collision surfaces checked, or `None` only after checking]
+
+    ## Neighbors
+    [Concurrent workers' subjects and allowlists, or `None (single-task wave)`]
+
     ## Implementation
     1. Study existing code: [file.ts:line]
     2. Write tests first (TDD)
@@ -346,6 +353,8 @@ Present in the root transcript as "Worker Brief: Add [specific deliverable]":
     - [ ] [specific measurable outcome]
     - [ ] Tests passing
     - [ ] Pre-commit hooks passing
+
+    Test command: [focused command]
 ```
 
 **Why so few?** Later tasks reflect learnings from execution. Upfront task trees become brittle when assumptions change.
@@ -464,54 +473,6 @@ Present "Epic: OAuth" in the root transcript:
     - NO mocking OAuth in integration tests (reason: defeats purpose)
 # Explicit reasoning prevents watering down under pressure
 ```
-
-## Critical Rules
-
-1. **Decompose multi-subsystem requests** — several subsystems = several epics, before refining
-2. **Questions in prose, with context** — never GambitAskUser; every question states why you're asking and your recommendation
-3. **Research BEFORE proposing** — use explorer agent for codebase context
-4. **Propose 2-3 approaches** — don't jump to a single solution
-5. **Decompose for isolation, apply YAGNI** — well-bounded units, no unrequested scope
-6. **Steelman before epic drafting** — one mandatory discovery pass after design agreement
-7. **Freeze and show every finding** — disposition the complete ledger, then yield to the user
-8. **Bound closure** — at most one discovery and one closure call without an explicitly authorized reset
-9. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
-10. **Include anti-patterns** — prevents watering down under pressure
-11. **Author only the first wave** — independently pluckable tasks; the rest created iteratively
-12. **Apply task refinement** — before handoff
-13. **Confirm the contract before handoff** — user locks immutable requirements first
-14. **Invoke next skill directly** — don't tell user to run it manually
-
-**Common rationalizations (all mean STOP, follow the process):**
-- "Requirements obvious" → Questions reveal hidden complexity
-- "I know this pattern" → Research might show a better way
-- "The design already looks solid" → The contracted discovery pass is still mandatory
-- "Closure can happen immediately" → Show the frozen ledger and yield to the user first
-- "One more pass will settle it" → No automatic third call; only an explicit architecture reset renews the budget
-- "Can plan every worker upfront" → Worker briefs become brittle as you learn
-- "It's one project" → Independent subsystems are separate epics; decompose first
-- "They'll want this feature too" → YAGNI; propose minimal, let them ask for more
-
-## Verification Checklist
-
-- [ ] Scope-checked: decomposed if multiple independent subsystems
-- [ ] All questions asked in prose with context and a recommendation (no GambitAskUser)
-- [ ] Researched codebase patterns (explorer agent)
-- [ ] Proposed 2-3 approaches with trade-offs
-- [ ] Design decomposed into well-bounded, independently testable units
-- [ ] YAGNI applied — no scope the requirements don't demand
-- [ ] Sent the complete eight-field Design Packet through mandatory Steelman discovery
-- [ ] Reflected every finding in the visible frozen Design Ledger and yielded to the user
-- [ ] Ran closure when required, with no automatic third call or inferred reset
-- [ ] Created epic with all required sections
-- [ ] Anti-patterns include reasoning
-- [ ] Quality Bar present in the epic — gambit's fixed maximal standard, copied verbatim (not elicited, not weakened)
-- [ ] Rejected approaches have DO NOT REVISIT UNLESS
-- [ ] Created only the first wave (pluckable tasks, not full tree)
-- [ ] Task refined: scoped, self-contained, explicit, testable
-- [ ] User confirmed immutable requirements and the complete first wave before handoff
-- [ ] Offered next step in prose (execute/refine)
-- [ ] Invoked chosen skill directly via Codex skill invocation
 
 ## Integration
 

@@ -5,3 +5,6 @@ reference/
 # Python renderer/test caches
 __pycache__/
 *.pyc
+
+# Session worktrees (embedded repos, never committed)
+.claude/

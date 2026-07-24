@@ -1,6 +1,6 @@
 interface:
   display_name: "Task Refinement"
-  short_description: "Use this implementation mechanic to refine prepared work briefs only when explicitly invoked by n..."
+  short_description: "Refines prepared work briefs until each one is executable by a junior engineer without questions...."
   default_prompt: "Use $gambit:task-refinement for this task."
 policy:
   allow_implicit_invocation: false

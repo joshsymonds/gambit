@@ -1,6 +1,6 @@
 ---
 name: verification
-description: Use this implementation mechanic to substantiate a completion or readiness claim only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
+description: "Substantiates a completion or readiness claim with freshly gathered evidence. Use this implementation mechanic to substantiate a completion or readiness claim only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow."
 ---
 
 <!-- Generated backend adapter: edit src/backends/codex/, not plugins/gambit/. -->
@@ -17,17 +17,13 @@ literal shell commands.
 
 # Verification Before Completion
 
+**Freedom: LOW** — run the command, read the output, then claim. No exceptions.
+
 ## Overview
 
 Claiming work is complete without verification is dishonesty, not efficiency.
 
 **Core principle:** Evidence before claims, always. Be adversarial about proof and closed about scope.
-
-## Rigidity Level
-
-LOW FREEDOM - NO exceptions. Run verification command, read output, THEN make claim.
-
-Violating the letter of the rules is violating the spirit of the rules.
 
 ## Quick Reference
 
@@ -197,69 +193,6 @@ SessionContextRead → complete current-wave worker briefs
 ```
 
 **For epic completion:** Run `SessionPlanRead` first and confirm every wave step is completed. Then use `SessionContextRead` to reread the approved epic contract and verify every epic-level criterion. Worker completion evidence comes from checkpoints and native subagent results.
-
----
-
-## Critical Rules
-
-### Rules That Have No Exceptions
-
-1. **Fresh evidence required** → If you changed code since last run, previous results don't count
-2. **Each criterion individually** → "Tests pass" doesn't verify "no TODOs remain"
-3. **Agent results verified independently** → Check VCS diff, don't trust reports
-4. **No hedging language as evidence** → "Should", "probably", "seems to" are not verification
-5. **Complete command for the claim tier** → Run the entire focused worker command, wave/component gate, or release acceptance command that proves this claim; do not substitute a lower tier or silently promote to a higher one
-6. **Closed claim set** → Verification challenges declared claims; it never expands requirements or a review ledger
-
-### Common Excuses
-
-All of these mean: **STOP. Run verification.**
-
-| Excuse | Reality |
-|--------|---------|
-| "Should work now" | RUN the verification |
-| "I'm confident" | Confidence ≠ evidence |
-| "Just this once" | No exceptions |
-| "Linter passed" | Linter ≠ compiler ≠ tests |
-| "Agent said success" | Verify independently |
-| "Partial check is enough" | Partial proves nothing |
-| "I already verified earlier" | You changed code since then |
-| "Different words so rule doesn't apply" | Spirit over letter |
-| "While verifying, I noticed another improvement" | Report it separately. Do not turn verification into a new review |
-
----
-
-## Verification Checklist
-
-Before any completion claim:
-- [ ] Froze the complete claim set from approved criteria, open ledger IDs, and named gates
-- [ ] Kept newly noticed observations outside that set non-blocking
-
-Before claiming tests pass:
-- [ ] Identified the claim's declared validation tier
-- [ ] Ran its complete command (not a partial command within that tier)
-- [ ] Saw output showing 0 failures
-- [ ] Exit code was 0
-
-Before claiming build succeeds:
-- [ ] Ran build command (not just linter)
-- [ ] Saw exit code 0
-
-Before reporting a wave ready for its durable checkpoint:
-- [ ] Re-read every complete current-wave worker brief with `SessionContextRead`
-- [ ] Ran verification for EACH worker criterion
-- [ ] Confirmed individual worker completion from checkpoints/native subagent results
-- [ ] Saw evidence all pass
-- [ ] Reported readiness to the owning execution workflow without mutating native plan state
-
-Before reporting the epic ready for review:
-- [ ] Ran `SessionPlanRead`
-- [ ] Saw every wave step completed
-- [ ] Re-read the approved contract with `SessionContextRead`
-- [ ] Ran verification for epic success criteria
-- [ ] Reported epic readiness without mutating native plan state
-
-**Can't check all boxes?** Return to the process.
 
 ---
 

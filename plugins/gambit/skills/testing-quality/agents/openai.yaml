@@ -1,6 +1,6 @@
 interface:
   display_name: "Testing Quality Analysis"
-  short_description: "Use this implementation mechanic to audit an existing test suite only when explicitly invoked by..."
+  short_description: "Audits an existing test suite for tests that pass without catching bugs, and specifies the replac..."
   default_prompt: "Use $gambit:testing-quality for this task."
 policy:
   allow_implicit_invocation: false

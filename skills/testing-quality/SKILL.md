@@ -1,20 +1,19 @@
 ---
 name: testing-quality
-description: Use this implementation mechanic to audit an existing test suite only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
+description: Audits an existing test suite for tests that pass without catching bugs, and specifies the replacements.
+when_to_use: Use this implementation mechanic to audit an existing test suite only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
 user_invokable: true
 ---
 
 # Testing Quality Analysis
+
+**Freedom: MEDIUM** — corner-case discovery adapts to the codebase. Fixed: the phase order and the RED/YELLOW/GREEN criteria.
 
 ## Overview
 
 Audit test suites for real effectiveness, not vanity metrics. Identify tests that provide false confidence and missing corner cases. Create Tasks for improvements.
 
 **Core principle:** Tests must catch bugs, not inflate coverage metrics. Coverage measures execution, not assertion quality.
-
-## Rigidity Level
-
-MEDIUM FREEDOM — Follow analysis phases exactly. RED/YELLOW/GREEN criteria are rigid. Corner case discovery adapts to the codebase.
 
 ## Quick Reference
 
@@ -24,9 +23,10 @@ MEDIUM FREEDOM — Follow analysis phases exactly. RED/YELLOW/GREEN criteria are
 | 2 | Read production code | Context for analysis |
 | 3 | Categorize (skeptical default) | RED/YELLOW/GREEN per test |
 | 4 | Self-review all classifications | Validated categories |
-| 5 | Discover missing corner cases | Gap analysis |
-| 6 | Prioritize by business impact | Priority matrix |
-| 7 | Create Tasks for improvements | Tracked improvement plan |
+| 5 | Line-by-line justification (MANDATORY for every RED/YELLOW) | Written justification per test |
+| 6 | Discover missing corner cases | Gap analysis |
+| 7 | Prioritize by business impact | Priority matrix |
+| 8 | Create Tasks for improvements | Tracked improvement plan |
 
 **Iron Law:** Read production code BEFORE categorizing ANY test.
 
@@ -199,26 +199,6 @@ Present results as a structured report. See [REFERENCE.md](REFERENCE.md) for the
 
 **Overall Assessment:** CRITICAL / NEEDS WORK / ACCEPTABLE / GOOD
 
-## Critical Rules
-
-1. **Read production code FIRST** — before categorizing ANY test
-2. **Skeptical default** — RED/YELLOW until proven GREEN
-3. **Justify every GREEN** — name the production path, the bug, and the assertion
-4. **Justify every RED/YELLOW** — line-by-line with file references
-5. **Self-review before finalizing** — challenge every GREEN classification
-6. **Create actionable Tasks** — don't just report, create tracked improvement plan
-
-### Common Rationalizations
-
-| Excuse | Reality |
-|--------|---------|
-| "Test looks reasonable" | Looking reasonable ≠ catching bugs. Read production code. |
-| "High coverage = good tests" | Coverage measures execution, not assertion quality |
-| "Mock is necessary here" | Mock is fine, but assert on production behavior, not mock returns |
-| "Test exercises the function" | Calling a function without meaningful assertions is a line hitter |
-| "It would catch obvious bugs" | Name the specific bug. If you can't, it's YELLOW at best. |
-| "Too many tests to justify each" | Unjustified classifications are wrong classifications |
-
 ## Anti-patterns
 
 **Don't:**
@@ -235,28 +215,6 @@ Present results as a structured report. See [REFERENCE.md](REFERENCE.md) for the
 - Apply skeptical default (RED/YELLOW until proven GREEN)
 - Complete self-review checklist for all GREEN classifications
 - Create actionable Tasks for improvements
-
-## Verification Checklist
-
-**Analysis Quality (MANDATORY):**
-- [ ] Read production code for EVERY test before categorizing
-- [ ] Traced call paths to verify tests exercise production, not mocks/utilities
-- [ ] Applied skeptical default (assumed RED/YELLOW, required proof for GREEN)
-- [ ] Completed self-review checklist for ALL GREEN tests
-- [ ] Each GREEN test has explicit justification (production path + bug + assertion)
-- [ ] Each RED/YELLOW has line-by-line justification
-
-**Per module:**
-- [ ] All tests categorized (RED/YELLOW/GREEN)
-- [ ] RED tests have specific removal/replacement actions
-- [ ] YELLOW tests have specific strengthening actions
-- [ ] Corner cases identified (input, state, integration)
-- [ ] Priority assigned (P0/P1/P2/P3)
-
-**Task Integration:**
-- [ ] Created epic for test quality improvement
-- [ ] Created subtasks for each category (remove, strengthen, add)
-- [ ] Set task dependencies
 
 ## Integration
 

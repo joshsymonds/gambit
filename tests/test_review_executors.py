@@ -427,9 +427,14 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
         self.assertNotIn("#### Configured Codex finder dispatch", closure)
 
     def test_summary_rules_follow_the_once_selected_executor(self) -> None:
-        claude_rules = self.section(
-            self.claude, "## Critical Rules", "**Common rationalizations:**"
-        )
+        # The trailing Critical Rules recap was removed; the dispatch prose in the
+        # body is now the single statement of this rule, so assert against it. The
+        # guarantee is unchanged: the Claude branch must stay executor-aware and
+        # must not promise native Agent calls, which are wrong under a configured
+        # finder executor.
+        claude_rules = self.claude.split("**Parallelism is structural", 1)[1].split(
+            "\n##", 1
+        )[0]
         self.assertIn("four calls through the once-selected finder executor", claude_rules)
         self.assertIn(
             "native Agent calls or configured anonymous background wrapper calls",
@@ -443,10 +448,10 @@ class ReviewExecutorRoutingTest(unittest.TestCase):
             claude_integration,
         )
 
-        codex_rules = self.section(
-            self.codex, "## Critical Rules", "**Common rationalizations:**"
-        )
-        self.assertIn("four SpawnAgent calls", codex_rules)
+        codex_rules = self.codex.split("**Parallelism is structural", 1)[1].split(
+            "\n##", 1
+        )[0]
+        self.assertIn("native SpawnAgent calls", codex_rules)
         self.assertNotIn("finder.tool", codex_rules)
 
     def test_native_codex_review_is_isolated_from_claude_executor_routing(self) -> None:

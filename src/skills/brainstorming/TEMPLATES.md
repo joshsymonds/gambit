@@ -1,7 +1,9 @@
 <!-- gambit-backend:claude -->
 # Epic and Task Templates
 
-Full templates for creating epics and first tasks. SKILL.md has condensed versions — use these for complete output.
+**Canonical templates for epics and first tasks.** SKILL.md's skeletons are abbreviated for
+reading; emit from these. A brief missing `Files owned`, `Hidden shared surfaces`, `Neighbors`, or
+`Test command:` cannot be dispatched to a configured worker or run in a wave of ≥2.
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 # Epic Contract and Worker Brief Templates

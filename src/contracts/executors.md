@@ -5,6 +5,10 @@ Claude-backed Gambit may override the native executor for all eight contracted e
 reading `~/.claude/gambit/executors.json`. The registry is optional. It selects an executor only;
 the class contract, authority, model tier, and workflow semantics remain unchanged.
 
+**Probe before you read this file.** Absence of `~/.claude/gambit/executors.json` is the common
+case and resolves to native execution. Skills must check that the file exists *before* reading
+this contract — reading it first loads ~650 lines to reach the default answer.
+
 All eight contracted execution roles may be configured: `steelman`, `worker`, `escalation`,
 `escalation-final`, `scout`, `finder`, `verifier`, and `test-runner`. A configured `worker`
 requires configured `escalation` and `escalation-final` entries so the executing-plans repair

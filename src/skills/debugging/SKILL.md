@@ -1,9 +1,12 @@
 ---
 name: debugging
-description: Use when a test is failing, when a bug is reported, when behavior is unexpected or intermittent, when a build or integration step fails, or when a flaky test keeps resurfacing. Especially when "the fix seems obvious", when multiple previous fixes haven't stuck, or when under time pressure to ship.
+description: Investigates a bug to its root cause with evidence and a failing test, then hands the understanding off — it does not implement the fix.
+when_to_use: Use when a test is failing, when a bug is reported, when behavior is unexpected or intermittent, when a build or integration step fails, or when a flaky test keeps resurfacing. Especially when "the fix seems obvious", when multiple previous fixes haven't stuck, or when under time pressure to ship.
 ---
 
 # Debugging — Root Cause Investigation
+
+**Freedom: MEDIUM** — adapt techniques to the bug. Fixed: evidence before hypothesis, a failing test before handoff, fix the source not the symptom.
 
 ## Overview
 
@@ -16,10 +19,6 @@ Random fixes waste time and create new bugs. A fix for a symptom you don't under
 **Iron Law:** No fix designed without root-cause evidence AND a failing test that reproduces the bug. Think the fix is obvious? Prove it with evidence first. No exceptions.
 
 **Announce at start:** "I'm using gambit:debugging to find the root cause."
-
-## Rigidity Level
-
-MEDIUM FREEDOM — Follow the investigation sequence; adapt the techniques to the bug in front of you. Non-negotiable: evidence before hypothesis, a failing test before handoff, fix the source not the symptom.
 
 ## Quick Reference
 
@@ -56,8 +55,10 @@ MEDIUM FREEDOM — Follow the investigation sequence; adapt the techniques to th
 **Evidence before hypothesis. Use tools, not guessing.**
 
 <!-- gambit-backend:claude -->
-For bounded codebase investigation, Glob `**/contracts/scout.md`, read
-`contracts/executors.md`, and resolve `scout` through `contracts/executors.md` before dispatch.
+For bounded codebase investigation, Glob `**/contracts/scout.md`. If
+`~/.claude/gambit/executors.json` does not exist, use native execution and do NOT read
+`contracts/executors.md` — the registry is optional and its absence is the common case. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise
+read `contracts/executors.md` and resolve `scout` through `contracts/executors.md` before dispatch.
 Missing registry or a valid registry with no `scout` role selects native Claude and a contracted
 `subagent_type: "Explore"` call with `model:` at the scout tier and a prompt that says Read
 `contracts/scout.md` first. A configured `scout` role uses the Configured
@@ -119,45 +120,6 @@ Brainstorming turns this into an epic and routes it through `executing-plans` �
 **Fast path (one-liners only):** if the root cause is a genuine one-line change and the failing test fully guards it, just make the change and verify (test passes + full suite green). Don't spin up an epic for a typo. Anything larger than a one-liner → brainstorming.
 
 **If 3+ hypotheses or fixes have already failed: STOP.** Each fix revealing a new problem elsewhere, or fixes that need "massive refactoring," means your root-cause model is wrong or the architecture is. Question fundamentals *with the user* before handing a shaky diagnosis to brainstorming.
-
----
-
-## Critical Rules
-
-### Rules That Have No Exceptions
-
-1. **Evidence before hypothesis** → code path, logs, or test output showing WHY
-2. **Reproduce before investigating** → can't reproduce → gather data, don't guess
-3. **Failing test before handoff** → proves you caught the real bug, not a story
-4. **Trace to the SOURCE** → fix where the bad value originates, not where it crashes
-5. **3+ failed attempts → question architecture** → stop and discuss with the user
-6. **Hand the root cause to brainstorming** → don't rebuild a fix-and-close pipeline here
-
-### Common Excuses
-
-All mean: **STOP. Return to steps 1–2.**
-
-| Excuse | Reality |
-|--------|---------|
-| "Issue is simple, don't need to investigate" | Simple issues have root causes too |
-| "Emergency, no time to investigate" | Systematic is FASTER than thrashing |
-| "Just try this fix first, then investigate" | First fix sets the pattern. Do it right. |
-| "I'll write the test after I confirm the fix" | Untested fixes don't stick |
-| "I see the problem, let me fix it" | Seeing symptoms ≠ understanding root cause |
-| "One more fix attempt" (after 2+ failures) | 3+ failures = architectural problem |
-| "Obviously X is the cause" | "Obvious" causes are often wrong. Get evidence. |
-
----
-
-## Verification Checklist
-
-- [ ] Bug reproduced consistently
-- [ ] Root cause identified WITH evidence (not a plausible guess)
-- [ ] Failing test reproduces the bug (RED)
-- [ ] Root cause (not symptom) handed to brainstorming — or one-line fix verified green
-- [ ] If 3+ attempts failed: architecture questioned with the user
-
-**Can't check these?** Return to the process.
 
 ---
 

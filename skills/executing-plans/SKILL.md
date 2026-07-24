@@ -1,10 +1,13 @@
 ---
 name: executing-plans
-description: Use when an epic Task exists and subtasks are ready to implement, when resuming work after a previous checkpoint, when iteratively building a feature, or when implementation has revealed unexpected work that needs a new task. User phrases like "continue the plan", "next task", "resume where we left off", "pick up the epic".
+description: Executes an approved epic one wave at a time, dispatching a worker per task and stopping at a checkpoint after each wave.
+when_to_use: Use when an epic Task exists and subtasks are ready to implement, when resuming work after a previous checkpoint, when iteratively building a feature, or when implementation has revealed unexpected work that needs a new task. User phrases like "continue the plan", "next task", "resume where we left off", "pick up the epic".
 user_invokable: true
 ---
 
 # Executing Plans
+
+**Freedom: LOW** — load epic, execute one wave, checkpoint, STOP.
 
 ## Overview
 
@@ -23,12 +26,6 @@ STOP does not mean the epic halts; it means this turn ends and the next cycle be
 - **A goal Stop-hook** that re-invokes the skill automatically — the ONLY sanctioned way to run cycle-after-cycle without a human pause.
 
 Continuous, no-human-pause execution is therefore **authorized only by a goal Stop-hook — never self-granted.** An in-session "just keep going, don't stop for me" does NOT authorize it: if the user wants unattended execution they set a goal; surface that in the checkpoint rather than batching cycles yourself. Every safeguard — quality gate, commit, checkpoint summary, and this re-invocation — runs on every cycle regardless; the goal changes only who triggers the next one, never what happens inside a cycle.
-
-## Rigidity Level
-
-LOW FREEDOM — Follow exact process: load epic, execute one wave, checkpoint, STOP.
-
-Do not skip checkpoints or verification. Epic requirements never change. Tasks adapt to discoveries.
 
 ## Quick Reference
 
@@ -111,10 +108,12 @@ The transient per-worker worktrees of a ≥2 wave (`references/wave-dispatch.md`
 
 **Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. This is optional per task; skip it when the brief is already clear.
 
-Glob `**/contracts/scout.md`, read `contracts/executors.md`, and resolve `scout` through
-`contracts/executors.md` before dispatch. Missing registry or a valid registry with no `scout` role
+Glob `**/contracts/scout.md`. If `~/.claude/gambit/executors.json` does not exist, use native
+execution and do NOT read `contracts/executors.md` — the registry is optional and its absence is
+the common case. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise read `contracts/executors.md` and
+resolve `scout` through `contracts/executors.md` before dispatch. Missing registry or a valid registry with no `scout` role
 selects native Claude: dispatch `subagent_type: "Explore"` with `model:` at the scout tier (default
-cheap-or-standard; `contracts/models.md`) and prompt it to Read `contracts/scout.md` first, then ask
+cheap; `contracts/models.md`) and prompt it to Read `contracts/scout.md` first, then ask
 the bounded question. A configured `scout` role uses the Configured scout wire in
 `contracts/executors.md` with that same question and the task's repository/worktree root. An
 invalid registry or configured call failure is terminal: report it and do not retry or fall back
@@ -126,6 +125,8 @@ The scout returns `file:line` evidence or `NOT FOUND` — never a guess.
 
 **Apply the declared validation ladder.** The focused worker command proves the worker-owned behavior during TDD. The wave/component gate proves the integrated wave once. Release acceptance proves the final system claim on fresh artifacts within the approved budget. Release acceptance is not a per-worker or per-wave default; run it early only when the contract budgets a diagnostic run that answers a named system-level question.
 
+**Answer the user before you dispatch.** When the user asks a direct question mid-epic, answer it in prose before or alongside your next action. A dispatch, a task update, or a checkpoint summary is never a substitute for the answer. Deferring a question to "keep the loop moving" is the drift, not the discipline; if you can't answer, say so plainly rather than fabricating (e.g. per-worker token cost isn't surfaced to you — point the user at the session telemetry, don't guess a number).
+
 **Dispatch the wave to workers:**
 
 The ready work is a **wave** — one or more ready tasks whose file sets are **pairwise disjoint** and that have **no semantic dependency** on each other (a task needing another's output belongs in a later wave). One cycle dispatches one wave. The orchestrator does not write implementation code in the main context and stays a coordinator: it plans, verifies, integrates, and checkpoints while the selected worker executor does the mechanical work. Native Claude dispatches a fresh `general-purpose` worker with a tier-resolved model; a configured `worker` role instead uses its MCP executor and concrete registry model. Every worker is governed by the shared **`contracts/worker.md`** — blast-radius confinement, TDD with RED/GREEN evidence, fail-fast Stop Triggers, and a 4-state return.
@@ -135,7 +136,7 @@ The ready work is a **wave** — one or more ready tasks whose file sets are **p
 
 **Resolve the contract path once.** Glob `**/contracts/worker.md` at the start of the epic to get its absolute path and pass that path to the worker — **do NOT Read `worker.md` into your own context**, and **do NOT hardcode or reuse a stale absolute path from an earlier session** (plugin store paths change; re-Glob). The worker reads it in its fresh context (exactly as the `review` skill passes `reviewers/*.md` by path); reading it yourself loads ~1.4k tokens into the long-lived orchestrator context on every epic, for nothing. The worker re-reads it on every dispatch, including retries — keep `worker.md` lean.
 
-1. **Resolve the worker executor.** Before initial dispatch, resolve `worker` through `contracts/executors.md` using its complete validation and resolution sequence.
+1. **Resolve the worker executor.** If `~/.claude/gambit/executors.json` does not exist, use native Claude dispatch and do NOT read `contracts/executors.md` — the registry is optional and its absence is the common case. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise: Before initial dispatch, resolve `worker` through `contracts/executors.md` using its complete validation and resolution sequence.
    - **Missing registry file or valid registry with no `worker` role** → preserve native Claude dispatch. Resolve the worker model by tier through `contracts/models.md`: default `worker → standard`, with `~/.claude/gambit/models.json` overrides and `escalation` for a re-dispatch. **Always set `model:` explicitly — never omit it, never pass `inherit`** (that silently inherits the expensive session model). **Never write a concrete model ID into this skill** — native resolution is config/alias only.
    - **Invalid registry** → stop and report the registry error without dispatching.
    - **Configured Codex** → read **`references/configured-workers.md`** completely and follow its fixed external ladder. Its validated `worker` and required `escalation` and `escalation-final` entries own every implementation and repair rung. Any configured transport or protocol failure stops and is reported; do not retry through native Claude.
@@ -221,7 +222,7 @@ Route on the verdict:
 
 **Escalate to an independent quality reviewer** when any trigger fires: the diff is large or touches a security- or correctness-sensitive surface, the worker returned `DONE_WITH_CONCERNS` on correctness/scope, the wave is wide (≥4 diffs this checkpoint — inline gate attention dilutes across many diffs, so escalate the ones you'd otherwise skim), or your own read leaves you genuinely unsure. Resolve `skills/review/reviewers/quality.md` once (Glob) and pass its absolute quality contract path, without reading the contract into your context.
 
-Before this checkpoint quality dispatch, resolve `finder` through `contracts/executors.md` using its complete validation and resolution sequence:
+If `~/.claude/gambit/executors.json` does not exist, use the native Agent path below and do NOT read `contracts/executors.md`. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise: Before this checkpoint quality dispatch, resolve `finder` through `contracts/executors.md` using its complete validation and resolution sequence:
 - **Missing registry file or valid registry with no `finder` role** → preserve the current native Agent path at the **finder tier** (`model:` per `contracts/models.md`, set explicitly):
   ```
   Agent subagent_type="general-purpose" model="<finder tier — see contracts/models.md>" description="Quality review: <task>"
@@ -441,60 +442,6 @@ Skill skill="gambit:review"
 Do not tell the user to run it manually — invoke it and follow its process immediately. Review validates architecture, security, completeness, dead code, test quality, and code quality across the entire epic before allowing finishing-branch.
 
 For obstacle handling and checkpoint-brief examples, read `references/examples.md`.
-
-## Critical Rules
-
-**Answer the user before you dispatch.** When the user asks a direct question mid-epic, answer it in prose before or alongside your next action. A dispatch, a task update, or a checkpoint summary is never a substitute for the answer. Deferring a question to "keep the loop moving" is the drift, not the discipline; if you can't answer, say so plainly rather than fabricating (e.g. per-worker token cost isn't surfaced to you — point the user at the session telemetry, don't guess a number).
-
-1. **One wave then STOP** — no second wave this cycle, no "just one more"
-2. **Epic requirements IMMUTABLE** — tasks adapt, requirements don't
-3. **Check epic before switching approaches** — rejected approaches stay rejected unless conditions changed
-4. **Create next task from learnings** — not from upfront assumptions
-5. **Evidence before completion** — run tests, show output, then mark done
-6. **Judge the diff at the checkpoint** — a green test is necessary, not sufficient; read the diff, emit a cited verdict against the epic's Quality Bar, route clean/defect/escalate. Never mark complete on a passing test alone
-7. **Never water down requirements** — if blocked, ask user, don't simplify
-8. **Commit before checkpoint** — default is commit to current branch; skip only if the user said "don't commit yet" this session. Never push.
-9. **A ≥2 wave is atomic** — exact allowlists first, commit-based `integrate_wave.py` transport, one combined wave/component gate, then one fast-forward. Never land or clean a partial wave.
-
-**Common rationalizations (all mean STOP, follow the process):**
-
-| Excuse | Reality |
-|--------|---------|
-| "Good context loaded" | STOP anyway — user reviews matter |
-| "Just one more quick task" | STOP anyway — quick tasks compound |
-| "User trusts me" | STOP anyway — one invocation ≠ blanket permission |
-| "User said 'keep going' in chat" | STOP anyway — autonomy is authorized by a goal Stop-hook, not a chat aside; note it in the checkpoint and let them set a goal |
-| "This is trivial" | STOP anyway — trivial tasks can have unexpected effects |
-| "I'll save time by continuing" | STOP anyway — wrong direction wastes more time |
-
-## Verification Checklist
-
-Before the first wave:
-- [ ] Epic worktree entered (repo convention or native `EnterWorktree`) — never executing on main
-- [ ] Environment set up and baseline test run pinned
-
-Before completing each task:
-- [ ] All steps in description executed
-- [ ] Worker-scoped tests passing; for a ≥2 wave, the wave/component gate ran exactly once on the combined detached HEAD
-- [ ] Checkpoint quality gate run — diff judged against the epic's Quality Bar, cited verdict emitted, routed clean/defect/escalate
-- [ ] A ≥2 wave landed only through the successful atomic fast-forward; no partial worker history reached the epic
-- [ ] Changes committed
-- [ ] `TaskUpdate status="completed"` only after truly done
-
-After completing each task:
-- [ ] Reviewed learnings against epic (`TaskGet`)
-- [ ] Created next task based on learnings (or documented why not)
-- [ ] Committed the task's work to the current branch (or noted `git status` was clean)
-- [ ] Presented checkpoint summary with commit SHA + subject line
-- [ ] STOPPED execution
-- [ ] Waiting for user to run `/gambit:executing-plans` again
-
-Before closing epic:
-- [ ] ALL subtasks show "completed" in `TaskList`
-- [ ] ALL success criteria verified with evidence
-- [ ] ALL anti-patterns avoided
-- [ ] Invoked `gambit:review` directly via Skill tool
-- [ ] Review approved → finishing-branch invoked automatically
 
 ## Integration
 

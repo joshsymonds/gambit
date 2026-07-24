@@ -1,10 +1,13 @@
 ---
 name: task-refinement
-description: Use this implementation mechanic to refine prepared work briefs only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
+description: Refines prepared work briefs until each one is executable by a junior engineer without questions.
+when_to_use: Use this implementation mechanic to refine prepared work briefs only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
 user_invokable: true
 ---
 
 # Task Refinement
+
+**Freedom: LOW** — apply all 8 categories to every brief; reject anything with placeholders or critical gaps.
 
 ## Overview
 
@@ -13,10 +16,6 @@ Review Tasks systematically. Find gaps, fix them, verify fixes. A task is ready 
 **Core principle:** Don't just identify problems — fix them. Update each Task, then read it back to verify.
 
 **Iron Law:** NO task passes review with vague criteria, missing file paths, or placeholder text. Every task must be executable by a junior engineer without questions. No exceptions.
-
-## Rigidity Level
-
-LOW FREEDOM — Apply all 8 categories to every task. No skipping. Update tasks with fixes, then verify no placeholders remain. Reject plans with critical gaps.
 
 ## Quick Reference
 
@@ -206,51 +205,6 @@ Check:
 - Critical issues found: [count]
 - Recommendation: [approve/revise/reject with reasoning]
 ```
-
----
-
-## Critical Rules
-
-### Rules That Have No Exceptions
-
-1. **Apply all 8 categories to every task** — no skipping any category
-2. **Reject plans with placeholder text** — "[detailed above]" = instant reject
-3. **Verify after every update** — read back with TaskGet, check for placeholders
-4. **Strengthen vague criteria** — "works correctly" must become measurable commands
-5. **Add edge cases to every task** — empty, unicode, concurrency, failure modes
-6. **Reject tautological tests** — tests must catch specific bugs
-
-### Common Excuses
-
-All mean: **STOP. Apply the full checklist.**
-
-| Excuse | Reality |
-|--------|---------|
-| "Task looks straightforward" | Edge cases hide in "straightforward" tasks |
-| "Has 3 criteria, meets minimum" | Criteria must be MEASURABLE, not just 3+ items |
-| "Placeholder is just formatting" | Placeholder = incomplete specification |
-| "Can handle edge cases during implementation" | Must specify upfront to prevent rework |
-| "Junior will figure it out" | Junior should NOT need to figure anything out |
-| "Tests are specified, don't need review" | Test quality matters more than quantity |
-
----
-
-## Verification Checklist
-
-**Per task reviewed:**
-- [ ] Applied all 8 categories
-- [ ] Updated task with missing information
-- [ ] Verified update (no placeholders remain)
-- [ ] Success criteria are measurable
-- [ ] Edge cases addressed
-- [ ] Test specifications are meaningful
-
-**Overall plan:**
-- [ ] Reviewed ALL tasks (no exceptions)
-- [ ] Presented structured results
-- [ ] Provided clear recommendation
-
-**Can't check all boxes?** Return to the review process.
 
 ---
 

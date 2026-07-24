@@ -56,8 +56,11 @@ Control rules:
 threadId: <id>
 artifact: <path>
 status-head: <first line of content>
-5. Do not read any path, execute commands, invoke skills, reconstruct or interpret values, send
-   messages, or use any other tool.
+5. Do not read any path, execute commands, spawn agents, invoke skills, touch tasks, reconstruct or
+   interpret values, send messages, or use any other tool. The single exception: `ToolSearch` may be
+   used first, and only, to load the named MCP tool's schema when that tool is deferred — a
+   runtime-selected `mcp__*` tool is deferred by construction, so without this the call cannot be
+   made at all. This list and `agents/gambit-wrapper.md` must stay identical.
 ```
 
 The wrapper must fail rather than emit an envelope when the MCP invocation fails or either required

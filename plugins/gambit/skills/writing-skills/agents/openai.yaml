@@ -1,6 +1,6 @@
 interface:
   display_name: "Writing Skills"
-  short_description: "Use when creating a new skill, modifying an existing skill, writing or rewriting a SKILL.md file,..."
+  short_description: "Validates that a new or modified skill actually changes model behavior before it ships. Use when..."
   default_prompt: "Use $gambit:writing-skills for this task."
 policy:
   allow_implicit_invocation: true

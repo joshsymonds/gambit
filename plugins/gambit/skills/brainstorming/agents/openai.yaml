@@ -1,6 +1,6 @@
 interface:
   display_name: "Brainstorming Ideas Into Designs"
-  short_description: "Use when user has a new feature idea, rough concept, or unexplored approach. Include when plannin..."
+  short_description: "Turns a rough idea into an approved epic contract with immutable requirements, anti-patterns, and..."
   default_prompt: "Use $gambit:brainstorming for this task."
 policy:
   allow_implicit_invocation: true

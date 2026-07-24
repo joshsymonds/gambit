@@ -12,7 +12,11 @@ You will receive `mode: initial` or `mode: closure`, the frozen review revisions
 - `body` — the reviewer's claim.
 - `verify_by` — concrete steps the reviewer proposed for verification.
 
-You will NOT receive the reviewer's severity, category (Gap vs. Improvement), or reasoning chain. This is intentional — fresh context prevents anchoring. You have the same `Read`, `Grep`, `Glob`, `WebFetch`, and `WebSearch` tools the reviewers had.
+You will NOT receive the reviewer's severity, category (Gap vs. Improvement), or reasoning chain. This is intentional — fresh context prevents anchoring. Verify by **static inspection**: `Read`, `Grep`, `Glob`, `WebFetch`, and `WebSearch`. Like the reviewers, you do not run the code under review, execute its test suite, or edit any file.
+
+**A `verify_by` step you cannot execute is not, by itself, evidence against the finding.** If the reviewer proposed a scanner invocation, a test run, or anything else outside static inspection, substitute a check you *can* perform — read the cited code, grep for the invariant, trace the callers — and judge the claim on that.
+
+The substitute must prove **the same thing the original step would have proved**, and you must say in `evidence` what it was and why it is equivalent. It is not licence to swap the claim for an easier one: if the finding asserts attacker-controlled input reaches a sink, grepping for string interpolation shows the sink shape but *not* reachability — that is a partial check, and a partial check does not confirm. When no substitute establishes the actual claim, the normal rules apply unchanged: insufficient evidence is **refuted**, and false confirmations still cost 3× false refutations.
 
 In `initial` mode, classify candidates from the one full audit. In `closure` mode, the inputs are the immutable open Review Closure Ledger: test whether each original claim still holds after remediation. Do not search for, mention, or emit new findings. `refuted` means the original defect is resolved; `confirmed` means it remains; `gap` means a literal wall prevents proving resolution.
 
@@ -38,7 +42,7 @@ You located positive evidence the claim is **wrong**. The behavior the finding f
 
 Refuted **ALSO** applies when:
 - The claim itself is too vague to be testable (a well-formed finding would have been evaluable — "this might be a race condition somewhere" refutes because no specific race has been claimed).
-- The evidence you can gather does not sustain the claim (you read the file, traced every caller, grep'd the invariants, and the finding cannot be shown to hold).
+- The evidence you can gather does not sustain the claim (you read the file, traced every caller, grep'd the invariants, and the finding cannot be shown to hold). This means the *code* did not sustain it — not that the reviewer's suggested verification step was unavailable to you.
 
 "I couldn't find enough to confirm" means **refuted**, not gap. Gap is reserved for structural walls, not investigative shortfalls.
 
@@ -58,7 +62,7 @@ Before returning ANY verdict, you must:
 
 1. Read the cited file **end-to-end**. The whole file. Not just the cited line.
 2. `Grep` the repo for callers, definitions, and invariants related to the cited symbol.
-3. Run the reviewer's `verify_by` steps literally.
+3. Run the reviewer's `verify_by` steps literally. If a step is outside static inspection, see the substitution rule above — substitute, don't skip, and don't treat the impossibility as a refutation.
 4. For framework / SDK / external-API claims: `WebFetch` the official documentation. Do not speculate about library behavior.
 5. For claims spanning multiple files: read every file the control flow touches.
 

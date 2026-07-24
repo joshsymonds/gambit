@@ -1,6 +1,6 @@
 interface:
   display_name: "Finishing a Branch"
-  short_description: "Use when every native epic wave is completed, when ready to integrate after review approval, when..."
+  short_description: "Integrates a finished branch — merge, pull request, keep, or discard — after verifying tests on t..."
   default_prompt: "Use $gambit:finishing-branch for this task."
 policy:
   allow_implicit_invocation: true

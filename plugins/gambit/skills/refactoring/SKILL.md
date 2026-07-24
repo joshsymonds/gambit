@@ -1,6 +1,6 @@
 ---
 name: refactoring
-description: Use this implementation mechanic to restructure covered code without changing behavior only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow.
+description: "Restructures code that already has a green test suite, without changing behavior. Use this implementation mechanic to restructure covered code without changing behavior only when explicitly invoked by name or called by an active Gambit workflow owner; do not select it implicitly as a peer workflow."
 ---
 
 <!-- Generated backend adapter: edit src/backends/codex/, not plugins/gambit/. -->
@@ -17,6 +17,8 @@ literal shell commands.
 
 # Safe Refactoring
 
+**Freedom: MEDIUM** — adapt refactoring patterns to the language and codebase. Fixed: the change→test→commit cycle, and never proceed with failing tests.
+
 ## Overview
 
 Refactoring changes code structure without changing behavior. Tests must stay green throughout, or you're rewriting, not refactoring.
@@ -24,12 +26,6 @@ Refactoring changes code structure without changing behavior. Tests must stay gr
 **Core principle:** Change → Test → Commit. Repeat until complete. Tests green at every step.
 
 **Iron Law:** NO changes without passing tests BEFORE and AFTER. Tests fail? STOP. Undo. Make a smaller change. "I'll test at the end" = you're not refactoring. No exceptions.
-
-## Rigidity Level
-
-MEDIUM FREEDOM — Follow the change→test→commit cycle strictly. Adapt specific refactoring patterns to your language and codebase. Never proceed with failing tests.
-
-Violating the cycle is violating the skill. "I'll test at the end" means you're not refactoring safely.
 
 ## Quick Reference
 
@@ -154,12 +150,21 @@ SpawnAgent
 - All pass → Go to Step 5
 - Any fail → **STOP. Undo and try smaller change.**
 
-**If tests fail:**
+**If tests fail:** undo only what this step changed, never the whole tree.
 
-```bash
-# Undo the change
-git checkout -- .
-```
+This only works from a clean baseline. Step 1 requires green tests and Step 5 commits after every
+green change, so at the start of each step `HEAD` matches the worktree and is your floor. If the
+tree was already dirty when the step began, **stop and report** — you cannot separate your edits
+from the pre-existing ones.
+
+- Files you **modified** (they exist at `HEAD`):
+  `git restore --source=HEAD --worktree -- path/one path/two`
+- Files you **created** during the step: they have no `HEAD` entry, so `restore` will not remove
+  them and will *fail the whole command* if you list one. Delete them individually instead.
+
+Name every path explicitly. `git checkout -- .` and `git restore .` discard every uncommitted
+change in the worktree — including a concurrent worker's output when this refactoring runs inside
+an `executing-plans` wave — and are unrecoverable.
 
 Then:
 1. Understand why it broke
@@ -271,64 +276,13 @@ After the checkpoint result and review evidence are present, use `SessionPlanWri
 
 ---
 
-## Critical Rules
-
-### Rules That Have No Exceptions
-
-1. **Tests must stay green** throughout → If they fail, you changed behavior (stop and undo)
-2. **Commit after each small change** → Large commits hide which change broke what
-3. **One transformation at a time** → Multiple changes = impossible to debug failures
-4. **Run tests after EVERY change** → Delayed testing doesn't tell you which change broke it
-5. **If tests fail 3+ times, question approach** → Might need to rewrite instead, or add tests first
-6. **No scope creep, even if asked** → If asked to add type hints, docstrings, or other improvements during refactoring, explain that those are separate commits AFTER the structural refactoring is complete. Recommend and explain why, then follow user's final decision.
-
 ### Handling User Override
 
 If the user explicitly asks to batch changes or skip steps:
 1. **Explain the risk clearly** — "Batching N changes means if tests break, we debug all N instead of one"
 2. **Recommend the incremental approach** — offer partial progress if time-constrained
-3. **Separate structural changes from cosmetic ones** — ALWAYS push back on mixing refactoring with type hints, docstrings, comments, or formatting. These are different categories of work.
-4. **Follow user's final decision** on batch size, but never combine structural + cosmetic in one pass
-
-### Common Excuses
-
-All of these mean: **STOP. Return to the change→test→commit cycle.**
-
-| Excuse | Reality |
-|--------|---------|
-| "Small refactoring, don't need tests between steps" | Small changes can break things. Test every step. |
-| "I'll test at the end" | Can't identify which change broke what |
-| "Tests are slow, I'll run once at the end" | Slow tests → run targeted tests between steps |
-| "Just fixing bugs while refactoring" | Bug fixes = behavior changes = not refactoring |
-| "Easier to do all at once" | Easier to debug one change than ten |
-| "Tests will fail temporarily but I'll fix them" | Tests must stay green. No exceptions. |
-| "While I'm here, I'll also..." | Scope creep during refactoring = disaster |
-| "Just adding docstrings/comments/type hints" | Separate commit. Cosmetic ≠ structural. |
-| "User said to batch it" | Explain risk, recommend incremental, separate structural from cosmetic |
-
----
-
-## Verification Checklist
-
-Before marking refactoring complete:
-
-- [ ] Verified all tests passed BEFORE starting
-- [ ] Presented the complete refactoring workflow brief in the root transcript
-- [ ] Made ONE small change at a time
-- [ ] Ran tests after EVERY change
-- [ ] Committed each safe transformation
-- [ ] Undid changes when tests failed
-- [ ] No behavior changes introduced
-- [ ] Code is cleaner/simpler than before
-- [ ] Each commit in history is small and safe
-- [ ] Final verification: all tests pass, no warnings
-- [ ] `gambit:review` invoked and passed
-- [ ] Root checkpoint documents what was done and why
-- [ ] Complete native plan marks the refactoring wave completed
-
-**Can't check all boxes?** Return to the process before completing the wave.
-
----
+3. **Separate structural changes from cosmetic ones** — say once why type hints, docstrings, comments, and formatting are separate commits from a structural refactoring, and offer to do them straight after. Say it once; don't re-argue it.
+4. **Follow the user's decision.** If they still want them combined, do it — it's their call, and a restructuring pass mixed with cosmetics is a preference, not a correctness failure.
 
 ## Examples
 

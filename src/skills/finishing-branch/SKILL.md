@@ -1,15 +1,18 @@
 ---
 name: finishing-branch
 <!-- gambit-backend:claude -->
-description: Use when all epic tasks show completed, when ready to integrate after review approval, when choosing between merge / PR / keep / discard for a branch, when tests need final verification before integration, or when a merge produced conflicts that require re-testing. User phrases like "ready to merge", "open a PR", "done with this branch", "ship it".
+description: Integrates a finished branch — merge, pull request, keep, or discard — after verifying tests on the result.
+when_to_use: Use when all epic tasks show completed, when ready to integrate after review approval, when choosing between merge / PR / keep / discard for a branch, when tests need final verification before integration, or when a merge produced conflicts that require re-testing. User phrases like "ready to merge", "open a PR", "done with this branch", "ship it".
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
-description: Use when every native epic wave is completed, when ready to integrate after review approval, when choosing between merge / PR / keep / discard for a branch, when tests need final verification before integration, or when a merge produced conflicts that require re-testing. User phrases like "ready to merge", "open a PR", "done with this branch", "ship it".
+description: Integrates a finished branch — merge, pull request, keep, or discard — after verifying tests on the result. Use when every native epic wave is completed, when ready to integrate after review approval, when choosing between merge / PR / keep / discard for a branch, when tests need final verification before integration, or when a merge produced conflicts that require re-testing. User phrases like "ready to merge", "open a PR", "done with this branch", "ship it".
 <!-- /gambit-backend -->
 user_invokable: true
 ---
 
 # Finishing a Branch
+
+**Freedom: LOW** — verify tests before integrating (unless review's handoff guarantees green), never discard without typed confirmation, always use AskUserQuestion for the options.
 
 ## Overview
 
@@ -18,10 +21,6 @@ Complete development work by verifying readiness, presenting integration options
 **Core principle:** Verify everything passes → Present options → Execute choice → Clean up only what should be cleaned up.
 
 **Announce at start:** "I'm using gambit:finishing-branch to complete this work."
-
-## Rigidity Level
-
-LOW FREEDOM — Follow the process exactly. Never skip test verification. Never discard without typed confirmation. Always use AskUserQuestion for options.
 
 ## Quick Reference
 
@@ -105,7 +104,7 @@ Complete every wave before finishing.
 
 ### Step 2: Verify Tests Pass
 
-**Skip this step if invoked by `gambit:review`.** Review's handoff guarantees tests are green (either freshly run in its Step 7 after implementing improvements, or already green since review began and no code changed). Re-running here is pure redundancy. Trust review's handoff announcement and go to Step 3.
+**Skip this step if invoked by `gambit:review`.** Review's handoff guarantees tests are green (either freshly run at its Step 9 gate decision after remediation, or already green since review began and no code changed). Re-running here is pure redundancy. Trust review's handoff announcement and go to Step 3.
 
 **Run the full suite only when invoked standalone** (user ran `/gambit:finishing-branch` directly without a prior review, or invoked from any path other than review's approval gate). Detect the test command from project files (go.mod → `go test ./...`, package.json → `npm test`, Cargo.toml → `cargo test`, pyproject.toml → `pytest`, Makefile → `make test`).
 
@@ -116,11 +115,15 @@ Complete every wave before finishing.
 
 ### Step 3: Determine Base Branch
 
+Determine the **branch name** this work should integrate into. `git merge-base` returns a commit
+SHA, not a branch — it cannot answer this, and Step 5 needs a name to check out.
+
 ```bash
-git merge-base HEAD main 2>/dev/null || git merge-base HEAD master 2>/dev/null
+git symbolic-ref --short refs/remotes/origin/HEAD 2>/dev/null | sed 's|^origin/||'
 ```
 
-If this fails, ask the user what base branch to use.
+If that is empty or the repo has several long-lived bases, ask the user which base branch to use.
+Do not guess between `main` and `master`.
 
 ---
 
@@ -152,7 +155,7 @@ AskUserQuestion
 
 **STOP.** Wait for user response. Do not add recommendations, defaults, or explanations.
 
-**The 4 options above are fixed.** Never modify, reorder, add variants (like "merge and push"), or remove any. The "Never push main" rule means pushing is never offered — user pushes manually after merge.
+**The 4 options above are fixed.** Never modify, reorder, add variants (like "merge and push"), or remove any. The "Never push main" rule means the *base branch* is never pushed — the user pushes it manually after merge. (Option 2 does push the feature branch; that is what opening a PR requires.)
 
 ---
 
@@ -333,57 +336,6 @@ git worktree remove .claude/worktrees/experimental
 git worktree remove .worktrees/experimental
 <!-- /gambit-backend -->
 ```
-
-## Critical Rules
-
-1. **Tests before options** — run full suite and show output when invoked standalone; skip only when review handed off with a green-tests guarantee
-2. **AskUserQuestion for options** — never print options as text
-3. **Typed "discard" for Option 4** — exact text, no shortcuts
-4. **No worktree cleanup for PR or Keep** — user needs it for feedback/later work
-5. **Verify tests after merge** — merged result might have conflicts
-<!-- gambit-backend:claude -->
-6. **All tasks complete first** — no "mostly done" exceptions
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-6. **Every wave complete first** — no "mostly done" exceptions
-<!-- /gambit-backend -->
-7. **Never push main** — not even as an option; user pushes manually
-8. **Fixed option set** — the 4 options are immutable; never add "merge and push" or other variants
-
-**Common rationalizations (all mean STOP, follow the process):**
-
-| Excuse | Reality |
-|--------|---------|
-| "Tests passed earlier" | RUN THEM NOW unless review just handed off with a green-tests guarantee — code might have changed |
-| "User obviously wants to merge" | PRESENT ALL 4 OPTIONS — let them choose |
-| "User said discard" | GET TYPED CONFIRMATION — "discard" exactly |
-| "PR done, cleanup worktree" | KEEP IT — PR will need updates |
-<!-- gambit-backend:claude -->
-| "Tasks are mostly done" | ALL must be complete — no exceptions |
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-| "Waves are mostly done" | EVERY wave must be complete — no exceptions |
-<!-- /gambit-backend -->
-
-## Verification Checklist
-
-<!-- gambit-backend:claude -->
-- [ ] All tasks show "completed" (`TaskList`)
-<!-- /gambit-backend -->
-<!-- gambit-backend:codex -->
-- [ ] Every wave step shows `completed` (`SessionPlanRead`)
-- [ ] Individual worker completion confirmed from checkpoints/native subagent results
-- [ ] Full approved contract reread with `SessionContextRead`
-<!-- /gambit-backend -->
-- [ ] Tests verified passing (ran them here OR review handed off with green-tests guarantee)
-- [ ] Base branch determined
-- [ ] Presented 4 options via `AskUserQuestion`
-- [ ] Waited for user choice
-- [ ] If merge: verified tests on merged result, did NOT push main
-- [ ] If PR: reported URL, kept worktree
-- [ ] If discard: got typed "discard" confirmation
-- [ ] If merge/discard: cleaned up worktree (if one existed)
-- [ ] If PR/keep: did NOT cleanup worktree
 
 ## Integration
 

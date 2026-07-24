@@ -1,6 +1,6 @@
 ---
 name: executing-plans
-description: Use when an approved epic contract and native wave plan exist in the current root session, when resuming work after a previous checkpoint, or when iteratively building a feature and execution learnings require a later wave. User phrases like "continue the plan", "next wave", "resume where we left off", "pick up the epic".
+description: Executes an approved epic one wave at a time, dispatching a worker per task and stopping at a checkpoint after each wave. Use when an approved epic contract and native wave plan exist in the current root session, when resuming work after a previous checkpoint, or when iteratively building a feature and execution learnings require a later wave. User phrases like "continue the plan", "next wave", "resume where we left off", "pick up the epic".
 ---
 
 <!-- Generated backend adapter: edit src/backends/codex/, not plugins/gambit/. -->
@@ -16,6 +16,8 @@ subagent threads inside that single step. These are backend operations, not
 literal shell commands.
 
 # Executing Plans
+
+**Freedom: LOW** — load epic, execute one wave, checkpoint, STOP.
 
 ## Overview
 
@@ -34,12 +36,6 @@ STOP does not mean the epic halts; it means this turn ends and the next cycle be
 - **A goal Stop-hook** that re-invokes the skill automatically — the ONLY sanctioned way to run cycle-after-cycle without a human pause.
 
 Continuous, no-human-pause execution is therefore **authorized only by a goal Stop-hook — never self-granted.** An in-session "just keep going, don't stop for me" does NOT authorize it: if the user wants unattended execution they set a goal; surface that in the checkpoint rather than batching cycles yourself. Every safeguard — quality gate, commit, checkpoint summary, and this re-invocation — runs on every cycle regardless; the goal changes only who triggers the next one, never what happens inside a cycle.
-
-## Rigidity Level
-
-LOW FREEDOM — Follow exact process: load epic, execute one wave, checkpoint, STOP.
-
-Do not skip checkpoints or verification. Epic requirements never change. Worker briefs and later wave summaries adapt to discoveries.
 
 ## Quick Reference
 
@@ -129,6 +125,8 @@ The scout returns `file:line` evidence or `NOT FOUND` — never a guess.
 **Settle architecture before dispatching.** A worker implements; it does not decide cross-file design. If a task carries an unresolved architectural question, resolve it first — scout it, record the decision in the brief, or decompose the task — then dispatch. A design question tangled into an implementation task is what produces same-pass-TDD drift.
 
 **Apply the declared validation ladder.** The focused worker command proves the worker-owned behavior during TDD. The wave/component gate proves the integrated wave once. Release acceptance proves the final system claim on fresh artifacts within the approved budget. Release acceptance is not a per-worker or per-wave default; run it early only when the contract budgets a diagnostic run that answers a named system-level question.
+
+**Answer the user before you dispatch.** When the user asks a direct question mid-epic, answer it in prose before or alongside your next action. A dispatch, a task update, or a checkpoint summary is never a substitute for the answer. Deferring a question to "keep the loop moving" is the drift, not the discipline; if you can't answer, say so plainly rather than fabricating (e.g. per-worker token cost isn't surfaced to you — point the user at the session telemetry, don't guess a number).
 
 **Dispatch the wave to workers:**
 
@@ -446,58 +444,6 @@ Invoke skill="$gambit:review"
 Do not tell the user to run it manually — invoke it and follow its process immediately. Review validates architecture, security, completeness, dead code, test quality, and code quality across the entire epic before allowing finishing-branch.
 
 For obstacle handling and checkpoint-brief examples, read `references/examples.md`.
-
-## Critical Rules
-
-**Answer the user before you dispatch.** When the user asks a direct question mid-epic, answer it in prose before or alongside your next action. A dispatch, a task update, or a checkpoint summary is never a substitute for the answer. Deferring a question to "keep the loop moving" is the drift, not the discipline; if you can't answer, say so plainly rather than fabricating (e.g. per-worker token cost isn't surfaced to you — point the user at the session telemetry, don't guess a number).
-
-1. **One wave then STOP** — no second wave this cycle, no "just one more"
-2. **Epic requirements IMMUTABLE** — worker briefs and later waves adapt, requirements don't
-3. **Check epic before switching approaches** — rejected approaches stay rejected unless conditions changed
-4. **Author the next worker brief from learnings** — not from upfront assumptions
-5. **Evidence before completion** — run tests, show output, then mark done
-6. **Judge the diff at the checkpoint** — a green test is necessary, not sufficient; read the diff, emit a cited verdict against the epic's Quality Bar, route clean/defect/escalate. Never mark complete on a passing test alone
-7. **Never water down requirements** — if blocked, ask user, don't simplify
-8. **Durability before completion state** — commit the verified wave, present the full root-transcript checkpoint and next-wave briefs, then mark the native wave completed. Never push.
-9. **A ≥2 wave is atomic** — exact allowlists first, commit-based `integrate_wave.py` transport, one combined wave/component gate, then one fast-forward. Never land or clean a partial wave.
-
-**Common rationalizations (all mean STOP, follow the process):**
-
-| Excuse | Reality |
-|--------|---------|
-| "Good context loaded" | STOP anyway — user reviews matter |
-| "Just one more quick task" | STOP anyway — quick tasks compound |
-| "User trusts me" | STOP anyway — one invocation ≠ blanket permission |
-| "User said 'keep going' in chat" | STOP anyway — autonomy is authorized by a goal Stop-hook, not a chat aside; note it in the checkpoint and let them set a goal |
-| "This is trivial" | STOP anyway — trivial tasks can have unexpected effects |
-| "I'll save time by continuing" | STOP anyway — wrong direction wastes more time |
-
-## Verification Checklist
-
-Before the first wave:
-- [ ] Epic worktree entered (repo convention or native `GambitEnterWorktree`) — never executing on main
-- [ ] Environment set up and baseline test run pinned
-
-Before completing the current wave:
-- [ ] Every worker's brief steps executed and returned status verified from native subagent results
-- [ ] Worker-scoped tests passing; for a ≥2 wave, `integrate_wave.py` ran the wave/component gate exactly once on the combined detached HEAD
-- [ ] Checkpoint quality gate run — each diff judged against the epic's Quality Bar, cited verdict emitted, routed clean/defect/escalate
-- [ ] A ≥2 wave reached the epic only through the successful atomic fast-forward; validation/conflict/gate failure evidence was retained without moving epic HEAD
-- [ ] Reviewed learnings against the approved contract (`SessionContextRead`)
-- [ ] Committed the wave's work to the current branch (or noted `git status` was clean)
-- [ ] Presented the full checkpoint summary and complete next-wave worker briefs in the root transcript (or documented why no next wave remains)
-- [ ] Only then used `SessionPlanWrite` to replace the complete ordered plan and mark just this wave completed
-- [ ] Appended resulting plan status to the checkpoint
-- [ ] STOPPED execution
-- [ ] Waiting for user to run `$gambit:executing-plans` again
-
-Before closing epic:
-- [ ] ALL wave steps show `completed` in `SessionPlanRead`
-- [ ] Individual worker completion confirmed from checkpoint and native subagent results, not plan records
-- [ ] ALL success criteria verified with evidence
-- [ ] ALL anti-patterns avoided
-- [ ] Invoked `gambit:review` directly via Codex skill invocation
-- [ ] Review approved → finishing-branch invoked automatically
 
 ## Integration
 
