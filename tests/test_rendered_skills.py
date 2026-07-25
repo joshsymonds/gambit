@@ -467,9 +467,11 @@ class RenderedSkillsTest(unittest.TestCase):
             "mcp__codex__codex-reply",
             schema["properties"]["worker"]["properties"]["reply_tool"]["pattern"],
         )
-        self.assertEqual(
-            {"worker": ["escalation", "escalation-final"]}, schema.get("dependentRequired")
-        )
+        # Only rung 2 is family-coupled: it repairs inside the worker's own
+        # thread via reply_tool. escalation-final is a fresh call with no thread
+        # state, so omitting it is legal and resolves the terminal rung to
+        # native execution at most-capable.
+        self.assertEqual({"worker": ["escalation"]}, schema.get("dependentRequired"))
 
         resolution_match = re.search(
             r"use this deterministic sequence:\n\n(?P<steps>.*?)(?:\n\nNever infer)",

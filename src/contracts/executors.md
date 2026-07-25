@@ -11,8 +11,15 @@ this contract — reading it first loads ~650 lines to reach the default answer.
 
 All eight contracted execution roles may be configured: `steelman`, `worker`, `escalation`,
 `escalation-final`, `scout`, `finder`, `verifier`, and `test-runner`. A configured `worker`
-requires configured `escalation` and `escalation-final` entries so the executing-plans repair
-ladder cannot silently change executor families at its later rungs.
+requires a configured `escalation` entry: rung 2 repairs inside the worker's own thread through
+`worker.reply_tool`, so the rungs around it cannot change executor families without losing that
+thread.
+
+`escalation-final` is deliberately exempt. Rung 4 is a fresh call that carries its evidence in the
+prompt and holds no thread state, so it may be omitted while `worker` is configured. Omitting it
+resolves the terminal rung to native execution at its `most-capable` tier — the supported way to
+end a configured-Codex ladder on a Claude model. Configure it only to keep the terminal rung on
+Codex.
 
 ## Canonical schema
 
@@ -502,7 +509,7 @@ role:
       "additionalProperties": false
     }
   },
-  "dependentRequired": { "worker": ["escalation", "escalation-final"] },
+  "dependentRequired": { "worker": ["escalation"] },
   "additionalProperties": false
 }
 ```
