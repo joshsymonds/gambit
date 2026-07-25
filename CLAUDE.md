@@ -38,9 +38,12 @@ task files are ignored and untouched — there is no repository task store or mi
 
 ## Releasing
 
-`just release X.Y.Z` updates all three version manifests, regenerates, validates, and commits.
-Don't bump versions by hand; `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, and
-`src/backends/codex/plugin.json` must stay in sync.
+`just release X.Y.Z` updates all three version manifests, regenerates, runs `just check`, and
+commits. Don't bump versions by hand; `.claude-plugin/plugin.json`,
+`.claude-plugin/marketplace.json`, and `src/backends/codex/plugin.json` must stay in sync.
+
+It stages only the manifests and the generated trees — **not `src/`**. Commit your source changes
+before releasing, or they will be left out of the release commit.
 
 ## Where things are owned
 
