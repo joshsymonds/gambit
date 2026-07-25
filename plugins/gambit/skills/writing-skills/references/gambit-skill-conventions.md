@@ -3,14 +3,22 @@
 The repo-specific rules. Everything not listed here is ordinary skill authoring — trust your
 judgment and the live upstream docs.
 
-## Deliberate deviations from upstream
+## Frontmatter: WHAT and WHEN go in separate fields
 
-**The `description` states WHEN, not WHAT.** Upstream tells you to include both what the skill does
-and when to use it. Gambit does not, and this is measured, not stylistic: a description reading
-"review code between tasks" caused Claude to perform ONE review when the skill body required TWO.
-The description is read at routing time and its content leaks into execution. Write triggers,
-symptoms, and contexts — plus what the skill is *not* for, because the nearest wrong match is what
-actually causes misrouting.
+**`description` states WHAT the skill does. `when_to_use` carries the triggers** — symptoms, error
+messages, user phrasings, and what the skill is *not* for, since the nearest wrong match is what
+actually causes misrouting. The harness concatenates both into the skill listing it routes from.
+
+Keep workflow detail out of both, and never let `description` summarize the process. That is
+measured, not stylistic: a description reading "review code between tasks" caused Claude to perform
+ONE review when the body required TWO. A process summary in the routing text becomes a shortcut the
+model takes *instead of* loading the body. Triggers don't have that failure mode; summaries do.
+
+Both fields must be **plain, single-line, unquoted** scalars. The Codex target has no `when_to_use`,
+so the renderer merges the two into one `description` — it does not decode YAML, so a block scalar,
+a quoted value, or an escape sequence would be carried through as literal text. `just generate`
+rejects those rather than shipping them, and also fails if the merged text would exceed the
+listing's character cap.
 
 **No `@` links in skill bodies.** They load eagerly, which defeats the point of a reference file.
 Refer to `references/<file>.md` by name and let the model open it when it gets there.

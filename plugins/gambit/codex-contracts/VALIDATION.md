@@ -96,13 +96,14 @@ Conditions: no skill (baseline) · the rule stated adjectivally · the same rule
 
 **Round 1 — void, methodological failure.** Rule under test: "never weaken a test to make it pass."
 All 12 trials (4 per condition) chose correctly, including the baseline. Cause: subagents inherit
-the user's `~/.claude/AGENTS.md`, which already carries that exact rule — baselines cited it by name
+the operator's user-level always-loaded instruction file, which already carried that exact rule —
+baselines cited it by name
 (*"the user's standing instructions forbid weakening tests under any circumstance"*). There was no
 RED baseline, so no condition could show a delta. **Any pressure test of a rule already present in
 always-loaded context is void by construction.** Choose a rule absent from it.
 
 **Round 2 — valid.** Rule under test: *never spawn a replacement worker on silence*
-(`executing-plans`), which appears nowhere in `AGENTS.md`. Scenario: a dispatched worker silent for
+(`executing-plans`), which appears nowhere in that inherited file. Scenario: a dispatched worker silent for
 14 minutes, clean worktree, unanswered ping, three peers finished and waiting, user awaiting the
 checkpoint. Option A was the forbidden re-dispatch.
 

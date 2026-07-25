@@ -221,7 +221,12 @@ Agent subagent_type="general-purpose" model="<finder tier — see contracts/mode
 Agent subagent_type="general-purpose" model="<finder tier — see contracts/models.md>" description="Performance review" prompt="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
 ```
 
+<!-- gambit-backend:claude -->
 **Parallelism is structural, not a reminder.** That single message contains four calls through the once-selected finder executor — native Agent calls or configured anonymous background wrapper calls — and nothing else: no `Read` calls, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself using `Read` on a reviewer file, you've reverted to the old serializing pattern — stop and dispatch by path.
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
+**Parallelism is structural, not a reminder.** That single message contains four native SpawnAgent calls and nothing else: no file reads, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself reading a reviewer file here, you've reverted to the old serializing pattern — stop and dispatch by path.
+<!-- /gambit-backend -->
 
 <!-- gambit-backend:claude -->
 #### Configured Codex finder dispatch

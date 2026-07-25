@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 import tempfile
 import unittest
@@ -160,18 +161,45 @@ class WorkflowRoutingTest(unittest.TestCase):
                     encoding="utf-8"
                 )
                 frontmatter, body = text.split("\n---\n", 1)
-                # The routing decision sees the skill LISTING, which is
-                # `description` plus `when_to_use` concatenated. Claude builds
-                # split WHAT/WHEN across both fields; Codex builds merge them
-                # back into `description`. Assert on what the model actually
-                # reads, not on which field happens to hold it.
-                listing = " ".join(
-                    m.group(1)
-                    for m in re.finditer(
-                        r"(?m)^(?:description|when_to_use):\s*(.+)$", frontmatter
+                # The routing decision sees the skill LISTING: `description`
+                # plus `when_to_use`. Claude builds split WHAT/WHEN across both
+                # fields; Codex builds merge them into `description`. Assert on
+                # what the model reads, not on which field holds it — but read
+                # the fields as YAML scalars so a trailing `# comment` cannot
+                # satisfy an assertion the routing layer would never see.
+                fields: dict[str, str] = {}
+                for m in re.finditer(
+                    r"(?m)^(description|when_to_use):\s*(.+)$", frontmatter
+                ):
+                    raw = m.group(2).strip()
+                    # Block scalars and YAML anchors/aliases are rejected by the
+                    # renderer; they must never reach a rendered artifact.
+                    self.assertNotRegex(
+                        raw,
+                        r"^[|>&*]",
+                        f"{mechanic}: {m.group(1)} must be a single-line scalar",
                     )
-                )
+                    if raw.startswith('"'):
+                        # Codex builds merge WHAT+WHEN into one json.dumps-quoted
+                        # description; decode it rather than reading the literal.
+                        value = json.loads(raw)
+                    else:
+                        # plain scalar: YAML discards an unquoted trailing comment
+                        value = re.sub(r"\s+#.*$", "", raw)
+                    fields[m.group(1)] = value
+                listing = " ".join(fields.values())
                 with self.subTest(root=skill_root, mechanic=mechanic):
+                    # The gating clause governs selection, so it belongs in the
+                    # field the author reaches for when writing triggers.
+                    gating_field = fields.get("when_to_use") or fields.get(
+                        "description", ""
+                    )
+                    self.assertIn(
+                        "explicitly invoked by name",
+                        gating_field,
+                        f"{mechanic}: gating clause must live in when_to_use "
+                        "(or, for merged Codex output, description)",
+                    )
                     self.assertIn(
                         "explicitly invoked by name",
                         listing,
