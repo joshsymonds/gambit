@@ -187,7 +187,7 @@ The transient per-worker worktrees of a ≥2 wave (`references/wave-dispatch.md`
 **Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. This is optional per task; skip it when the brief is already clear.
 
 <!-- gambit-backend:claude -->
-Glob `**/contracts/scout.md`, then Resolve the `scout` role through `contracts/models.md` to its
+Glob `**/contracts/scout.md`. Resolve the `scout` role through `contracts/models.md` to its
 rung. On a model rung, dispatch `subagent_type: "Explore"` with `model:` set to the rung's alias;
 on an agent rung, dispatch the rung's `readonly_agent` and pass no `model:` at all. Either way,
 prompt it to Read `contracts/scout.md` first, then ask the bounded question with the task's
@@ -678,7 +678,7 @@ When every native wave step is completed:
 2. `SessionContextRead` — reread the complete approved epic contract and review each success criterion; use checkpoint and native subagent results for individual worker completion
 <!-- /gambit-backend -->
 <!-- gambit-backend:claude -->
-3. Run an **architecture/scope preflight** before release acceptance. Compare the complete epic diff with the approved Approach, Scope Boundaries, and Anti-Patterns. If the work introduced a new cross-component ownership, persistence, recovery, ordering, fencing, or protocol invariant, dispatch the existing `skills/review/reviewers/conformance.md` reviewer on the `finder` rung (`contracts/models.md`) for an independent preflight and adjudicate its cited findings. Any unapproved architecture or scope growth routes back through `gambit:brainstorming`; do not spend acceptance to discover a design decision review could catch.
+3. Run an **architecture/scope preflight** before release acceptance. Compare the complete epic diff with the approved Approach, Scope Boundaries, and Anti-Patterns. If the work introduced a new cross-component ownership, persistence, recovery, ordering, fencing, or protocol invariant, dispatch the existing `skills/review/reviewers/conformance.md` reviewer on the rung the `finder` role resolves to (`contracts/models.md`) for an independent preflight and adjudicate its cited findings. Any unapproved architecture or scope growth routes back through `gambit:brainstorming`; do not spend acceptance to discover a design decision review could catch.
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 3. Run an **architecture/scope preflight** before release acceptance. Compare the complete epic diff with the approved Approach, Scope Boundaries, and Anti-Patterns. If the work introduced a new cross-component ownership, persistence, recovery, ordering, fencing, or protocol invariant, dispatch the existing `skills/review/reviewers/conformance.md` reviewer at the finder tier for an independent preflight and adjudicate its cited findings. Any unapproved architecture or scope growth routes back through `gambit:brainstorming`; do not spend acceptance to discover a design decision review could catch.

@@ -141,7 +141,9 @@ Dispatch an Explore agent to map the system:
 Agent
 <!-- gambit-backend:claude -->
   subagent_type: "Explore"          # model rung: the read-only scout class
-  model: "<scout rung alias — contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
+                                    # scout is read-only, so an agent rung dispatches the rung's `readonly_agent`
+  model: "<scout rung alias — contracts/models.md>"   # omit entirely on an agent rung
+                                    # resolve <abs> via Glob **/contracts/scout.md
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
   subagent_type: "Explore"          # the read-only scout class

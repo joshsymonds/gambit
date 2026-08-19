@@ -55,7 +55,7 @@ Random fixes waste time and create new bugs. A fix for a symptom you don't under
 **Evidence before hypothesis. Use tools, not guessing.**
 
 <!-- gambit-backend:claude -->
-For bounded codebase investigation, Glob `**/contracts/scout.md`, then Resolve the `scout` role
+For bounded codebase investigation, Glob `**/contracts/scout.md`. Resolve the `scout` role
 through `contracts/models.md` to its rung. A model rung is a contracted `subagent_type: "Explore"`
 call with `model:` set to the rung's alias; an agent rung uses the rung's `readonly_agent` with no
 `model:` at all. Either way the prompt says Read `contracts/scout.md` first, then asks the one

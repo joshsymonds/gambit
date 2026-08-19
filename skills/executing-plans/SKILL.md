@@ -108,7 +108,7 @@ The transient per-worker worktrees of a ≥2 wave (`references/wave-dispatch.md`
 
 **Investigate first if needed — reach for a scout.** Before constructing the worker brief, if you need to locate code, confirm an interface, or gather cross-task context, dispatch the read-only **scout class** — don't read around inline or spawn a bare generic agent. This is optional per task; skip it when the brief is already clear.
 
-Glob `**/contracts/scout.md`, then Resolve the `scout` role through `contracts/models.md` to its
+Glob `**/contracts/scout.md`. Resolve the `scout` role through `contracts/models.md` to its
 rung. On a model rung, dispatch `subagent_type: "Explore"` with `model:` set to the rung's alias;
 on an agent rung, dispatch the rung's `readonly_agent` and pass no `model:` at all. Either way,
 prompt it to Read `contracts/scout.md` first, then ask the bounded question with the task's
@@ -393,7 +393,7 @@ When all subtasks completed:
 
 1. `TaskList` — verify all subtasks show "completed"
 2. `TaskGet` on epic — review each success criterion
-3. Run an **architecture/scope preflight** before release acceptance. Compare the complete epic diff with the approved Approach, Scope Boundaries, and Anti-Patterns. If the work introduced a new cross-component ownership, persistence, recovery, ordering, fencing, or protocol invariant, dispatch the existing `skills/review/reviewers/conformance.md` reviewer on the `finder` rung (`contracts/models.md`) for an independent preflight and adjudicate its cited findings. Any unapproved architecture or scope growth routes back through `gambit:brainstorming`; do not spend acceptance to discover a design decision review could catch.
+3. Run an **architecture/scope preflight** before release acceptance. Compare the complete epic diff with the approved Approach, Scope Boundaries, and Anti-Patterns. If the work introduced a new cross-component ownership, persistence, recovery, ordering, fencing, or protocol invariant, dispatch the existing `skills/review/reviewers/conformance.md` reviewer on the rung the `finder` role resolves to (`contracts/models.md`) for an independent preflight and adjudicate its cited findings. Any unapproved architecture or scope growth routes back through `gambit:brainstorming`; do not spend acceptance to discover a design decision review could catch.
 4. Run the declared wave/component gate fresh on the complete integrated epic.
 5. Run release acceptance only after the preflight and wave/component gate pass, with the declared freshness setup and within the declared acceptance budget. If the budget is exhausted, STOP and request explicit user approval; never hide an extra run as ordinary verification.
 6. Verify every success criterion with the evidence at its declared validation tier.

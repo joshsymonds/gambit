@@ -8,9 +8,9 @@ the expensive orchestrator model.
 - A **role** is the job gambit needs done. Each role names an `entry` rung plus an ordered `ladder`
   of rungs to climb when the work does not clear.
 
-The roles are exactly `scout`, `worker`, `escalation`, `steelman`, `finder`, `verifier`, and
-`test-runner`. This file owns rung and role resolution; no skill names a rung, an agent, or a model
-of its own.
+[README.md](README.md) owns the role enum — the roles named below are the ones it defines. This
+file owns rung and role resolution: which rung each role enters on, the ladder it climbs, and how
+each rung shape is dispatched. No skill names a rung, an agent, or a model of its own.
 
 ## Configuration
 
@@ -76,6 +76,11 @@ subagent onto one model, collapsing every rung. Pin per-alias models with the
 `ANTHROPIC_DEFAULT_SONNET_MODEL`, `ANTHROPIC_DEFAULT_OPUS_MODEL`, `ANTHROPIC_DEFAULT_HAIKU_MODEL`,
 and `ANTHROPIC_DEFAULT_FABLE_MODEL` environment variables instead.
 
+**On Bedrock an unpinned alias lags** — it resolves to an older generation than the same alias on
+the Anthropic API, and that model may not even be enabled in your account. Under
+`CLAUDE_CODE_USE_BEDROCK=1`, pin each alias to a full inference-profile ID with the environment
+variables above rather than relying on alias auto-advance.
+
 **No concrete model ID lives in a skill or contract.** gambit emits alias rungs and agent names;
 exact IDs come from the config file, the agent definitions, or those environment variables.
 
@@ -115,8 +120,11 @@ because an operator declared one in the config file.
 - **Each escalation step moves UP the ladder**, carrying the updated evidence the previous rung
   produced — the cited defect, the failing output, the missing value.
 - **The top rung repeats.** At the ladder's last rung, re-dispatch that same rung with updated
-  evidence, again and again, until the defect clears. There is no human rung. The terminal rung is
-  native Claude by config design, which is what preserves the measured 100%-solve invariant.
+  evidence, again and again, until the defect clears. There is no human rung. For the roles that
+  escalate — `worker` and `escalation` — the terminal rung is native Claude by config design, which
+  is what preserves the 100%-solve invariant measured in the tiltyard ladder experiments (recorded
+  outside this repo). An advisory or test-running role whose `ladder` is its entry rung alone never
+  escalates at all.
 
 ## Roles
 

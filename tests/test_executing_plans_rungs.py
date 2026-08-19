@@ -81,7 +81,6 @@ class ExecutingPlansRungRoutingTest(unittest.TestCase):
         for retired in (
             "executors.json",
             "contracts/executors.md",
-            "configured-workers.md",
             "async-dispatch",
             "gambit-wrapper",
             "codex-reply",

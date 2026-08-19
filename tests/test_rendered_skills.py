@@ -295,12 +295,12 @@ class RenderedSkillsTest(unittest.TestCase):
                 "test_brainstorming_steelman.py",
             ),
             (
-                "`tests/test_executing_plans_executors.py` covers worker, escalation, and checkpoint-finder routing",
-                "test_executing_plans_executors.py",
+                "`tests/test_executing_plans_rungs.py` covers worker, escalation, and checkpoint-finder routing",
+                "test_executing_plans_rungs.py",
             ),
             (
-                "`tests/test_review_executors.py` covers finder and verifier routing",
-                "test_review_executors.py",
+                "`tests/test_review_rungs.py` covers finder and verifier routing",
+                "test_review_rungs.py",
             ),
             (
                 "`tests/test_workflow_routing.py` covers scout and test-runner routing",

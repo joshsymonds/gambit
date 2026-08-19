@@ -117,7 +117,6 @@ class ClaudeRenderIsFreeOfExecutorMachineryTest(unittest.TestCase):
                 / "configured-workers.md"
             ).exists()
         )
-        self.assertFalse((ROOT / "agents" / "gambit-wrapper.md").exists())
 
     def test_codex_render_keeps_its_own_copies(self) -> None:
         with tempfile.TemporaryDirectory() as temporary:
@@ -126,14 +125,42 @@ class ClaudeRenderIsFreeOfExecutorMachineryTest(unittest.TestCase):
             )
             for relative in ("executors.md", "async-dispatch.md"):
                 self.assertTrue((contracts / relative).exists(), relative)
-            self.assertTrue(
-                (
-                    skills
-                    / "executing-plans"
-                    / "references"
-                    / "configured-workers.md"
-                ).exists()
+            self.assertTrue((skills / "executing-plans" / "SKILL.md").exists())
+
+    def test_configured_worker_ladder_ships_in_neither_render(self) -> None:
+        """Deleted at the source, so no backend carries it."""
+        with tempfile.TemporaryDirectory() as temporary:
+            codex_skills, _ = render_skills.render_backend(
+                "codex", Path(temporary)
             )
+            for skills in (self.skills, codex_skills):
+                self.assertFalse(
+                    (
+                        skills
+                        / "executing-plans"
+                        / "references"
+                        / "configured-workers.md"
+                    ).exists()
+                )
+
+
+class RepositoryStateTest(unittest.TestCase):
+    """Working-tree state, not render output."""
+
+    def test_wrapper_agent_file_is_gone_from_the_repository(self) -> None:
+        self.assertFalse((ROOT / "agents" / "gambit-wrapper.md").exists())
+
+    def test_configured_worker_ladder_is_gone_from_the_source_tree(self) -> None:
+        self.assertFalse(
+            (
+                ROOT
+                / "src"
+                / "skills"
+                / "executing-plans"
+                / "references"
+                / "configured-workers.md"
+            ).exists()
+        )
 
 
 class ModelsContractDefinesRungsAndRolesTest(unittest.TestCase):
@@ -223,8 +250,21 @@ class ModelsContractDefinesRungsAndRolesTest(unittest.TestCase):
 
         # Public-repo safety: no environment-specific agent name may ship.
         self.assertNotRegex(defaults, r'"agent":')
-        self.assertIn("invalid", defaults.lower())
-        self.assertIn("warning", defaults.lower())
+
+        # An invalid config must not degrade silently: the clause owes four
+        # promises, and a bare "invalid"/"warning" grep would pass on prose
+        # that kept none of them.
+        clause = re.search(
+            r"An \*\*invalid\*\* file[^.]*\.", " ".join(defaults.split())
+        )
+        self.assertIsNotNone(clause, "no invalid-config clause in the defaults")
+        invalid = clause.group(0)
+        self.assertIn("falls back to these same defaults", invalid)
+        self.assertIn("in the transcript", invalid)
+        self.assertIn("one-line warning", invalid)
+        self.assertIn(
+            "naming the file and the exact parse or validation error", invalid
+        )
 
     def test_rung_and_ladder_invariants_are_stated(self) -> None:
         invariants = self.text.split("## Rung and ladder invariants", 1)[1]

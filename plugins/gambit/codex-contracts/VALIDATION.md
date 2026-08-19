@@ -7,8 +7,8 @@ coverage. `tests/test_rung_dispatch.py` pins the `models.json` config path, the 
 schema, the two dispatch shapes, the foreign-model-id prohibition, the built-in defaults, and the
 ladder invariants — and proves the Claude render carries no Codex-MCP executor machinery.
 `tests/test_brainstorming_steelman.py` covers Steelman rung resolution and call wiring;
-`tests/test_executing_plans_executors.py` covers worker, escalation, and checkpoint-finder routing;
-`tests/test_review_executors.py` covers finder and verifier routing; and
+`tests/test_executing_plans_rungs.py` covers worker, escalation, and checkpoint-finder routing;
+`tests/test_review_rungs.py` covers finder and verifier routing; and
 `tests/test_workflow_routing.py` covers scout and test-runner routing. Together they check source
 and rendered backend behavior, including both Steelman modes, exact statuses, the frozen Design
 Ledger, authority boundaries, the two-call circuit breaker, and per-role rung resolution.
