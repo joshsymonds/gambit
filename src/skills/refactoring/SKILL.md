@@ -61,17 +61,13 @@ Refactoring changes code structure without changing behavior. Tests must stay gr
 ## The Process
 
 <!-- gambit-backend:claude -->
-### Test-runner executor selection
+### Test-runner rung selection
 
-Before the first test dispatch: if `~/.claude/gambit/executors.json` does not exist, use native
-execution and do NOT read `contracts/executors.md` — the registry is optional and its absence is
-the common case. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise read `contracts/executors.md` and
-resolve `test-runner` through `contracts/executors.md`; retain that selection for every test-runner call in this refactoring.
-Missing registry or a valid registry with no `test-runner` role selects native Claude and the
-tier-resolved `general-purpose` Task examples below. A configured `test-runner` role uses the
-Configured test-runner wire in `contracts/executors.md` for each example's exact command and
-current repository/worktree root. An invalid registry or configured call failure is terminal:
-report it and do not retry, repair, run the command inline, or fall back natively.
+Before the first test dispatch, Resolve the `test-runner` role through `contracts/models.md` to its
+rung, and retain that rung for every test-runner call in this refactoring. A model rung uses the
+`general-purpose` dispatch examples below with `model:` set to the rung's alias; an agent rung uses
+the rung's `agent` and passes no `model:` at all. The command, the report requirement, and the
+no-edits rule are the same on either shape.
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 ### Test-runner dispatch
@@ -83,6 +79,16 @@ Use the native `test-runner` class for every test dispatch below.
 
 **BEFORE any refactoring:**
 
+<!-- gambit-backend:claude -->
+```
+Agent
+  subagent_type: "general-purpose"          # model rung; an agent rung uses the rung's agent
+  model: "<test-runner rung alias — contracts/models.md>"   # omit entirely on an agent rung
+  description: "Run test suite"
+  prompt: "Run: [test command for this project]. Report pass/fail counts and any failures. Make no edits."
+```
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
 ```
 Agent
   subagent_type: "general-purpose"
@@ -90,6 +96,7 @@ Agent
   description: "Run test suite"
   prompt: "Run: [test command for this project]. Report pass/fail counts and any failures. Make no edits."
 ```
+<!-- /gambit-backend -->
 
 **ALL tests must pass.**
 
@@ -171,6 +178,16 @@ The smallest transformation that compiles.
 
 After EVERY small change:
 
+<!-- gambit-backend:claude -->
+```
+Agent
+  subagent_type: "general-purpose"          # model rung; an agent rung uses the rung's agent
+  model: "<test-runner rung alias — contracts/models.md>"   # omit entirely on an agent rung
+  description: "Run test suite"
+  prompt: "Run: [test command for this project]. Report pass/fail counts and any failures. Make no edits."
+```
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
 ```
 Agent
   subagent_type: "general-purpose"
@@ -178,6 +195,7 @@ Agent
   description: "Run test suite"
   prompt: "Run: [test command for this project]. Report pass/fail counts and any failures. Make no edits."
 ```
+<!-- /gambit-backend -->
 
 **ALL tests must still pass.**
 
@@ -244,6 +262,16 @@ Repeat steps 3-5 for each small transformation. Track progress:
 
 After all transformations complete:
 
+<!-- gambit-backend:claude -->
+```
+Agent
+  subagent_type: "general-purpose"          # model rung; an agent rung uses the rung's agent
+  model: "<test-runner rung alias — contracts/models.md>"   # omit entirely on an agent rung
+  description: "Run full test suite and linter"
+  prompt: "Run: [test command] && [lint command]. Report all results. Make no edits."
+```
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
 ```
 Agent
   subagent_type: "general-purpose"
@@ -251,6 +279,7 @@ Agent
   description: "Run full test suite and linter"
   prompt: "Run: [test command] && [lint command]. Report all results. Make no edits."
 ```
+<!-- /gambit-backend -->
 
 **Checklist:**
 - [ ] All tests pass
@@ -351,7 +380,12 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 **This skill requires:**
 - Tests exist (use `gambit:test-driven-development` to write tests first if none exist)
 - `gambit:verification` (for final verification)
+<!-- gambit-backend:claude -->
+- the contracted test-runner role (run + report, no source edits — rung resolved through `contracts/models.md`) for running tests
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
 - a configured or native test-runner executor (run + report, no source edits — `contracts/executors.md` and `contracts/models.md`) for running tests
+<!-- /gambit-backend -->
 
 **Called by:**
 - When improving code structure after features complete

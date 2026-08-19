@@ -55,16 +55,11 @@ Random fixes waste time and create new bugs. A fix for a symptom you don't under
 **Evidence before hypothesis. Use tools, not guessing.**
 
 <!-- gambit-backend:claude -->
-For bounded codebase investigation, Glob `**/contracts/scout.md`. If
-`~/.claude/gambit/executors.json` does not exist, use native execution and do NOT read
-`contracts/executors.md` — the registry is optional and its absence is the common case. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise
-read `contracts/executors.md` and resolve `scout` through `contracts/executors.md` before dispatch.
-Missing registry or a valid registry with no `scout` role selects native Claude and a contracted
-`subagent_type: "Explore"` call with `model:` at the scout tier and a prompt that says Read
-`contracts/scout.md` first. A configured `scout` role uses the Configured
-scout wire in `contracts/executors.md` with the same bounded question and repository root. An
-invalid registry or configured call failure is terminal: report it and do not retry or fall back
-natively.
+For bounded codebase investigation, Glob `**/contracts/scout.md`, then Resolve the `scout` role
+through `contracts/models.md` to its rung. A model rung is a contracted `subagent_type: "Explore"`
+call with `model:` set to the rung's alias; an agent rung uses the rung's `readonly_agent` with no
+`model:` at all. Either way the prompt says Read `contracts/scout.md` first, then asks the one
+bounded question.
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 For bounded codebase investigation, Glob `**/contracts/scout.md`, dispatch the `scout` role using

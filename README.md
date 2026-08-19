@@ -89,7 +89,7 @@ plan storage and Gambit does not create them automatically.
 
 During `executing-plans`, the active agent acts as an **orchestrator**: it dispatches a fresh worker subagent per work item instead of writing the code itself, staying free to plan, verify, and checkpoint. Every worker receives a self-contained brief and is bound by a shared worker contract — build only what the brief asks, never inspect or mutate orchestration state, test-first with evidence, and **stop and report** at the first sign of ambiguity or scope creep rather than guessing. Workers return one of four states (`DONE` / `DONE_WITH_CONCERNS` / `BLOCKED` / `NEEDS_CONTEXT`); the orchestrator routes on it and owns all commits.
 
-Backend adapters choose appropriate worker roles. Claude resolves model tiers through `contracts/models.md`; Codex resolves built-in or custom agent profiles through `codex-contracts/models.md`.
+Backend adapters choose appropriate worker roles. Claude resolves each role to a rung — a named subagent or a harness model alias — through `contracts/models.md`; Codex resolves built-in or custom agent profiles through `codex-contracts/models.md`.
 
 ## Why Not Just Use Superpowers/Hyperpowers?
 

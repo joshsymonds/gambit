@@ -54,16 +54,11 @@ Random fixes waste time and create new bugs. A fix for a symptom you don't under
 
 **Evidence before hypothesis. Use tools, not guessing.**
 
-For bounded codebase investigation, Glob `**/contracts/scout.md`. If
-`~/.claude/gambit/executors.json` does not exist, use native execution and do NOT read
-`contracts/executors.md` — the registry is optional and its absence is the common case. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise
-read `contracts/executors.md` and resolve `scout` through `contracts/executors.md` before dispatch.
-Missing registry or a valid registry with no `scout` role selects native Claude and a contracted
-`subagent_type: "Explore"` call with `model:` at the scout tier and a prompt that says Read
-`contracts/scout.md` first. A configured `scout` role uses the Configured
-scout wire in `contracts/executors.md` with the same bounded question and repository root. An
-invalid registry or configured call failure is terminal: report it and do not retry or fall back
-natively.
+For bounded codebase investigation, Glob `**/contracts/scout.md`, then Resolve the `scout` role
+through `contracts/models.md` to its rung. A model rung is a contracted `subagent_type: "Explore"`
+call with `model:` set to the rung's alias; an agent rung uses the rung's `readonly_agent` with no
+`model:` at all. Either way the prompt says Read `contracts/scout.md` first, then asks the one
+bounded question.
 
 - **Search for context** — `WebSearch` for error messages. For bounded codebase investigation, use the resolved scout path above, ask the exact question, and require `file:line` evidence or `NOT FOUND`.
 - **Find a working neighbor and compare** — most codebases contain a near-neighbor of the broken path (another caller of the same function, another feature using the same library). Comparing working-vs-broken is faster than pure tracing and catches "configured differently" bugs. List **every** difference, not just the ones that seem relevant — "that can't matter" is how real bugs hide. Read the working reference *completely*.

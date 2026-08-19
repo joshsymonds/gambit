@@ -20,7 +20,7 @@ That is what you are testing for.
 
 **Announce at start:** "I'm using gambit:writing-skills to validate this skill with evaluation-driven development."
 
-Repo mechanics — canonical `src/`, backend blocks, renderer and test coupling, tier aliases, the
+Repo mechanics — canonical `src/`, backend blocks, renderer and test coupling, rung aliases, the
 `Agent` dispatch token — are in [references/gambit-skill-conventions.md](references/gambit-skill-conventions.md). Read it before your first edit.
 
 
@@ -69,13 +69,13 @@ TaskCreate
 
 ### Phase 2: Baseline test (RED) — the gate that matters
 
-Dispatch a subagent with the scenario and **no skill**, at the cheap tier. Tell it to respond
-normally and use no skills.
+Dispatch a subagent with the scenario and **no skill**, on the weakest rung you expect the skill to
+run on. Tell it to respond normally and use no skills.
 
 ```
 Agent
   subagent_type: "general-purpose"
-  model: "<cheap tier — see contracts/models.md>"
+  model: "<weakest model-rung alias — contracts/models.md>"
   description: "Baseline test without skill"
   prompt: |
     [Test scenario]
@@ -87,7 +87,7 @@ Agent
 - **Behaves correctly → STOP. Do not write the skill.** The model already does this. A skill here
   buys nothing and costs context on every invocation that loads it.
 
-This is the single most important step. Capable models are disciplined by default; the cheap tier
+This is the single most important step. Capable models are disciplined by default; the weakest rung
 is where a contract earns its keep, and where the baseline tells you the truth.
 
 ### Phase 3: Write the minimal skill (GREEN)
@@ -114,7 +114,7 @@ Real scenarios force a choice with consequences. Combine 3+ pressures:
 paths. Ask **"what do you do?"** — never "what should you do?". No easy outs like "I'd ask the
 user." And never tell the test agent which loophole you are probing.
 
-**When it fails, prefer a structural fix — but for the right reason.** Tested at the cheap tier
+**When it fails, prefer a structural fix — but for the right reason.** Tested on the weakest rung
 (`contracts/VALIDATION.md`, 2026-07-24), an emphatic absolute ("NEVER… NO EXCEPTIONS") and a
 checkable gate produced *identical* compliance: 3/3 each, against a 0/3 baseline. Emphasis is not
 the weakest lever, and anyone who tells you otherwise — including an earlier version of this file —
@@ -156,17 +156,17 @@ only acceptable answer?
 
 ### Phase 5: Record the result
 
-Test across the tiers you expect the skill to run at — a skill that only holds at the most-capable
-tier does not hold for a dispatched worker.
+Test across the rungs you expect the skill to run on — a skill that only holds on a ladder's top
+rung does not hold for a dispatched worker.
 
-| Tier | What you are checking |
+| Model rung | What you are checking |
 |------|-----------------------|
 | **Haiku** | Does the skill give enough guidance to act on? |
-| **Sonnet** | Is it clear and efficient — the tier most workers run at? |
+| **Sonnet** | Is it clear and efficient — the rung most workers run on? |
 | **Opus** | Does it avoid over-explaining what the model already knows? |
 
-Then write the RED/GREEN outcome into `contracts/VALIDATION.md`: what behavior flipped, at which
-tier, and which clause caused it. An unrecorded pressure test is an assertion, not evidence.
+Then write the RED/GREEN outcome into `contracts/VALIDATION.md`: what behavior flipped, on which
+rung, and which clause caused it. An unrecorded pressure test is an assertion, not evidence.
 
 Then update the Task and commit.
 

@@ -109,101 +109,44 @@ class BrainstormingSteelmanTest(unittest.TestCase):
                     prose,
                 )
 
-    def test_claude_executor_resolution_and_configured_wire_call_fail_closed(
-        self,
-    ) -> None:
+    def test_claude_steelman_resolves_its_rung_and_stays_read_only(self) -> None:
         steelman = self.claude.split("### 3a. Steelman the Agreed Design", 1)[1]
         steelman = steelman.split("### 4. Create the Epic Task", 1)[0]
         prose = " ".join(steelman.split())
         for required in (
+            "Resolve the `steelman` role through `contracts/models.md` to its rung",
+            "an agent rung dispatches the rung's `readonly_agent` with no `model:` at all",
+            'model: "<steelman rung alias — contracts/models.md>"',
+            "omit entirely on an agent rung",
+            "contracts/steelman.md",
+            "Mode: Discovery",
+        ):
+            self.assertIn(required, prose)
+
+        # The Codex-MCP executor registry is gone from the Claude render.
+        for retired in (
+            "executors.json",
             "contracts/executors.md",
-            "~/.claude/gambit/executors.json",
-            "missing registry file",
-            "requested `steelman` role is absent",
-            "native Claude",
-            "most-capable tier",
-            "invalid registry",
-            "do not dispatch",
-            "no native fallback",
-            "configured Codex call fails",
+            "codex-reply",
             "configured fully qualified MCP tool",
-            "prompt:",
-            "model:",
-            "cwd:",
-            "sandbox:",
-            "approval-policy:",
-            "developer-instructions:",
-            "model_reasoning_effort:",
-            'web_search: "live"',
-            'plugins."gambit@personal".enabled: false',
-            "skills.include_instructions: false",
-            "orchestrator.skills.enabled: false",
-            "features.collab: false",
-            "features.multi_agent_v2.enabled: false",
-            "subordinate read-only Steelman",
-            "orchestration, skills/workflows, nested agents/delegation, task discovery, and scope expansion",
+            "developer-instructions",
+            "steelman tier",
         ):
-            self.assertIn(required, prose)
+            self.assertNotIn(retired, prose)
 
-        self.assertRegex(prose, r"configured `reasoning_effort`.*model_reasoning_effort")
-        self.assertRegex(prose, r"configured `web_search`.*web_search")
-
-    def test_configured_steelman_is_bounded_and_apps_disabled(self) -> None:
-        steelman = self.claude.split("### 3a. Steelman the Agreed Design", 1)[1]
-        steelman = steelman.split("### 4. Create the Epic Task", 1)[0]
-        prose = " ".join(steelman.split())
-        self.assertIn(
-            "FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt",
-            prose,
-        )
-        self.assertNotIn("your FIRST action must be to Read it", prose)
-        self.assertIn(
-            "only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) the single exact absolute contract path named in the prompt, even when outside `cwd`, and (b) local files rooted inside the assigned repository/worktree",
-            prose,
-        )
-        self.assertIn("All other commands and operations are forbidden", prose)
-        for forbidden in (
-            "redirection",
-            "command substitution",
-            "backgrounding",
-            "tests",
-            "mutation",
-            "arbitrary absolute paths",
-            "orchestration",
-            "skills/workflows",
-            "nested agents/delegation",
-            "task discovery",
-            "scope expansion",
-        ):
-            self.assertIn(forbidden, prose)
-        configured = steelman.split("For configured Codex", 1)[1].split(
-            "Map the configured", 1
-        )[0]
-        self.assertIn("```\nCall <configured fully qualified MCP tool>\n", configured)
-        self.assertEqual(1, configured.count("features.apps: false"))
-        self.assertEqual(0, prose.count("This role forbids"))
-        self.assertNotIn("Do not invoke workflows or delegate work.", configured)
-
-    def test_configured_codex_calls_are_fresh_and_validate_supported_output(
+    def test_steelman_dispatch_is_fresh_and_carries_only_contract_and_mode(
         self,
     ) -> None:
         steelman = self.claude.split("### 3a. Steelman the Agreed Design", 1)[1]
         steelman = steelman.split("### 4. Create the Epic Task", 1)[0]
         prose = " ".join(steelman.split())
         for required in (
-            "Every configured Codex call is fresh",
-            "only the absolute Steelman contract path plus the mode inputs",
-            "non-empty `threadId`",
-            "non-empty `content`",
-            "Ignore thread persistence",
-            "Never invoke `codex-reply`",
+            "Discovery receives the Design Packet and no previous Steelman output",
+            "revised Design Packet, the frozen Design Ledger, and a concise design delta",
+            "Never inherit prior turns into a Steelman dispatch",
+            "never dispatch a Steelman without its contract path",
         ):
             self.assertIn(required, prose)
-        self.assertIn("Design Packet and no previous Steelman output", prose)
-        self.assertIn(
-            "revised Design Packet, frozen Design Ledger, and concise design delta",
-            prose,
-        )
 
     def test_visible_frozen_ledger_yield_and_bounded_closure_dialogue(self) -> None:
         expected_choices = (
@@ -259,9 +202,12 @@ class BrainstormingSteelmanTest(unittest.TestCase):
             "#### Run bounded closure when required", 1
         )[1].split("### 4. Create the Epic Task", 1)[0]
         claude_prose = " ".join(claude_closure.split())
-        self.assertIn("configured Codex closure is another fresh call", claude_prose)
-        self.assertIn("native Claude uses another fresh contracted dispatch", claude_prose)
+        self.assertIn(
+            "closure is another fresh contracted dispatch on the `steelman` role's rung",
+            claude_prose,
+        )
         self.assertNotIn("native Codex uses another fresh contracted dispatch", claude_prose)
+        self.assertNotIn("configured Codex closure", claude_prose)
 
         codex_closure = self.codex.split(
             "#### Run bounded closure when required", 1

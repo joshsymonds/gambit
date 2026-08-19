@@ -1,3 +1,4 @@
+<!-- gambit-backend:codex -->
 # Configured Codex Worker Ladder
 
 - [Common async transport](#common-async-transport)
@@ -147,3 +148,4 @@ human rung; the ladder ends only in a verified, quality-clean result. The epic-l
 negative-convergence circuit breaker in the main workflow still applies. Never embed any prior
 result's whole `content` in the prompt; carry only the bounded summaries, cited excerpts, and
 evidence above.
+<!-- /gambit-backend -->

@@ -31,7 +31,7 @@ Step 1: Reproduce
 
 Step 2: Investigate
   WebSearch: "NullPointerException getEmail java"
-  Scout (subagent_type: "Explore" + Read contracts/scout.md, scout tier):
+  Scout (subagent_type: "Explore" + Read contracts/scout.md, scout rung):
     "Find where User objects are created without email validation — cite file:line"
 
   Trace backward:
@@ -134,8 +134,8 @@ Dispatch an Explore agent to map the system:
 
 ```
 Agent
-  subagent_type: "Explore"          # the read-only scout class
-  model: "<scout tier — default cheap; contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
+  subagent_type: "Explore"          # model rung: the read-only scout class
+  model: "<scout rung alias — contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
   description: "Map data flow for [feature]"
   prompt: |
     Read <abs>/contracts/scout.md first (your binding scout contract), then trace the request flow for [operation]:

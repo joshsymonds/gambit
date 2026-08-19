@@ -1,16 +1,17 @@
 # Behavioral Validation
 
-## Contract-surface validation: executor registry and steelman
+## Contract-surface validation: rung dispatch and steelman
 
-The executor and steelman contracts and their wired workflow routing have structural regression
-coverage. `tests/test_rendered_skills.py` parses the executor registry schema, proves that all eight
-contracted execution roles are configurable, checks every required and role-specific field, and
-locks the missing/invalid/failure resolution rules. `tests/test_brainstorming_steelman.py` covers
-Steelman executor resolution and call wiring; `tests/test_executing_plans_executors.py` covers
-worker and checkpoint-finder routing; `tests/test_review_executors.py` covers finder and verifier
-routing; and `tests/test_workflow_routing.py` covers scout and test-runner routing. Together they check source and rendered backend
-behavior, including both Steelman modes, exact statuses, the frozen Design Ledger, authority
-boundaries, the two-call circuit breaker, configured wire mapping, and fail-closed routing.
+The rung/role and steelman contracts and their wired workflow routing have structural regression
+coverage. `tests/test_rung_dispatch.py` pins the `models.json` config path, the rung and role
+schema, the two dispatch shapes, the foreign-model-id prohibition, the built-in defaults, and the
+ladder invariants — and proves the Claude render carries no Codex-MCP executor machinery.
+`tests/test_brainstorming_steelman.py` covers Steelman rung resolution and call wiring;
+`tests/test_executing_plans_executors.py` covers worker, escalation, and checkpoint-finder routing;
+`tests/test_review_executors.py` covers finder and verifier routing; and
+`tests/test_workflow_routing.py` covers scout and test-runner routing. Together they check source
+and rendered backend behavior, including both Steelman modes, exact statuses, the frozen Design
+Ledger, authority boundaries, the two-call circuit breaker, and per-role rung resolution.
 
 Each agent class and the governance reflex was validated with **baseline-RED → GREEN-under-pressure → mis-prompt/injection**, using the gambit:writing-skills evaluation-driven method (a fresh subagent, a realistic scenario, a forced choice under combined pressure). Tested at the tier each class actually runs at — the cheap tier is where contracts earn their keep, since capable models are already disciplined by default. Summary of recorded results:
 

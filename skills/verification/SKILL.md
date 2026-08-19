@@ -105,19 +105,15 @@ Execute the COMPLETE command for the declared validation tier. Not a partial com
 
 **For verbose output:** use the contracted test-runner.
 
-**Probe before reading.** If `~/.claude/gambit/executors.json` does not exist, use native execution
-and do NOT read `contracts/executors.md` — the registry is optional and its absence is the common
-case. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise read `contracts/executors.md` and resolve `test-runner` through `contracts/executors.md` before
-dispatch. Missing registry or a valid registry with no `test-runner` role selects native Claude
-and the tier-resolved `general-purpose` Task below. A configured `test-runner` role uses the
-Configured test-runner wire in `contracts/executors.md`, substituting the complete command and
-repository/worktree root. An invalid registry or configured call failure is terminal: report the
-failure and do not retry, repair, run the command inline, or fall back natively.
+Resolve the `test-runner` role through `contracts/models.md` to its rung before dispatch. A model
+rung uses the `general-purpose` dispatch below with `model:` set to the rung's alias; an agent rung
+uses the rung's `agent` and passes no `model:` at all. The complete command and the
+repository/worktree root are the same on either shape.
 
 ```
 Agent
-  subagent_type: "general-purpose"
-  model: "<test-runner tier — see contracts/models.md>"
+  subagent_type: "general-purpose"          # model rung; an agent rung uses the rung's agent
+  model: "<test-runner rung alias — contracts/models.md>"   # omit entirely on an agent rung
   description: "Run verification"
   prompt: "Run: [command]. Report pass/fail counts, exit code, and any failures. Make no edits."
 ```
@@ -209,7 +205,7 @@ See [REFERENCE.md](REFERENCE.md) for detailed good/bad examples including:
 - ALL skills before completion claims
 
 **This skill calls:**
-- the configured or native test-runner executor (run + report, no source edits — `contracts/executors.md` and `contracts/models.md`) for running verbose commands
+- the contracted test-runner role (run + report, no source edits — rung resolved through `contracts/models.md`) for running verbose commands
 
 **Called by:**
 - Any skill before marking work complete

@@ -56,19 +56,16 @@ Do NOT write any code, invoke any implementation skill, or take any implementati
 
 **Research existing context first:**
 
-Resolve the absolute path to `contracts/scout.md`. If `~/.claude/gambit/executors.json` does not
-exist, use native execution and do NOT read `contracts/executors.md` — the registry is optional and
-its absence is the common case. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise read `contracts/executors.md` and resolve
-`scout` through `contracts/executors.md` before dispatch. Missing registry or a valid registry with
-no `scout` role selects native Claude and the contracted `Explore` dispatch below. A configured
-`scout` role uses the Configured scout wire in `contracts/executors.md`, with the bounded pattern
-question and repository root substituted exactly. An invalid registry or configured call failure
-is terminal: report it and do not retry or fall back natively.
+Resolve the absolute path to `contracts/scout.md`. Resolve the `scout` role through
+`contracts/models.md` — its built-in entry rung, or a higher rung on the scout ladder when the
+question is about code flow or exhaustiveness rather than a single fact. Dispatch that rung: a
+model rung uses the read-only `Explore` class below; an agent rung uses the rung's `readonly_agent`
+and passes no `model:` at all. The prompt is identical either way.
 
 ```
 Agent
-  subagent_type: "Explore"          # the read-only scout class
-  model: "<scout tier — default cheap; contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
+  subagent_type: "Explore"          # model rung: the read-only scout class
+  model: "<scout rung alias — contracts/models.md>"   # resolve <abs> via Glob **/contracts/scout.md
   prompt: "Read <abs>/contracts/scout.md first (your binding scout contract), then: Find existing [relevant] implementation patterns in this codebase. Report with file:line evidence; say NOT FOUND if absent."
 ```
 
@@ -159,27 +156,16 @@ must stand alone without inherited conversation.
 
 #### Resolve and dispatch the Steelman
 
-Resolve the absolute path to `contracts/steelman.md`, then check whether
-`~/.claude/gambit/executors.json` exists. If it does not, use native execution and do NOT read
-`contracts/executors.md`. If the check itself errors (permission denied, unreadable path, tool
-failure), that is NOT absence — stop and report the probe failure without dispatching. Only when
-that file exists, read the executor contract completely and
-resolve `steelman` through `~/.claude/gambit/executors.json` exactly as it specifies:
-
-- A missing registry file or a valid registry where the requested `steelman` role is absent uses
-  the current native Claude dispatch at the most-capable tier.
-- An invalid registry is terminal: report the validation failure and do not dispatch. There is no
-  native fallback.
-- A configured `steelman` entry invokes its configured fully qualified MCP tool. If the configured
-  Codex call fails, including malformed or unsupported output, report the failure and stop. There
-  is no native fallback and no native retry.
-
-The native Claude discovery dispatch is fresh and contracted:
+Resolve the absolute path to `contracts/steelman.md`. Resolve the `steelman` role through
+`contracts/models.md` to its rung. Steelman is read-only and advisory, so an agent rung dispatches
+the rung's `readonly_agent` with no `model:` at all; a model rung dispatches `general-purpose` with
+the rung's alias. The dispatch is fresh and contracted either way, and its prompt carries only the
+absolute contract path plus the mode inputs:
 
 ```
 Agent
-  subagent_type: "general-purpose"
-  model: "<steelman tier — most-capable; contracts/models.md>"
+  subagent_type: "general-purpose"          # model rung; an agent rung uses the rung's readonly_agent
+  model: "<steelman rung alias — contracts/models.md>"   # omit entirely on an agent rung
   prompt: |
     Read <abs>/contracts/steelman.md first and follow it exactly.
 
@@ -189,50 +175,9 @@ Agent
     [complete self-contained packet]
 ```
 
-For configured Codex, map registry fields to this wire shape; invoke the exact tool named by the
-registry rather than a guessed alias:
-
-```
-Call <configured fully qualified MCP tool>
-  prompt: |
-    Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt. Use only bounded `cat`, `sed`, `nl`, or `rg` reads of that path before doing anything else.
-    Read <abs>/contracts/steelman.md first and follow it exactly.
-
-    Mode: <Discovery or Closure>
-
-    <mode inputs>
-  model: <configured model>
-  cwd: <repository root>
-  sandbox: <configured sandbox>
-  approval-policy: <configured approval_policy>
-  developer-instructions: |
-    You are a subordinate read-only Steelman. The only permitted local commands are bounded
-    `cat`, `sed`, `nl`, or `rg` reads of (a) the single exact absolute contract path named in the
-    prompt, even when outside `cwd`, and (b) local files rooted inside the assigned
-    repository/worktree. All other commands and operations are forbidden, including redirection,
-    command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration,
-    skills/workflows, nested agents/delegation, task discovery, and scope expansion.
-  config:
-    model_reasoning_effort: <configured reasoning_effort>
-    web_search: "live"
-    plugins."gambit@personal".enabled: false
-    skills.include_instructions: false
-    orchestrator.skills.enabled: false
-    features.collab: false
-    features.multi_agent_v2.enabled: false
-    features.apps: false
-```
-
-Map the configured `reasoning_effort` to `config.model_reasoning_effort` and the configured
-`web_search` to `config.web_search`; pass the other configured values through the direct fields
-shown above.
-
-Every configured Codex call is fresh. The `prompt` contains only the absolute Steelman contract
-path plus the mode inputs: discovery receives the Design Packet and no previous Steelman output;
-closure receives the revised Design Packet, frozen Design Ledger, and concise design delta. Do
-not send inherited turns or a prior `threadId`. Require a supported response with a non-empty
-`threadId` and non-empty `content`; anything else is a configured call failure. Ignore thread
-persistence after validating the response. Never invoke `codex-reply`.
+Discovery receives the Design Packet and no previous Steelman output; closure receives the revised
+Design Packet, the frozen Design Ledger, and a concise design delta. Never inherit prior turns into
+a Steelman dispatch, and never dispatch a Steelman without its contract path.
 
 Discovery receives the Design Packet and no previous Steelman output. Require one of the contract
 statuses — `READY`, `REVISE`, `NEEDS_DECISION`, or `BLOCKED` — and all contracted sections:
@@ -278,8 +223,7 @@ materially changes the design. Skip closure only when discovery returned `READY`
 design change occurred. Use the revised self-contained Design Packet, the frozen
 Design Ledger verbatim, and a concise design delta as the only closure inputs. Repeat the same
 backend dispatch rules above.
-Under those rules, configured Codex closure is another fresh call, and native Claude uses another
-fresh contracted dispatch at the most-capable tier.
+Under those rules, closure is another fresh contracted dispatch on the `steelman` role's rung.
 
 Require one closure status — `READY`, `STILL_OPEN`, `CHANGE_INDUCED_CONCERN`, or `BLOCKED` — plus
 **Status**, **Ledger dispositions**, **Change-induced concerns**, **Required caller action**, and

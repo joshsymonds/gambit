@@ -200,18 +200,27 @@ Before any finder dispatch, validate that the frozen Review Brief contains the a
 Resolve the absolute path to this skill's `reviewers/` directory **once** (Glob `**/skills/review/reviewers/conformance.md` if you don't already know it). You pass this path to the agents — **do NOT read the reviewer files into this context.** The four reviewer files are ~8k tokens; reading them here and re-emitting them as prompts wastes ~18k tokens every review. Each agent reads its own instruction file in its own fresh context.
 
 <!-- gambit-backend:claude -->
-#### Executor resolution (Claude only)
+#### Rung resolution (Claude only)
 
-If `~/.claude/gambit/executors.json` does not exist, select native Claude and do NOT read `contracts/executors.md` — the registry is optional and its absence is the common case. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise: Resolve `finder` exactly once through `contracts/executors.md` before emitting any of the four calls. Missing registry or a valid registry with no `finder` role selects native Claude and the native branch below, including its current finder-tier model resolution. Invalid registry stops the review before any finder dispatch; report the validation failure. A valid configured role selects the configured Codex branch. A configured call failure is fail-closed: stop and report with never native fallback.
+Resolve the `finder` role through `contracts/models.md` exactly once, before emitting any of the four calls. All four dimensions run on that one resolved rung — never resolve per dimension and never mix rungs inside one audit. Finders are advisory and read-only, so an agent rung uses the rung's `readonly_agent`.
 
-Do not infer selection from MCP tool availability, resolve once per dimension, or mix branches. One resolution selects the executor for the complete four-finder dispatch.
-
-#### Native Claude finder dispatch
+#### Finder dispatch
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 #### Native Codex finder dispatch
 <!-- /gambit-backend -->
 
+<!-- gambit-backend:claude -->
+In ONE message, emit exactly four finder calls on that one resolved rung. A model rung emits four `general-purpose` Agent calls with `model:` set to the rung's alias — set it explicitly, never `inherit`; an agent rung emits four calls on the rung's `readonly_agent` with no `model:` at all. Each prompt is just: (1) a directive to read and follow that agent's instruction file by path, then (2) the review brief.
+
+```
+Agent subagent_type="general-purpose" model="<finder rung alias — contracts/models.md>" description="Conformance review" prompt="Read <abs>/reviewers/conformance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" model="<finder rung alias — contracts/models.md>" description="Security review"    prompt="Read <abs>/reviewers/security.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" model="<finder rung alias — contracts/models.md>" description="Quality review"     prompt="Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+Agent subagent_type="general-purpose" model="<finder rung alias — contracts/models.md>" description="Performance review" prompt="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
+```
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
 In ONE message, emit exactly four `general-purpose` Agent calls, each at the **finder tier** (`model:` resolved per `contracts/models.md` — default most-capable, because a missed finding is unrecoverable; set `model:` explicitly, never `inherit`). Each prompt is just: (1) a directive to read and follow that agent's instruction file by path, then (2) the review brief.
 
 ```
@@ -220,124 +229,15 @@ Agent subagent_type="general-purpose" model="<finder tier — see contracts/mode
 Agent subagent_type="general-purpose" model="<finder tier — see contracts/models.md>" description="Quality review"     prompt="Read <abs>/reviewers/quality.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
 Agent subagent_type="general-purpose" model="<finder tier — see contracts/models.md>" description="Performance review" prompt="Read <abs>/reviewers/performance.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\n## Review Brief\n\n[brief]"
 ```
+<!-- /gambit-backend -->
 
 <!-- gambit-backend:claude -->
-**Parallelism is structural, not a reminder.** That single message contains four calls through the once-selected finder executor — native Agent calls or configured anonymous background wrapper calls — and nothing else: no `Read` calls, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself using `Read` on a reviewer file, you've reverted to the old serializing pattern — stop and dispatch by path.
+**Parallelism is structural, not a reminder.** That single message contains four calls on the once-resolved finder rung and nothing else: no `Read` calls, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself using `Read` on a reviewer file, you've reverted to the old serializing pattern — stop and dispatch by path.
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 **Parallelism is structural, not a reminder.** That single message contains four native SpawnAgent calls and nothing else: no file reads, no prose between them. Reading one reviewer file before each dispatch is *exactly* what forces the agents sequential; passing paths removes the read step, so there's nothing left to interleave. If you catch yourself reading a reviewer file here, you've reverted to the old serializing pattern — stop and dispatch by path.
 <!-- /gambit-backend -->
 
-<!-- gambit-backend:claude -->
-#### Configured Codex finder dispatch
-
-When resolution selects configured Codex, `finder.tool` is the configured fully qualified MCP tool. Follow `contracts/async-dispatch.md` for the frozen wrapper, artifact, handle, waiting, envelope, and failure mechanics; this section defines only the review finders' site-specific wire arguments and gates. The dimension-to-contract mapping is immutable: conformance, security, quality, and performance must each receive its matching absolute reviewer path and must never be interchanged.
-
-Each call is fresh and distinct: omit any `threadId` input and never continue one dimension's thread for another. Each complete Wire arguments object has `prompt`, `model`, `cwd`, `sandbox`, `approval-policy`, `developer-instructions`, and `config`. `model` maps from `finder.model`; `cwd` is the absolute repository/worktree path under review; `sandbox` is the configured, schema-required `read-only`; `approval-policy` maps from `finder.approval_policy`; and `config.model_reasoning_effort` maps from `finder.reasoning_effort`.
-
-The prompt value contains only the dimension's absolute reviewer-contract path directive plus the same frozen Review Brief, byte-for-byte. Use these four complete structured objects as the opaque Wire arguments payloads in the async relay prompts:
-
-```
-conformance Wire arguments:
-{
-  "prompt": "Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt. Use only bounded `cat`, `sed`, `nl`, or `rg` reads of that path before doing anything else.\nRead <abs>/reviewers/conformance.md — that file is your complete instructions; then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
-  "model": "<finder.model>",
-  "cwd": "<absolute repository/worktree path>",
-  "sandbox": "read-only",
-  "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single exact absolute reviewer-contract path named in the prompt is REQUIRED and is not repository discovery. The only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) that exact contract path, even when outside `cwd`, and (b) local files rooted inside the assigned review worktree. All other commands and operations are forbidden, including redirection, command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration, skills/workflows, nested agents/delegation, task discovery, and scope expansion. Analyze only those supplied materials and return advisory findings.",
-  "config": {
-    "model_reasoning_effort": "<finder.reasoning_effort>",
-    "web_search": "live",
-    "plugins.\"gambit@personal\".enabled": false,
-    "skills.include_instructions": false,
-    "orchestrator.skills.enabled": false,
-    "features.collab": false,
-    "features.multi_agent_v2.enabled": false,
-    "features.apps": false
-  }
-}
-security Wire arguments:
-{
-  "prompt": "Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt. Use only bounded `cat`, `sed`, `nl`, or `rg` reads of that path before doing anything else.\nRead <abs>/reviewers/security.md — that file is your complete instructions; then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
-  "model": "<finder.model>",
-  "cwd": "<absolute repository/worktree path>",
-  "sandbox": "read-only",
-  "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single exact absolute reviewer-contract path named in the prompt is REQUIRED and is not repository discovery. The only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) that exact contract path, even when outside `cwd`, and (b) local files rooted inside the assigned review worktree. All other commands and operations are forbidden, including redirection, command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration, skills/workflows, nested agents/delegation, task discovery, and scope expansion. Analyze only those supplied materials and return advisory findings.",
-  "config": {
-    "model_reasoning_effort": "<finder.reasoning_effort>",
-    "web_search": "live",
-    "plugins.\"gambit@personal\".enabled": false,
-    "skills.include_instructions": false,
-    "orchestrator.skills.enabled": false,
-    "features.collab": false,
-    "features.multi_agent_v2.enabled": false,
-    "features.apps": false
-  }
-}
-quality Wire arguments:
-{
-  "prompt": "Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt. Use only bounded `cat`, `sed`, `nl`, or `rg` reads of that path before doing anything else.\nRead <abs>/reviewers/quality.md — that file is your complete instructions; then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
-  "model": "<finder.model>",
-  "cwd": "<absolute repository/worktree path>",
-  "sandbox": "read-only",
-  "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single exact absolute reviewer-contract path named in the prompt is REQUIRED and is not repository discovery. The only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) that exact contract path, even when outside `cwd`, and (b) local files rooted inside the assigned review worktree. All other commands and operations are forbidden, including redirection, command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration, skills/workflows, nested agents/delegation, task discovery, and scope expansion. Analyze only those supplied materials and return advisory findings.",
-  "config": {
-    "model_reasoning_effort": "<finder.reasoning_effort>",
-    "web_search": "live",
-    "plugins.\"gambit@personal\".enabled": false,
-    "skills.include_instructions": false,
-    "orchestrator.skills.enabled": false,
-    "features.collab": false,
-    "features.multi_agent_v2.enabled": false,
-    "features.apps": false
-  }
-}
-performance Wire arguments:
-{
-  "prompt": "Your FIRST action is a bounded read-only `exec_command` inspection of the single exact absolute contract path named in the prompt. Use only bounded `cat`, `sed`, `nl`, or `rg` reads of that path before doing anything else.\nRead <abs>/reviewers/performance.md — that file is your complete instructions; then follow it exactly.\n\n## Review Brief\n\n[identical frozen Review Brief]",
-  "model": "<finder.model>",
-  "cwd": "<absolute repository/worktree path>",
-  "sandbox": "read-only",
-  "approval-policy": "<finder.approval_policy>",
-  "developer-instructions": "You are a subordinate read-only advisory finder. Reading and analyzing the material supplied in the frozen Review Brief and the single exact absolute reviewer-contract path named in the prompt is REQUIRED and is not repository discovery. The only permitted local commands are bounded `cat`, `sed`, `nl`, or `rg` reads of (a) that exact contract path, even when outside `cwd`, and (b) local files rooted inside the assigned review worktree. All other commands and operations are forbidden, including redirection, command substitution, backgrounding, tests, mutation, arbitrary absolute paths, orchestration, skills/workflows, nested agents/delegation, task discovery, and scope expansion. Analyze only those supplied materials and return advisory findings.",
-  "config": {
-    "model_reasoning_effort": "<finder.reasoning_effort>",
-    "web_search": "live",
-    "plugins.\"gambit@personal\".enabled": false,
-    "skills.include_instructions": false,
-    "orchestrator.skills.enabled": false,
-    "features.collab": false,
-    "features.multi_agent_v2.enabled": false,
-    "features.apps": false
-  }
-}
-```
-
-Before launching any wrapper, expand `~/.claude/gambit/async-results/` to an absolute path and ensure the directory exists. If preparation fails, stop before launching any wrapper; do not fall back to native execution. Generate four collision-resistant unique absolute artifact paths under that prepared directory and store each expected path with its call before dispatch:
-
-- conformance → `<conformance-artifact-path>`
-- security → `<security-artifact-path>`
-- quality → `<quality-artifact-path>`
-- performance → `<performance-artifact-path>`
-
-Build each anonymous wrapper's exact relay prompt from `contracts/async-dispatch.md`, using `finder.tool`, that dimension's complete Wire arguments object, and its stored expected artifact path. At the wrapper tier from `contracts/models.md`, emit one message containing all four background Agent wrapper calls and nothing else. Every wrapper is anonymous: never pass `name:`. Descriptions are unique and identify this review site and the dimension:
-
-```
-Agent subagent_type="gambit:gambit-wrapper" model="<wrapper tier — see contracts/models.md>" run_in_background=true description="Review configured finder: conformance" prompt="<exact relay prompt from contracts/async-dispatch.md with conformance Wire arguments and conformance artifact path>"
-Agent subagent_type="gambit:gambit-wrapper" model="<wrapper tier — see contracts/models.md>" run_in_background=true description="Review configured finder: security" prompt="<exact relay prompt from contracts/async-dispatch.md with security Wire arguments and security artifact path>"
-Agent subagent_type="gambit:gambit-wrapper" model="<wrapper tier — see contracts/models.md>" run_in_background=true description="Review configured finder: quality" prompt="<exact relay prompt from contracts/async-dispatch.md with quality Wire arguments and quality artifact path>"
-Agent subagent_type="gambit:gambit-wrapper" model="<wrapper tier — see contracts/models.md>" run_in_background=true description="Review configured finder: performance" prompt="<exact relay prompt from contracts/async-dispatch.md with performance Wire arguments and performance artifact path>"
-```
-
-As the wrappers launch, record every handle using the complete `task_id → dispatch site → task/dimension → worktree → expected artifact path` mapping, with the review dimension in `task/dimension`, and restate all four mappings in checkpoint scratch state. Drain every launched handle to a terminal state with repeated bounded `TaskOutput block=true` calls on that same handle, continuing after nonterminal waits and never messaging a wrapper. Per the collection barrier, validate all four terminal results before judging the batch; never cancel or retry a wrapper, and never stop collection while a sibling remains live.
-
-For each terminal result, require the exact envelope from `contracts/async-dispatch.md`; require that the envelope contains a non-empty string `threadId` containing no CR or LF and that the envelope's artifact path matches its stored expected artifact path exactly. Only after that match may you read only that exact-matched artifact; require a non-empty string `content`, then delete it after successful validation. The exact artifact content is that dimension's advisory reviewer report; discard its `threadId` after validation, never persist it, pass it to another call, or use it again. Feed all four advisory reports unchanged into Step 5.
-
-A terminal wrapper error, malformed envelope, artifact-path mismatch, missing or empty artifact, non-string `threadId` or `content`, tool error, protocol error, timeout, empty response, missing or empty response field, non-string field, or malformed response is a configured call failure. After satisfying the collection barrier, stop and report the complete batch outcome; never retry natively or fall back to native execution. Never call `codex-reply`. Configured Codex output otherwise receives the same frozen-boundary filtering, byte-identical deduplication, candidate side-table handling, and selected-verifier adjudication as native output.
-<!-- /gambit-backend -->
 
 Each reviewer will:
 - Read the changed files independently
@@ -370,33 +270,20 @@ The deduped list and frozen boundary go to the verifier in Step 6.
 ### Step 6: Dispatch Verifier Sub-Agent
 
 <!-- gambit-backend:claude -->
-If `~/.claude/gambit/executors.json` does not exist, use the native verifier dispatch and do NOT read `contracts/executors.md`. If the check itself errors (permission denied, unreadable path, tool failure), that is NOT absence — stop and report the probe failure without dispatching. Otherwise: Resolve `verifier` exactly once through `contracts/executors.md` before dispatch and retain the
-selected executor for closure. Missing registry or a valid registry with no `verifier` role selects
-native Claude. A configured role selects configured Codex independently of the finder executor;
-never route verifier work through `finder.tool`. An invalid registry or configured call failure is
-terminal: stop and report it without native retry or fallback.
+Resolve the `verifier` role through `contracts/models.md` exactly once before dispatch, and retain
+that rung for closure. The verifier rung is resolved independently of the finder rung — the two
+roles have their own ladders. Verifying is read-only and advisory, so an agent rung uses the rung's
+`readonly_agent`.
 
-#### Native Claude verifier dispatch
-
-When native Claude is selected, dispatch ONE `general-purpose` agent at the **verifier tier**
-(`model:` per `contracts/models.md` — default most-capable; a cheap verifier is forbidden for
-code/security review, where verifying a subtle finding is as hard as finding it). As with the
-reviewers, **pass the path — do NOT read `verifier.md` into this context.** The candidate list IS
-passed inline (it's dynamic):
+Dispatch ONE verifier on that rung. A model rung dispatches `general-purpose` with the rung's alias
+(never a rung below the role's entry — a weak verifier is forbidden for code/security review, where
+verifying a subtle finding is as hard as finding it); an agent rung dispatches the rung's
+`readonly_agent` with no `model:` at all. As with the reviewers, **pass the path — do NOT read
+`verifier.md` into this context.** The candidate list IS passed inline (it's dynamic):
 
 ```
-Agent subagent_type="general-purpose" model="<verifier tier — see contracts/models.md>" description="Verify candidates" prompt="Read <abs>/reviewers/verifier.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\nmode: initial\nreview_base: [revision]\nreview_snapshot: [revision]\n\n## Candidate Findings\n\n[deduped list with ids]"
+Agent subagent_type="general-purpose" model="<verifier rung alias — contracts/models.md>" description="Verify candidates" prompt="Read <abs>/reviewers/verifier.md — that file is your complete instructions; your FIRST action must be to Read it, then follow it exactly.\n\nmode: initial\nreview_base: [revision]\nreview_snapshot: [revision]\n\n## Candidate Findings\n\n[deduped list with ids]"
 ```
-
-#### Configured Codex verifier dispatch
-
-When configured Codex is selected, invoke `verifier.tool` once using the Configured verifier wire
-in `contracts/executors.md`. Supply the same absolute verifier path, `mode: initial`, frozen
-`review_base`, `review_snapshot`, review boundary, and deduped candidate fields byte-for-byte. Use
-the returned `content` as the verifier report and retain only the selected executor identity for
-closure; discard the fresh `threadId`. An invalid registry or configured call failure is terminal,
-including malformed output or a missing, extra, or incomplete candidate classification.
-
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 Dispatch ONE `general-purpose` agent at the **verifier tier** (`model:` per `contracts/models.md` — default most-capable; a cheap verifier is forbidden for code/security review, where verifying a subtle finding is as hard as finding it). As with the reviewers, **pass the path — do NOT read `verifier.md` into this context.** The candidate list IS passed inline (it's dynamic):
@@ -452,17 +339,15 @@ In initial mode, implement every confirmed improvement. Confirmed gaps become fi
 After any remediation, enter closure mode. **Do not dispatch the four finders again.** Dispatch the verifier with only open ledger entries.
 
 <!-- gambit-backend:claude -->
-During closure, reuse the verifier executor selected in Step 6; do not reread the registry or switch executor
-families during closure. Native Claude uses the contracted Agent call below. Configured Codex uses
-another fresh `verifier.tool` call through the Configured verifier wire, with `mode: closure`, the
-original frozen revisions and boundary, `current_revision`, and only the original fields for open
-ledger IDs. Require one complete classification per supplied open ID; a configured failure remains
-fail-closed. Never call `codex-reply`.
+During closure, reuse the verifier rung resolved in Step 6; do not re-resolve the role or change
+rungs mid-ledger. The closure call is fresh and carries `mode: closure`, the original frozen
+revisions and boundary, `current_revision`, and only the original fields for open ledger IDs.
+Require one complete classification per supplied open ID.
 <!-- /gambit-backend -->
 
 <!-- gambit-backend:claude -->
 ```
-Agent subagent_type="general-purpose" model="<verifier tier — see contracts/models.md>" description="Close review ledger" prompt="Read <abs>/reviewers/verifier.md and follow it exactly.\n\nmode: closure\nreview_base: [revision]\nreview_snapshot: [original reviewed revision]\ncurrent_revision: [current HEAD]\n\n## Open Ledger Findings\n\n[original candidate fields for open IDs only]"
+Agent subagent_type="general-purpose" model="<verifier rung alias — contracts/models.md>" description="Close review ledger" prompt="Read <abs>/reviewers/verifier.md and follow it exactly.\n\nmode: closure\nreview_base: [revision]\nreview_snapshot: [original reviewed revision]\ncurrent_revision: [current HEAD]\n\n## Open Ledger Findings\n\n[original candidate fields for open IDs only]"
 ```
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
@@ -512,7 +397,7 @@ Never create work from refuted, gap-classified-in-initial-mode, boundary-rejecte
 - `gambit:finishing-branch` (if approved)
 
 <!-- gambit-backend:claude -->
-**Dispatches four finders (parallel, read-only) through native general-purpose agents or configured async wrapper calls. Native calls resolve the finder tier through `contracts/models.md`; configured calls use the registry's concrete model behind anonymous background wrappers. Each finder reads its own instruction file by path — main context never loads it:**
+**Dispatches four finders (parallel, read-only) on the once-resolved `finder` rung (`contracts/models.md`). Each finder reads its own instruction file by path — main context never loads it:**
 <!-- /gambit-backend -->
 <!-- gambit-backend:codex -->
 **Dispatches general-purpose agents (parallel, read-only) at the finder tier (`contracts/models.md`). Each agent reads its own instruction file by path — main context never loads them:**
@@ -522,7 +407,12 @@ Never create work from refuted, gap-classified-in-initial-mode, boundary-rejecte
 - `reviewers/quality.md` — language idioms, linter circumvention, test quality
 - `reviewers/performance.md` — scaling, N+1, resource management
 
+<!-- gambit-backend:claude -->
+**Dispatches one verifier on the once-resolved `verifier` rung, also by path:**
+<!-- /gambit-backend -->
+<!-- gambit-backend:codex -->
 **Dispatches one verifier through the configured or native verifier executor, also by path:**
+<!-- /gambit-backend -->
 - `reviewers/verifier.md` — initial kill-or-keep classification; later bounded closure of the frozen ledger
 
 **Call chain (epic context):**

@@ -15,7 +15,6 @@ ROOT = Path(__file__).resolve().parents[1]
 CODEX_PLUGIN = ROOT / "plugins" / "gambit"
 CLAUDE_SKILLS = ROOT / "skills"
 CLAUDE_CONTRACTS = ROOT / "contracts"
-CLAUDE_WRAPPER_AGENT = ROOT / "agents" / "gambit-wrapper.md"
 TEXT_SUFFIXES = {".md", ".txt", ".json", ".toml", ".yaml", ".yml", ".sh", ".py"}
 CODE_FENCE = re.compile(
     r"^[ \t]*```[^\n]*\n(.*?)^[ \t]*```[ \t]*$",
@@ -127,53 +126,6 @@ def validated_codex_dispatch_examples(
 
 
 class RenderedSkillsTest(unittest.TestCase):
-    def test_claude_wrapper_agent_matches_dispatches_and_has_only_transport_tools(
-        self,
-    ) -> None:
-        text = CLAUDE_WRAPPER_AGENT.read_text(encoding="utf-8")
-        frontmatter_match = re.match(r"^---\n(.*?)\n---\n", text, re.DOTALL)
-        self.assertIsNotNone(frontmatter_match)
-        frontmatter = frontmatter_match.group(1)
-
-        name_match = re.search(r"(?m)^name:\s*([^\n]+)$", frontmatter)
-        self.assertIsNotNone(name_match)
-        agent_name = name_match.group(1).strip().strip('"\'')
-
-        tools_match = re.search(
-            r"(?ms)^tools:\s*\n(?P<items>(?:\s+-\s+[^\n]+\n?)+)",
-            frontmatter,
-        )
-        self.assertIsNotNone(tools_match)
-        tools = tuple(
-            item.strip().strip('"\'')
-            for item in re.findall(r"(?m)^\s+-\s+([^\n]+)$", tools_match.group("items"))
-        )
-        # The harness honors only exact built-in tool names in agent grants, so the
-        # definition declares "*" and confinement lives in the normative relay rules.
-        self.assertEqual(("*",), tools)
-        body = text[frontmatter_match.end() :]
-        self.assertIn("exactly once", body)
-        self.assertIn("fail honestly", body)
-        self.assertIn("Never fabricate", body)
-
-        dispatched_types: set[str] = set()
-        for skill in ("executing-plans", "review"):
-            skill_text = (CLAUDE_SKILLS / skill / "SKILL.md").read_text(
-                encoding="utf-8"
-            )
-            dispatched_types.update(
-                re.findall(
-                    r'Agent subagent_type="([^"]+)"[^\n]*wrapper',
-                    skill_text,
-                )
-            )
-        # Claude Code registers plugin agents as <plugin>:<agent>, so dispatches
-        # must use the namespaced form of the shipped definition's name.
-        plugin_name = json.loads(
-            (ROOT / ".claude-plugin" / "plugin.json").read_text(encoding="utf-8")
-        )["name"]
-        self.assertEqual({f"{plugin_name}:{agent_name}"}, dispatched_types)
-
     def test_generated_trees_are_current(self) -> None:
         subprocess.run(
             [sys.executable, str(ROOT / "tools" / "render_skills.py"), "--check"],
@@ -231,9 +183,9 @@ class RenderedSkillsTest(unittest.TestCase):
             for model in ("Haiku", "Sonnet", "Opus"):
                 self.assertIn(model, claude_writing)
 
-    def test_contract_catalogs_register_executor_registry_and_steelman(self) -> None:
+    def test_contract_catalogs_register_their_classes_and_steelman(self) -> None:
         catalogs = {
-            "shared source": ROOT / "src" / "contracts" / "README.md",
+            "claude source": ROOT / "src" / "contracts" / "README.md",
             "claude rendered": CLAUDE_CONTRACTS / "README.md",
             "codex source": (
                 ROOT
@@ -249,12 +201,23 @@ class RenderedSkillsTest(unittest.TestCase):
         for name, path in catalogs.items():
             with self.subTest(catalog=name):
                 text = path.read_text(encoding="utf-8")
-                self.assertIn("[executors.md](executors.md)", text)
+                self.assertIn("[models.md](models.md)", text)
                 self.assertRegex(
                     text,
                     r"(?m)^\| \*\*steelman\*\* \| \[steelman\.md\]"
                     r"\(steelman\.md\) \|",
                 )
+
+        # The executor registry is a Codex-render-only artifact now.
+        for name in ("codex source", "codex rendered"):
+            self.assertIn(
+                "[executors.md](executors.md)",
+                catalogs[name].read_text(encoding="utf-8"),
+            )
+        for name in ("claude source", "claude rendered"):
+            self.assertNotIn(
+                "executors.md", catalogs[name].read_text(encoding="utf-8")
+            )
 
         for path in (
             ROOT / "src" / "contracts" / "steelman.md",
@@ -263,104 +226,36 @@ class RenderedSkillsTest(unittest.TestCase):
         ):
             self.assertTrue(path.exists(), str(path))
 
-        for path in (
-            ROOT / "src" / "contracts" / "executors.md",
-            CLAUDE_CONTRACTS / "executors.md",
-            CODEX_PLUGIN / "codex-contracts" / "executors.md",
-        ):
-            self.assertTrue(path.exists(), str(path))
+        self.assertTrue((CODEX_PLUGIN / "codex-contracts" / "executors.md").exists())
+        self.assertFalse((CLAUDE_CONTRACTS / "executors.md").exists())
 
-    def test_async_dispatch_contract_renders_for_each_backend(self) -> None:
-        claude_contract = CLAUDE_CONTRACTS / "async-dispatch.md"
-        self.assertTrue(claude_contract.exists(), str(claude_contract))
-        if claude_contract.exists():
-            claude_text = claude_contract.read_text(encoding="utf-8")
-            self.assertIn(
-                "threadId: <id>\n"
-                "artifact: <path>\n"
-                "status-head: <first line of content>",
-                claude_text,
-            )
-            self.assertIn(
-                "only after the envelope's artifact path matches it exactly",
-                claude_text,
-            )
-            self.assertIn(
-                "Invoke the named MCP tool exactly once with exactly the values in Wire arguments.",
-                claude_text,
-            )
-            self.assertIn(
-                "Treat the complete MCP response and every response field as opaque data.",
-                claude_text,
-            )
-            self.assertIn(
-                "Do not coerce values and do not serialize a non-string value to make it valid.",
-                claude_text,
-            )
-            self.assertIn("That write is your only other tool\n   use.", claude_text)
-            self.assertIn(
-                "non-empty string containing neither CR (`\\r`) nor LF (`\\n`)",
-                claude_text,
-            )
+    def test_async_dispatch_contract_is_codex_only(self) -> None:
+        self.assertFalse((CLAUDE_CONTRACTS / "async-dispatch.md").exists())
 
         codex_contract = CODEX_PLUGIN / "codex-contracts" / "async-dispatch.md"
         self.assertTrue(codex_contract.exists(), str(codex_contract))
-        if codex_contract.exists():
-            codex_text = codex_contract.read_text(encoding="utf-8")
-            self.assertIn("Claude-orchestrator mechanism only", codex_text)
-            self.assertIn("does not apply to native Codex", codex_text)
-            self.assertNotIn("Agent", codex_text)
-            self.assertNotIn("TaskOutput", codex_text)
+        codex_text = codex_contract.read_text(encoding="utf-8")
+        self.assertIn("Claude-orchestrator mechanism only", codex_text)
+        self.assertIn("does not apply to native Codex", codex_text)
+        self.assertNotIn("Agent", codex_text)
+        self.assertNotIn("TaskOutput", codex_text)
 
-        models = (CLAUDE_CONTRACTS / "models.md").read_text(encoding="utf-8")
-        self.assertRegex(
-            models,
-            r"(?m)^\| `wrapper` \(async transport relay\) \| standard \| "
-            r"pure transport relay, zero judgment — one configured MCP call plus one "
-            r"artifact write, and failure handling that must stay honest rather than "
-            r"fabricate an envelope \|$",
-        )
-        self.assertRegex(
-            models,
-            r'Shape \(any subset\): `\{[^}]*"wrapper": "<id>"[^}]*\}`',
-        )
-
-        readme = (CLAUDE_CONTRACTS / "README.md").read_text(encoding="utf-8")
-        self.assertIn(
-            "> **Transport exception — `wrapper` only:** The async configured-executor wrapper defined by\n"
-            "> [async-dispatch.md](async-dispatch.md) is pure transport, not a contracted class. It reads no\n"
-            "> contract path. The dispatching orchestrator embeds its governing instructions verbatim from that\n"
-            "> contract. This exception grants zero judgment and applies only to the one configured MCP call and\n"
-            "> one artifact write defined there.",
-            readme,
-        )
-
-        executing_plans = (
-            CLAUDE_SKILLS / "executing-plans" / "SKILL.md"
-        ).read_text(encoding="utf-8")
-        configured_workers = (
-            CLAUDE_SKILLS
-            / "executing-plans"
-            / "references"
-            / "configured-workers.md"
-        ).read_text(encoding="utf-8")
-        self.assertEqual(
-            (executing_plans + configured_workers).count(
-                "non-empty string `threadId` containing no CR or LF"
-            ),
-            2,
-        )
-
-    def test_model_docs_assign_steelman_tier_and_codex_fallback(self) -> None:
+    def test_claude_models_contract_owns_rungs_and_roles(self) -> None:
         for path in (
             ROOT / "src" / "contracts" / "models.md",
             CLAUDE_CONTRACTS / "models.md",
         ):
-            text = path.read_text(encoding="utf-8")
-            self.assertRegex(
-                text,
-                r"(?m)^\| `steelman` \(design collaborator\) \| most-capable \|",
-            )
+            with self.subTest(path=path):
+                text = path.read_text(encoding="utf-8")
+                self.assertRegex(
+                    text,
+                    r"(?m)^\| `steelman` \(design collaborator\) \|",
+                )
+                self.assertIn(
+                    "${CLAUDE_CONFIG_DIR:-$HOME/.claude}/gambit/models.json", text
+                )
+                self.assertNotIn("wrapper", text)
+                self.assertNotIn("most-capable", text)
 
         for path in (
             ROOT
@@ -378,281 +273,7 @@ class RenderedSkillsTest(unittest.TestCase):
                 r"(?m)^\| `steelman` \| `default` \| Fresh read-only design collaboration \|",
             )
 
-    def test_executor_registry_schema_and_resolution_are_fail_closed(self) -> None:
-        source_text = (ROOT / "src" / "contracts" / "executors.md").read_text(
-            encoding="utf-8"
-        )
-        schema_match = re.search(
-            r"```json\n(.*?)\n```", source_text, re.DOTALL
-        )
-        self.assertIsNotNone(schema_match)
-        schema = json.loads(schema_match.group(1))
-        source = " ".join(source_text.split())
-
-        self.assertEqual(
-            {
-                "steelman",
-                "worker",
-                "scout",
-                "finder",
-                "verifier",
-                "test-runner",
-                "escalation",
-                "escalation-final",
-            },
-            set(schema["properties"]),
-        )
-        self.assertEqual("object", schema["type"])
-        self.assertFalse(schema["additionalProperties"])
-
-        worker_keys = {
-            "executor",
-            "tool",
-            "model",
-            "reasoning_effort",
-            "sandbox",
-            "approval_policy",
-        }
-        expected_keys = {
-            "worker": worker_keys | {"reply_tool", "service_tier"},
-            "escalation": worker_keys,
-            "escalation-final": worker_keys,
-            "scout": worker_keys,
-            "verifier": worker_keys,
-            "test-runner": worker_keys,
-            "steelman": worker_keys | {"web_search"},
-            "finder": worker_keys | {"web_search"},
-        }
-        string_fields = {
-            "tool",
-            "model",
-            "reasoning_effort",
-            "approval_policy",
-        }
-        for role, entry in schema["properties"].items():
-            with self.subTest(role=role):
-                self.assertEqual("object", entry["type"])
-                self.assertEqual(expected_keys[role], set(entry["properties"]))
-                self.assertEqual(expected_keys[role], set(entry["required"]))
-                self.assertEqual("codex", entry["properties"]["executor"]["const"])
-                self.assertRegex(
-                    "mcp__server__tool",
-                    entry["properties"]["tool"]["pattern"],
-                )
-                for field in string_fields:
-                    self.assertEqual("string", entry["properties"][field]["type"])
-                if role in ("worker", "escalation", "escalation-final", "test-runner"):
-                    self.assertEqual(
-                        "string", entry["properties"]["sandbox"]["type"]
-                    )
-                self.assertFalse(entry["additionalProperties"])
-
-        for role in ("steelman", "finder"):
-            entry = schema["properties"][role]
-            self.assertEqual("read-only", entry["properties"]["sandbox"]["const"])
-            self.assertEqual("live", entry["properties"]["web_search"]["const"])
-            self.assertIn("web_search", entry["required"])
-
-        for role in ("scout", "verifier"):
-            entry = schema["properties"][role]
-            self.assertEqual(
-                "read-only", entry["properties"]["sandbox"]["const"]
-            )
-
-        for role in ("worker", "escalation", "escalation-final", "scout", "verifier", "test-runner"):
-            self.assertNotIn(
-                "web_search", schema["properties"][role]["properties"]
-            )
-        self.assertRegex(
-            "mcp__codex__codex-reply",
-            schema["properties"]["worker"]["properties"]["reply_tool"]["pattern"],
-        )
-        # Only rung 2 is family-coupled: it repairs inside the worker's own
-        # thread via reply_tool. escalation-final is a fresh call with no thread
-        # state, so omitting it is legal and resolves the terminal rung to
-        # native execution at most-capable.
-        self.assertEqual({"worker": ["escalation"]}, schema.get("dependentRequired"))
-
-        resolution_match = re.search(
-            r"use this deterministic sequence:\n\n(?P<steps>.*?)(?:\n\nNever infer)",
-            source_text,
-            re.DOTALL,
-        )
-        self.assertIsNotNone(resolution_match)
-        resolution = " ".join(resolution_match.group("steps").split())
-        missing_file = "Missing registry file: use native execution"
-        parse_stop = "JSON parse or duplicate-key failure: stop immediately"
-        schema_stop = "Schema validation failure: stop immediately"
-        valid_absence = "Valid registry, requested role absent: use native execution"
-        valid_presence = "Valid registry, requested role present"
-        call_stop = "Configured Codex call fails: stop immediately"
-        ordered_markers = (
-            missing_file,
-            parse_stop,
-            schema_stop,
-            valid_absence,
-            valid_presence,
-            call_stop,
-        )
-        positions = {
-            marker: resolution.find(marker) for marker in ordered_markers
-        }
-        self.assertNotIn(-1, positions.values(), positions)
-        self.assertTrue(resolution.startswith(f"1. {missing_file}."), resolution)
-        self.assertEqual(
-            list(positions.values()),
-            sorted(positions.values()),
-            positions,
-        )
-        self.assertLess(positions[parse_stop], positions[valid_absence])
-        self.assertLess(positions[schema_stop], positions[valid_absence])
-
-        for required in (
-            "~/.claude/gambit/executors.json",
-            "All eight contracted execution roles may be configured",
-            "Configured scout wire",
-            '"model_reasoning_effort": "<scout.reasoning_effort>"',
-            "Configured verifier wire",
-            '"model_reasoning_effort": "<verifier.reasoning_effort>"',
-            "Configured test-runner wire",
-            '"model_reasoning_effort": "<test-runner.reasoning_effort>"',
-            '"web_search": "disabled"',
-            "Reject duplicate JSON object keys before schema validation",
-            "Unknown roles, unknown fields, missing fields, and invalid values invalidate the entire registry",
-            "split `worker.tool` and `worker.reply_tool` at their final `__`",
-            "complete prefixes before that separator must be byte-identical",
-            "stop as an invalid whole registry before dispatch",
-            "Missing registry file: use native execution",
-            "Valid registry, requested role absent: use native execution",
-            "Schema validation failure: stop immediately",
-            "Configured Codex call fails: stop",
-            "do not retry natively",
-            "Never infer executor selection from MCP tool availability",
-            "Never silently fall back from configured Codex to native Claude",
-            "Executor selection is independent of model-tier selection",
-        ):
-            self.assertIn(required, source)
-
-        codex_notice = (
-            CODEX_PLUGIN / "codex-contracts" / "executors.md"
-        ).read_text(encoding="utf-8")
-        codex_notice = " ".join(codex_notice.split())
-        self.assertIn("Claude-only executor registry", codex_notice)
-        self.assertIn("does not apply to native Codex", codex_notice)
-        self.assertNotIn("~/.claude/gambit/executors.json", codex_notice)
-
-    def test_executor_registry_model_schema_requires_concrete_external_value(
-        self,
-    ) -> None:
-        source_text = (ROOT / "src" / "contracts" / "executors.md").read_text(
-            encoding="utf-8"
-        )
-        schema_match = re.search(r"```json\n(.*?)\n```", source_text, re.DOTALL)
-        self.assertIsNotNone(schema_match)
-        schema = json.loads(schema_match.group(1))
-
-        def accepts(model_schema: dict[str, object], value: object) -> bool:
-            if model_schema.get("type") == "string" and not isinstance(value, str):
-                return False
-            if len(value) < model_schema.get("minLength", 0):
-                return False
-            pattern = model_schema.get("pattern")
-            if pattern is not None and re.search(pattern, value) is None:
-                return False
-            forbidden = model_schema.get("not", {}).get("enum", ())
-            return value not in forbidden
-
-        forbidden_selectors = (
-            "inherit",
-            "default",
-            "haiku",
-            "sonnet",
-            "opus",
-            "fable",
-            "cheap",
-            "cheap-or-standard",
-            "standard",
-            "most-capable",
-        )
-        invalid_values = (*forbidden_selectors, "<model>", "external model", "")
-
-        for role, entry in schema["properties"].items():
-            model_schema = entry["properties"]["model"]
-            with self.subTest(role=role, value="external-model-v1"):
-                self.assertTrue(accepts(model_schema, "external-model-v1"))
-            for value in invalid_values:
-                with self.subTest(role=role, value=value):
-                    self.assertFalse(accepts(model_schema, value))
-
-    def test_executor_registry_transport_fields_use_exact_enums(self) -> None:
-        source_text = (ROOT / "src" / "contracts" / "executors.md").read_text(
-            encoding="utf-8"
-        )
-        schema_match = re.search(r"```json\n(.*?)\n```", source_text, re.DOTALL)
-        self.assertIsNotNone(schema_match)
-        schema = json.loads(schema_match.group(1))
-
-        allowed_values = {
-            "reasoning_effort": (
-                "none",
-                "minimal",
-                "low",
-                "medium",
-                "high",
-                "xhigh",
-                "max",
-                "ultra",
-            ),
-            "approval_policy": ("untrusted", "on-request", "never"),
-            "sandbox": (
-                "read-only",
-                "workspace-write",
-                "danger-full-access",
-            ),
-        }
-        invalid_values = ("potato", "inherit", "default", "<value>", "")
-
-        for role, entry in schema["properties"].items():
-            for field in ("reasoning_effort", "approval_policy"):
-                field_schema = entry["properties"][field]
-                with self.subTest(role=role, field=field, schema=field_schema):
-                    self.assertEqual("string", field_schema["type"])
-                    self.assertEqual(
-                        list(allowed_values[field]),
-                        field_schema["enum"],
-                    )
-                for value in allowed_values[field]:
-                    with self.subTest(role=role, field=field, allowed=value):
-                        self.assertIn(value, field_schema["enum"])
-                for value in invalid_values:
-                    with self.subTest(role=role, field=field, rejected=value):
-                        self.assertNotIn(value, field_schema["enum"])
-
-        worker_sandbox = schema["properties"]["worker"]["properties"]["sandbox"]
-        self.assertEqual("string", worker_sandbox["type"])
-        self.assertEqual(list(allowed_values["sandbox"]), worker_sandbox["enum"])
-        for value in allowed_values["sandbox"]:
-            with self.subTest(field="worker.sandbox", allowed=value):
-                self.assertIn(value, worker_sandbox["enum"])
-        for value in invalid_values:
-            with self.subTest(field="worker.sandbox", rejected=value):
-                self.assertNotIn(value, worker_sandbox["enum"])
-
-        service_tier = schema["properties"]["worker"]["properties"][
-            "service_tier"
-        ]
-        self.assertEqual("string", service_tier["type"])
-        self.assertRegex("fast", service_tier["pattern"])
-        for value in ("", "<service-tier>", "external service tier"):
-            with self.subTest(field="worker.service_tier", rejected=value):
-                self.assertIsNone(re.search(service_tier["pattern"], value))
-
-        normalized = " ".join(source_text.split())
-        for accepted_values in allowed_values.values():
-            for value in accepted_values:
-                self.assertIn(f"`{value}`", normalized)
-
-    def test_validation_catalog_describes_wired_executor_routing(self) -> None:
+    def test_validation_catalog_describes_wired_rung_routing(self) -> None:
         validation = (
             ROOT / "src" / "contracts" / "VALIDATION.md"
         ).read_text(encoding="utf-8")
@@ -662,13 +283,33 @@ class RenderedSkillsTest(unittest.TestCase):
             "Dispatch behavior is deliberately not claimed here",
             normalized,
         )
-        for coverage in (
-            "`tests/test_brainstorming_steelman.py` covers Steelman executor resolution and call wiring",
-            "`tests/test_executing_plans_executors.py` covers worker and checkpoint-finder routing",
-            "`tests/test_review_executors.py` covers finder and verifier routing",
-            "`tests/test_workflow_routing.py` covers scout and test-runner routing",
+        # Every named test module must exist, so the catalog cannot claim
+        # coverage that was deleted with the feature it covered.
+        for coverage, module in (
+            (
+                "`tests/test_rung_dispatch.py` pins the `models.json` config path",
+                "test_rung_dispatch.py",
+            ),
+            (
+                "`tests/test_brainstorming_steelman.py` covers Steelman rung resolution and call wiring",
+                "test_brainstorming_steelman.py",
+            ),
+            (
+                "`tests/test_executing_plans_executors.py` covers worker, escalation, and checkpoint-finder routing",
+                "test_executing_plans_executors.py",
+            ),
+            (
+                "`tests/test_review_executors.py` covers finder and verifier routing",
+                "test_review_executors.py",
+            ),
+            (
+                "`tests/test_workflow_routing.py` covers scout and test-runner routing",
+                "test_workflow_routing.py",
+            ),
         ):
-            self.assertIn(coverage, normalized)
+            with self.subTest(module=module):
+                self.assertIn(coverage, normalized)
+                self.assertTrue((ROOT / "tests" / module).exists())
 
     def test_steelman_contract_bounds_discovery_and_closure(self) -> None:
         contracts = (

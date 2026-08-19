@@ -219,65 +219,46 @@ class WorkflowRoutingTest(unittest.TestCase):
                     self.assertNotIn("Announce at start", body)
                     self.assertNotIn(f"I'm using gambit:{mechanic}", body)
 
-    def test_claude_scout_sites_resolve_configured_executor_fail_closed(self) -> None:
+    def test_claude_scout_sites_resolve_the_scout_rung(self) -> None:
         for skill in ("brainstorming", "executing-plans", "debugging"):
-            for skill_root in (
-                ROOT / "src" / "skills",
-                ROOT / "skills",
-                self.rendered_skill_roots[0],
-            ):
+            # The source keeps the Claude prose inside a backend block, so only
+            # the rendered Claude trees are asserted here.
+            for skill_root in (ROOT / "skills", self.rendered_skill_roots[0]):
                 text = (skill_root / skill / "SKILL.md").read_text(
                     encoding="utf-8"
                 )
                 prose = " ".join(text.split())
                 with self.subTest(skill=skill, root=skill_root):
                     self.assertIn(
-                        "resolve `scout` through `contracts/executors.md`",
+                        "Resolve the `scout` role through `contracts/models.md`",
                         prose,
                     )
                     self.assertIn(
-                        "Missing registry or a valid registry with no `scout` role selects native Claude",
+                        "an agent rung uses the rung's `readonly_agent`",
                         prose,
                     )
-                    self.assertIn(
-                        "configured `scout` role uses the Configured scout wire",
-                        prose,
-                    )
-                    self.assertIn(
-                        "invalid registry or configured call failure is terminal",
-                        prose,
-                    )
+                    self.assertIn("no `model:` at all", prose)
+                    self.assertNotIn("executors.json", prose)
+                    self.assertNotIn("scout tier", prose)
 
-    def test_claude_test_runner_sites_resolve_configured_executor_fail_closed(
+    def test_claude_test_runner_sites_resolve_the_test_runner_rung(
         self,
     ) -> None:
         for skill in ("verification", "refactoring"):
-            for skill_root in (
-                ROOT / "src" / "skills",
-                ROOT / "skills",
-                self.rendered_skill_roots[0],
-            ):
+            for skill_root in (ROOT / "skills", self.rendered_skill_roots[0]):
                 text = (skill_root / skill / "SKILL.md").read_text(
                     encoding="utf-8"
                 )
                 prose = " ".join(text.split())
                 with self.subTest(skill=skill, root=skill_root):
                     self.assertIn(
-                        "resolve `test-runner` through `contracts/executors.md`",
+                        "Resolve the `test-runner` role through `contracts/models.md`",
                         prose,
                     )
-                    self.assertIn(
-                        "Missing registry or a valid registry with no `test-runner` role selects native Claude",
-                        prose,
-                    )
-                    self.assertIn(
-                        "configured `test-runner` role uses the Configured test-runner wire",
-                        prose,
-                    )
-                    self.assertIn(
-                        "invalid registry or configured call failure is terminal",
-                        prose,
-                    )
+                    self.assertIn("an agent rung uses the rung's `agent`", prose)
+                    self.assertIn("no `model:` at all", prose)
+                    self.assertNotIn("executors.json", prose)
+                    self.assertNotIn("test-runner tier", prose)
 
     def test_debugging_uses_the_contracted_scout_dispatch(self) -> None:
         for text in self.claude_debugging_texts:
@@ -285,10 +266,12 @@ class WorkflowRoutingTest(unittest.TestCase):
             investigation = investigation.split("**Find a working neighbor", 1)[0]
             prose = " ".join(investigation.split())
             with self.subTest(backend="claude"):
-                self.assertIn("contracts/executors.md", prose)
+                self.assertIn("contracts/models.md", prose)
                 self.assertIn("**/contracts/scout.md", prose)
                 self.assertIn('subagent_type: "Explore"', prose)
-                self.assertIn("`model:` at the scout tier", prose)
+                self.assertIn(
+                    "`model:` set to the rung's alias", prose
+                )
                 self.assertIn("Read `contracts/scout.md` first", prose)
 
         for text in self.codex_debugging_texts:

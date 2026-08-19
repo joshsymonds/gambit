@@ -39,8 +39,8 @@ it narrows the model to the example's shape and costs tokens on every invocation
 - **The renderer and tests pin exact phrasings.** `tools/render_skills.py` matches specific source
   strings, and `tests/` asserts on substrings from skill prose. Rewording can silently change Codex
   output or fail a test guarding real behavior. Read the assertion before changing either side.
-- **Never write a concrete model ID.** Dispatch at a tier alias resolved through
-  `contracts/models.md`.
+- **Never write a concrete model ID.** Dispatch the rung a role resolves to through
+  `contracts/models.md` — a model rung's alias, or an agent rung's `agent` with no `model:` at all.
 - **The dispatch tool is `Agent`.** A bare `Agent` line opening a fenced block is rewritten to
   `SpawnAgent` for Codex. Do not confuse it with `TaskCreate`/`TaskUpdate`, which are task-tracking
   tools and stay as-is.
@@ -57,8 +57,8 @@ dispatch table, and reference files loaded only when their situation arises.
 ## Validating a skill change
 
 A skill that enforces a discipline under pressure needs a pressure test before shipping: dispatch a
-subagent at the cheap tier with a realistic scenario that tempts the shortcut, and check behavior,
-not recitation. Ask "what do you do?", never "what should you do?" — and don't tell the test agent
-the loophole you're probing. Record the result in `src/contracts/VALIDATION.md`.
+subagent on the weakest rung it will run on, with a realistic scenario that tempts the shortcut, and
+check behavior, not recitation. Ask "what do you do?", never "what should you do?" — and don't tell
+the test agent the loophole you're probing. Record the result in `src/contracts/VALIDATION.md`.
 
 Mechanical edits — a typo, a path fix, a reworded heading — do not need a pressure test.

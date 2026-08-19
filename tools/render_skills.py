@@ -91,6 +91,10 @@ CODEX_IMPLICIT_INVOCATION = {
 
 
 CODEX_REPLACEMENTS = [
+    # Claude's rung/role config lives behind CLAUDE_CONFIG_DIR; Codex resolves
+    # the same classes through installed agent profiles instead. The older
+    # tilde form still appears in Codex-only prose, so both map.
+    ("${CLAUDE_CONFIG_DIR:-$HOME/.claude}/gambit/models.json", "~/.codex/agents/"),
     ("~/.claude/gambit/models.json", "~/.codex/agents/"),
     ("native Claude Code Tasks", "Codex's native per-root-session plan"),
     ("Claude Code Tasks", "Codex's native per-root-session plan"),
@@ -534,6 +538,14 @@ def copy_tree(source: Path, destination: Path, backend: str) -> None:
             continue
         relative = path.relative_to(destination)
         text = select_backend_conditionals(text, backend)
+        if not text.strip():
+            # The whole file belongs to the other backend. Writing the empty
+            # remainder would ship a stub that looks like a real contract; drop
+            # it so the backend simply has no such file. `main` rebuilds each
+            # destination from scratch, so a previously rendered copy goes with
+            # it rather than lingering as a stale artifact.
+            path.unlink()
+            continue
         if backend == "codex":
             text = codex_transform(text, relative)
         path.write_text(text, encoding="utf-8")

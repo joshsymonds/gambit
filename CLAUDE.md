@@ -10,7 +10,6 @@ artifacts.
 
 ```
 src/                  # Canonical skills, contracts, backend adapters — EDIT HERE
-agents/               # Shipped agent definitions (gambit-wrapper)
 tools/                # render_skills.py — the renderer
 tests/
 skills/               # GENERATED — do not edit
@@ -24,9 +23,13 @@ this repo, and `contracts/` is the one people reach for by name.
 
 Run `just generate` after changing `src/`; run `just check` before committing.
 
-**The tests assert exact source phrasings.** `tests/` pins substrings from skill prose (executor
-resolution, fail-closed routing, scout dispatch shape). Rewording a sentence can fail a test that
-is guarding real behavior — read the assertion before changing either side.
+**The tests assert exact source phrasings.** `tests/` pins substrings from skill prose (role/rung
+resolution, agent-vs-model dispatch shape, scout dispatch shape). Rewording a sentence can fail a
+test that is guarding real behavior — read the assertion before changing either side.
+
+**A file excluded from one backend renders empty and is skipped.** Wrapping a whole source file in
+one backend block means the other backend simply has no such file — the renderer writes no empty
+stub, and `just generate` rebuilds each output tree from scratch, so the previous copy goes away.
 
 ## Backend task state
 
@@ -50,6 +53,6 @@ before releasing, or they will be left out of the release commit.
 - `gambit:writing-skills` owns skill structure and authoring conventions.
 - `executing-plans` owns the orchestrator/worker architecture.
 - `src/contracts/README.md` owns the agent-class and role enum.
-- `src/contracts/models.md` owns model tiers. No concrete model ID belongs in any skill.
+- `src/contracts/models.md` owns rungs, roles, and ladders. No concrete model ID belongs in any skill.
 
 Test a skill by invoking it as a subagent before finalizing.
