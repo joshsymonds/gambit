@@ -235,6 +235,7 @@ class ModelsContractDefinesRungsAndRolesTest(unittest.TestCase):
                     rf"(?m)^\| `{re.escape(role)}` \|(?P<rest>.*)$", defaults
                 )
                 self.assertIsNotNone(row, f"no built-in row for {role}")
+                assert row is not None
                 cells = [cell.strip() for cell in row.group("rest").split("|")]
                 self.assertEqual(f"`{entry}`", cells[0])
                 self.assertEqual(
@@ -245,6 +246,8 @@ class ModelsContractDefinesRungsAndRolesTest(unittest.TestCase):
             row = re.search(
                 rf"(?m)^\| `{re.escape(readonly_role)}` \|(?P<rest>.*)$", defaults
             )
+            self.assertIsNotNone(row, f"no built-in row for {readonly_role}")
+            assert row is not None
             cells = [cell.strip() for cell in row.group("rest").split("|")]
             self.assertEqual("yes", cells[2], readonly_role)
 
@@ -258,6 +261,7 @@ class ModelsContractDefinesRungsAndRolesTest(unittest.TestCase):
             r"An \*\*invalid\*\* file[^.]*\.", " ".join(defaults.split())
         )
         self.assertIsNotNone(clause, "no invalid-config clause in the defaults")
+        assert clause is not None
         invalid = clause.group(0)
         self.assertIn("falls back to these same defaults", invalid)
         self.assertIn("in the transcript", invalid)
@@ -265,6 +269,35 @@ class ModelsContractDefinesRungsAndRolesTest(unittest.TestCase):
         self.assertIn(
             "naming the file and the exact parse or validation error", invalid
         )
+
+    def test_resolution_requires_a_fresh_config_read_before_the_table(self) -> None:
+        """The 2026-08-20 field failure: the built-in table is a zero-tool-call
+        answer sitting in context, so without an explicit gate the config file
+        never gets read. The procedure, the source-line artifact, and the table
+        gating are what closed it — see contracts/VALIDATION.md."""
+        self.assertIn(
+            "Every resolution starts with a fresh Read of the config file",
+            self.text,
+        )
+        self.assertIn("`rung source: config`", self.text)
+        self.assertIn(
+            "`rung source: built-in defaults (models.json absent)`", self.text
+        )
+        defaults = " ".join(
+            self.text.split("## Built-in defaults", 1)[1].split()
+        )
+        self.assertIn(
+            "reached only through step 1 of the dispatch procedure", defaults
+        )
+
+    def test_a_concern_about_the_configured_rung_is_flagged_not_rerouted(
+        self,
+    ) -> None:
+        invariants = " ".join(
+            self.text.split("## Rung and ladder invariants", 1)[1].split()
+        )
+        self.assertIn("flagged, never routed around", invariants)
+        self.assertIn("not an in-flight override", invariants)
 
     def test_rung_and_ladder_invariants_are_stated(self) -> None:
         invariants = self.text.split("## Rung and ladder invariants", 1)[1]

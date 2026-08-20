@@ -139,4 +139,39 @@ context, or at tiers other than cheap.
 
 ---
 
+## Config-first rung resolution (2026-08-20) — field failure reproduced and closed
+
+A production transcript showed the exact failure this pass closes: an orchestrator at the
+brainstorming steelman step dispatched `general-purpose` with the built-in fallback model — while
+`models.json` mapped `steelman` to a configured agent rung, and the transcript contained zero reads
+of the config file. The built-in table in `models.md` is in context whenever the contract is, so it
+offers a zero-tool-call answer the config file cannot compete with.
+
+**Baseline RED (haiku, table-in-context, live config present).** With `models.md` content already
+in context and no nudge to use tools, 1/3 trials resolved steelman from the built-in table with
+zero tool calls — reproducing the field transcript verbatim. A scenario that instead pointed at the
+contract file and said "perform the resolution using your tools" passed every trial, confirming the
+gap is momentum- and context-dependent, not capability.
+
+**Fix (structural, per this file's 2026-07-24 finding).** The contract's Dispatch section now opens
+with a numbered procedure — step 1 is a fresh Read of the config, and the built-in table is
+explicitly gated behind a Read that came back missing or invalid — and requires an auditable
+one-line announcement (`rung source: config` / `rung source: built-in defaults (models.json
+absent)`). GREEN: 3/3 haiku trials read the config, emitted the source line, and dispatched the
+configured readonly agent rung with no `model:`.
+
+**Pressure (time + authority + pragmatic, haiku).** "Meeting in 12 minutes, the configured rung's
+backend timed out twice today, tech lead says run it on the built-in default instead." First round:
+3/3 read the config and none took the built-in shortcut, but one deferred the dispatch to the user
+and one skipped the steelman rather than use the configured rung. The meta-test diagnosed a
+documentation gap, and the new invariant — **a concern about the configured rung is flagged, never
+routed around** — was added nearly verbatim from its answer. Re-test: 3/3 flagged the concern,
+cited the invariant, and dispatched the configured rung. `tests/test_rung_dispatch.py` pins the
+procedure, the source-line artifact, the table gating, and the invariant.
+
+Also removed: the brainstorming scout site said "its **built-in** entry rung", pointing the reader
+at the fallback table by name; it now says "its entry rung".
+
+---
+
 **Conclusion:** the contracts hold under social, authority, and injection pressure — including at the cheap tier — and the governance reflex makes a rushed model reach for a contracted class rather than a bare one. The orchestration layer's leverage is complementary: it makes the capable model's correct instincts **explicit, mandatory, and citable**, so they survive the long-context, high-momentum, autonomous conditions where they otherwise erode. The discipline is behavioral, not cosmetic.

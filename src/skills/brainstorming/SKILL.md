@@ -74,7 +74,7 @@ Do NOT write any code, invoke any implementation skill, or take any implementati
 
 <!-- gambit-backend:claude -->
 Resolve the absolute path to `contracts/scout.md`. Resolve the `scout` role through
-`contracts/models.md` — its built-in entry rung, or a higher rung on the scout ladder when the
+`contracts/models.md` — its entry rung, or a higher rung on the scout ladder when the
 question is about code flow or exhaustiveness rather than a single fact. Dispatch that rung: a
 model rung uses the read-only `Explore` class below; an agent rung uses the rung's `readonly_agent`
 and passes no `model:` at all. The prompt is identical either way.

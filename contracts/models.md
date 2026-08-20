@@ -49,7 +49,24 @@ never escalates past its entry rung. `readonly` absent means the role may write.
 
 ## Dispatch
 
-Resolve `role → rung`, then dispatch by the rung's shape:
+**Every resolution starts with a fresh Read of the config file — never from memory of this
+document.** This file's built-in table is in your context whenever this document is; the operator's
+config is not. Resolving from the table without the Read silently discards the operator's
+configuration — the table and the config disagree in exactly the environments where the config
+matters most.
+
+1. Read `${CLAUDE_CONFIG_DIR:-$HOME/.claude}/gambit/models.json` (expand that exact fallback).
+2. The file exists and is valid → resolve `role → rung` from it alone; the built-in table does not
+   apply.
+3. The file is missing → resolve from the built-in defaults below.
+4. The file exists but is invalid → the built-in defaults, plus the warning the defaults section
+   requires.
+
+Before the dispatch, state the source on one line in the transcript: `rung source: config` or
+`rung source: built-in defaults (models.json absent)`. A resolution with no source line has skipped
+step 1.
+
+Then dispatch by the rung's shape:
 
 | Rung shape | Dispatch |
 |---|---|
@@ -86,8 +103,11 @@ exact IDs come from the config file, the agent definitions, or those environment
 
 ## Built-in defaults
 
-When the config file is absent, unreadable, or invalid, resolve every role from this built-in table
-instead. An **absent** file is the ordinary case and needs no comment. An **invalid** file — bad
+This table is reached only through step 1 of the dispatch procedure — a Read of the config file
+that came back missing or invalid. A resolution that lands here without that Read in the transcript
+skipped the operator's configuration, not an optional step. When the config file is absent,
+unreadable, or invalid, resolve every role from this built-in table instead. An **absent** file is
+the ordinary case and needs no comment. An **invalid** file — bad
 JSON, an unknown rung reference, a rung with neither `agent` nor `model` — falls back to these same
 defaults *and* prints a visible one-line warning in the transcript naming the file and the exact
 parse or validation error, so a broken config is never silently obeyed as if it were missing.
@@ -115,6 +135,11 @@ because an operator declared one in the config file.
 - **A dispatched agent never selects or changes its own rung.** A worker cannot promote itself, ask
   for a bigger model, or decline the rung it was given. Rung selection belongs to the orchestrator
   alone.
+- **A concern about the configured rung is flagged, never routed around.** A deadline, a flaky
+  backend, or anyone's in-session advice does not substitute a different rung, skip a contracted
+  dispatch, or reach for the built-in table while a valid config exists. State the concern in the
+  transcript, then dispatch the configured rung anyway; the reroute path is the operator editing
+  `models.json`, not an in-flight override.
 - **Never re-dispatch the same rung on unchanged evidence.** A repeat with nothing new added is the
   same call twice; something must change first.
 - **Each escalation step moves UP the ladder**, carrying the updated evidence the previous rung
