@@ -13,7 +13,9 @@ performs no network calls; ``--probe`` checks both subjects and the judge; and
 ``--dry-run --skill NAME`` prints subject and judge prompts without sending.
 
 Transport runs ``claude -p --model <model> --effort <effort> --output-format
-text`` with the prompt on stdin. It removes ``CLAUDECODE``,
+text`` with the prompt on stdin, no tools, a permission mode that cannot
+bypass, no setting sources, no MCP servers, and a fresh temporary working
+directory outside the repository. It removes ``CLAUDECODE``,
 ``CLAUDE_CODE_ENTRYPOINT``, ``ANTHROPIC_API_KEY``, and ``ANTHROPIC_AUTH_TOKEN``
 from the child environment so the subscription login is the only credential.
 """
@@ -290,23 +292,32 @@ def claude_transport(model: str, effort: str, prompt: str) -> str:
     ):
         environment.pop(name, None)
     try:
-        completed = subprocess.run(
-            [
-                "claude",
-                "-p",
-                "--model",
-                model,
-                "--effort",
-                effort,
-                "--output-format",
-                "text",
-            ],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            env=environment,
-            timeout=TIMEOUT_SECONDS,
-        )
+        with tempfile.TemporaryDirectory(prefix="gambit-trials-") as workdir:
+            completed = subprocess.run(
+                [
+                    "claude",
+                    "-p",
+                    "--model",
+                    model,
+                    "--effort",
+                    effort,
+                    "--output-format",
+                    "text",
+                    "--permission-mode",
+                    "dontAsk",
+                    "--setting-sources",
+                    "",
+                    "--strict-mcp-config",
+                    "--tools",
+                    "",
+                ],
+                input=prompt,
+                capture_output=True,
+                text=True,
+                env=environment,
+                cwd=workdir,
+                timeout=TIMEOUT_SECONDS,
+            )
     except subprocess.TimeoutExpired as error:
         raise TransportError(f"claude timed out after {TIMEOUT_SECONDS}s") from error
     except (OSError, subprocess.SubprocessError) as error:

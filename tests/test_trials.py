@@ -683,6 +683,13 @@ class TrialRunnerTest(unittest.TestCase):
                 "low",
                 "--output-format",
                 "text",
+                "--permission-mode",
+                "dontAsk",
+                "--setting-sources",
+                "",
+                "--strict-mcp-config",
+                "--tools",
+                "",
             ],
             captured["argv"],
         )
@@ -692,6 +699,58 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertEqual({"PATH": "/usr/bin"}, kwargs["env"])
         self.assertIs(True, kwargs["capture_output"])
         self.assertIs(True, kwargs["text"])
+
+    def test_claude_transport_runs_tool_less_outside_the_repository(self) -> None:
+        captured_argv: list[str] = []
+        captured_entries: list[str] = []
+        workdirs: list[Path] = []
+
+        def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+            captured_argv.extend(argv)
+            workdir = Path(str(kwargs["cwd"]))
+            workdirs.append(workdir)
+            captured_entries.extend(sorted(entry.name for entry in workdir.iterdir()))
+            return subprocess.CompletedProcess(
+                args=argv, returncode=0, stdout="transport reply\n", stderr=""
+            )
+
+        with mock.patch.object(trials.subprocess, "run", side_effect=run):
+            trials.claude_transport("claude-opus-5", "low", "prompt")
+
+        for flag in (
+            "--tools",
+            "--permission-mode",
+            "--setting-sources",
+            "--strict-mcp-config",
+        ):
+            self.assertIn(flag, captured_argv)
+        self.assertEqual("", captured_argv[captured_argv.index("--tools") + 1])
+        self.assertEqual(
+            "dontAsk", captured_argv[captured_argv.index("--permission-mode") + 1]
+        )
+        self.assertEqual(
+            "", captured_argv[captured_argv.index("--setting-sources") + 1]
+        )
+        self.assertEqual(1, len(workdirs))
+        self.assertEqual([], captured_entries)
+        self.assertNotIn(trials.REPO_ROOT, workdirs[0].parents)
+        self.assertFalse(workdirs[0].exists())
+
+    def test_claude_transport_removes_the_working_directory_when_the_run_fails(
+        self,
+    ) -> None:
+        workdirs: list[Path] = []
+
+        def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+            workdirs.append(Path(str(kwargs["cwd"])))
+            raise OSError("cannot run claude")
+
+        with mock.patch.object(trials.subprocess, "run", side_effect=run):
+            with self.assertRaises(trials.TransportError):
+                trials.claude_transport("claude-opus-5", "low", "prompt")
+
+        self.assertEqual(1, len(workdirs))
+        self.assertFalse(workdirs[0].exists())
 
     def test_claude_nonzero_exit_carries_the_exit_code(self) -> None:
         completed = subprocess.CompletedProcess(
