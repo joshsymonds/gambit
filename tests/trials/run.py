@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run behavioral skill trials through the local patchbay Messages API.
+"""Run behavioral skill trials through the Claude Code CLI.
 
 Fixtures live at ``tests/fixtures/trials/<skill>/<name>.json`` and contain
 ``skill``, repo-relative ``text``, repo-relative ``neighbors``, ``exercise``,
@@ -12,10 +12,10 @@ CLI: ``--skill NAME`` or ``--all`` runs and stores cells; ``--check-fresh``
 performs no network calls; ``--probe`` checks both subjects and the judge; and
 ``--dry-run --skill NAME`` prints subject and judge prompts without sending.
 
-Transport uses ``POST /v1/messages`` with ``model``, ``max_tokens: 4096``,
-``messages``, and ``output_config: {"effort": ...}``, plus the
-``anthropic-version: 2023-06-01`` and ``X-Patchbay-Key`` headers. A live probe
-on 2026-09-08 confirmed that patchbay accepts ``output_config.effort``.
+Transport runs ``claude -p --model <model> --effort <effort> --output-format
+text`` with the prompt on stdin. It removes ``CLAUDECODE``,
+``CLAUDE_CODE_ENTRYPOINT``, ``ANTHROPIC_API_KEY``, and ``ANTHROPIC_AUTH_TOKEN``
+from the child environment so the subscription login is the only credential.
 """
 
 from __future__ import annotations
@@ -23,14 +23,12 @@ from __future__ import annotations
 import argparse
 import fcntl
 import hashlib
-import http.client
 import json
 import os
 import re
+import subprocess
 import sys
 import tempfile
-import urllib.error
-import urllib.request
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 from typing import Callable, NamedTuple, TextIO
@@ -39,15 +37,12 @@ from typing import Callable, NamedTuple, TextIO
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIRECTORY = Path("tests/fixtures/trials")
 RESULTS_FILE = FIXTURE_DIRECTORY / "results.json"
-PATCHBAY_URL = "http://127.0.0.1:4100/v1/messages"
-PATCHBAY_KEY_FILE = Path("/run/agenix/patchbay-caller-key")
-MAX_TOKENS = 4096
 TIMEOUT_SECONDS = 300
 SUBJECTS = {
-    "sol-low": {"model": "chatgpt/sol", "effort": "low"},
-    "astra-high": {"model": "chatgpt/astra", "effort": "high"},
+    "opus-low": {"model": "claude-opus-5", "effort": "low"},
+    "fable-high": {"model": "claude-fable-5-1", "effort": "high"},
 }
-JUDGE = {"model": "chatgpt/sol", "effort": "xhigh"}
+JUDGE = {"model": "claude-fable-5-1", "effort": "xhigh"}
 SKILL_NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 Transport = Callable[[str, str, str], str]
 
@@ -71,7 +66,7 @@ class JudgeParseError(ValueError):
 
 
 class TransportError(RuntimeError):
-    """Patchbay could not return a valid Messages API response."""
+    """The Claude Code CLI could not return a subject or judge reply."""
 
     def __init__(self, message: str, status: int | None = None) -> None:
         super().__init__(message)
@@ -285,60 +280,45 @@ def parse_judge_output(response: str, checklist: tuple[str, ...]) -> list[dict[s
     return parsed
 
 
-def patchbay_transport(model: str, effort: str, prompt: str) -> str:
+def claude_transport(model: str, effort: str, prompt: str) -> str:
+    environment = dict(os.environ)
+    for name in (
+        "CLAUDECODE",
+        "CLAUDE_CODE_ENTRYPOINT",
+        "ANTHROPIC_API_KEY",
+        "ANTHROPIC_AUTH_TOKEN",
+    ):
+        environment.pop(name, None)
     try:
-        key = PATCHBAY_KEY_FILE.read_text(encoding="utf-8").strip()
-    except OSError as error:
-        raise TransportError(f"cannot read patchbay key: {error}") from error
-    body = json.dumps(
-        {
-            "model": model,
-            "max_tokens": MAX_TOKENS,
-            "messages": [{"role": "user", "content": prompt}],
-            "output_config": {"effort": effort},
-        }
-    ).encode("utf-8")
-    request = urllib.request.Request(
-        PATCHBAY_URL,
-        data=body,
-        headers={
-            "Content-Type": "application/json",
-            "anthropic-version": "2023-06-01",
-            "X-Patchbay-Key": key,
-        },
-        method="POST",
-    )
-    try:
-        with urllib.request.urlopen(request, timeout=TIMEOUT_SECONDS) as response:
-            status = response.status
-            raw = response.read().decode("utf-8")
-    except urllib.error.HTTPError as error:
-        detail = error.read().decode("utf-8", errors="replace")
-        raise TransportError(f"HTTP {error.code}: {detail}", error.code) from error
-    except (
-        UnicodeDecodeError,
-        http.client.HTTPException,
-        urllib.error.URLError,
-        TimeoutError,
-        OSError,
-    ) as error:
-        raise TransportError(str(error)) from error
-    if status != 200:
-        raise TransportError(f"HTTP {status}: {raw}", status)
-    try:
-        payload = json.loads(raw)
-        blocks = payload["content"]
-        text = "".join(
-            block["text"]
-            for block in blocks
-            if isinstance(block, dict)
-            and block.get("type") == "text"
-            and isinstance(block.get("text"), str)
+        completed = subprocess.run(
+            [
+                "claude",
+                "-p",
+                "--model",
+                model,
+                "--effort",
+                effort,
+                "--output-format",
+                "text",
+            ],
+            input=prompt,
+            capture_output=True,
+            text=True,
+            env=environment,
+            timeout=TIMEOUT_SECONDS,
         )
-    except (KeyError, TypeError, json.JSONDecodeError) as error:
-        raise TransportError(f"invalid Messages API response: {error}") from error
+    except subprocess.TimeoutExpired as error:
+        raise TransportError(f"claude timed out after {TIMEOUT_SECONDS}s") from error
+    except (OSError, subprocess.SubprocessError) as error:
+        raise TransportError(f"cannot run claude: {error}") from error
+    if completed.returncode != 0:
+        detail = completed.stderr.strip()
+        raise TransportError(
+            f"claude exited {completed.returncode}: {detail}", completed.returncode
+        )
+    text = completed.stdout.strip()
     if not text:
-        raise TransportError("Messages API response contained no text")
+        raise TransportError("claude returned no text")
     return text
 
 
@@ -348,7 +328,7 @@ def _transport_call(
     for _ in range(2):
         try:
             return transport(model, effort, prompt)
-        except (TransportError, OSError, urllib.error.URLError):
+        except (TransportError, OSError):
             continue
     return None
 
@@ -363,7 +343,7 @@ def _judge_call(
             output = transport(JUDGE["model"], JUDGE["effort"], prompt)
             last_raw = output
             return parse_judge_output(output, checklist), last_raw
-        except (TransportError, OSError, urllib.error.URLError, JudgeParseError):
+        except (TransportError, OSError, JudgeParseError):
             continue
     return None, last_raw
 
@@ -516,7 +496,7 @@ def _probe(transport: Transport, output: TextIO) -> int:
             reply = transport(
                 route["model"], route["effort"], "Reply with exactly OK."
             )
-        except (TransportError, OSError, urllib.error.URLError) as error:
+        except (TransportError, OSError) as error:
             status = (
                 error.status
                 if isinstance(error, TransportError) and error.status is not None
@@ -552,7 +532,7 @@ def main(
     arguments = parser.parse_args(argv)
     if arguments.dry_run and arguments.skill is None:
         parser.error("--dry-run requires --skill")
-    active_transport = transport or patchbay_transport
+    active_transport = transport or claude_transport
     try:
         if arguments.probe:
             return _probe(active_transport, output)

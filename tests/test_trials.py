@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import hashlib
-import http.client
 import importlib.util
 import io
 import json
 import os
+import subprocess
 import tempfile
 import threading
 import unittest
@@ -149,7 +149,7 @@ class TrialRunnerTest(unittest.TestCase):
 
     def test_cell_id_and_hashes_cover_exact_file_bytes(self) -> None:
         fixture = self.load_one()
-        self.assertEqual("demo/basic@sol-low", trials.cell_id(fixture, "sol-low"))
+        self.assertEqual("demo/basic@opus-low", trials.cell_id(fixture, "opus-low"))
         hashes = trials.fixture_hashes(self.root, fixture)
         fixture_path = self.root / "tests/fixtures/trials/demo/basic.json"
         text_path = self.root / "skills/demo/SKILL.md"
@@ -190,7 +190,7 @@ class TrialRunnerTest(unittest.TestCase):
             "subject answer",
             judge_json(self.checklist),
         )
-        record = trials.run_cell(self.root, fixture, "sol-low", fake)
+        record = trials.run_cell(self.root, fixture, "opus-low", fake)
         self.assertEqual("ok", record["status"])
         self.assertTrue(record["pass"])
         self.assertEqual(3, len(fake.calls))
@@ -201,74 +201,62 @@ class TrialRunnerTest(unittest.TestCase):
     def test_second_subject_transport_failure_is_recorded(self) -> None:
         fixture = self.load_one()
         fake = FakeTransport(OSError("first"), OSError("second"))
-        record = trials.run_cell(self.root, fixture, "astra-high", fake)
+        record = trials.run_cell(self.root, fixture, "fable-high", fake)
         self.assertEqual("transport_failure", record["status"])
         self.assertFalse(record["pass"])
         self.assertEqual("", record["response"])
         self.assertEqual([], record["items"])
         self.assertEqual(2, len(fake.calls))
 
-    def test_http_read_failures_retry_once_and_record_transport_failure(self) -> None:
+    def test_claude_failures_retry_once_and_record_transport_failure(self) -> None:
         fixture = self.load_one()
-        key_path = self.root / "patchbay-key"
-        key_path.write_text("secret-key\n", encoding="utf-8")
-
-        class Response:
-            status = 200
-
-            def __init__(self, outcome: object) -> None:
-                self.outcome = outcome
-
-            def __enter__(self) -> "Response":
-                return self
-
-            def __exit__(self, *args: object) -> None:
-                return None
-
-            def read(self) -> bytes:
-                if isinstance(self.outcome, BaseException):
-                    raise self.outcome
-                assert isinstance(self.outcome, bytes)
-                return self.outcome
-
         cases = {
-            "invalid UTF-8": lambda: b"\xff",
-            "incomplete body": lambda: http.client.IncompleteRead(b""),
+            "nonzero exit": subprocess.CompletedProcess(
+                args=[], returncode=1, stdout="", stderr="usage limit reached"
+            ),
+            "empty output": subprocess.CompletedProcess(
+                args=[], returncode=0, stdout="   \n", stderr=""
+            ),
         }
-        for name, outcome in cases.items():
+        for name, completed in cases.items():
             with self.subTest(name=name, call="_transport_call"):
-                with (
-                    mock.patch.object(trials, "PATCHBAY_KEY_FILE", key_path),
-                    mock.patch.object(
-                        trials.urllib.request,
-                        "urlopen",
-                        side_effect=lambda *args, **kwargs: Response(outcome()),
-                    ) as urlopen,
-                ):
+                with mock.patch.object(
+                    trials.subprocess, "run", return_value=completed
+                ) as run:
                     self.assertIsNone(
                         trials._transport_call(
-                            trials.patchbay_transport, "model", "low", "prompt"
+                            trials.claude_transport, "model", "low", "prompt"
                         )
                     )
-                self.assertEqual(2, urlopen.call_count)
+                self.assertEqual(2, run.call_count)
 
             with self.subTest(name=name, call="run_cell"):
-                with (
-                    mock.patch.object(trials, "PATCHBAY_KEY_FILE", key_path),
-                    mock.patch.object(
-                        trials.urllib.request,
-                        "urlopen",
-                        side_effect=lambda *args, **kwargs: Response(outcome()),
-                    ) as urlopen,
-                ):
+                with mock.patch.object(
+                    trials.subprocess, "run", return_value=completed
+                ) as run:
                     record = trials.run_cell(
-                        self.root, fixture, "sol-low", trials.patchbay_transport
+                        self.root, fixture, "opus-low", trials.claude_transport
                     )
                 self.assertEqual("transport_failure", record["status"])
                 self.assertFalse(record["pass"])
                 self.assertEqual("", record["response"])
                 self.assertEqual([], record["items"])
-                self.assertEqual(2, urlopen.call_count)
+                self.assertEqual(2, run.call_count)
+
+    def test_claude_timeout_and_missing_binary_become_transport_errors(self) -> None:
+        with mock.patch.object(
+            trials.subprocess,
+            "run",
+            side_effect=subprocess.TimeoutExpired(cmd="claude", timeout=300),
+        ):
+            with self.assertRaises(trials.TransportError):
+                trials.claude_transport("claude-opus-5", "low", "prompt")
+
+        with mock.patch.object(
+            trials.subprocess, "run", side_effect=FileNotFoundError("claude")
+        ):
+            with self.assertRaises(trials.TransportError):
+                trials.claude_transport("claude-opus-5", "low", "prompt")
 
     def test_judge_output_matches_numbered_items_by_position(self) -> None:
         checklist = ("first item", "second item", "third item")
@@ -376,7 +364,7 @@ class TrialRunnerTest(unittest.TestCase):
         fake = FakeTransport(
             "subject answer", judge_json(self.checklist, [True, False])
         )
-        record = trials.run_cell(self.root, fixture, "sol-low", fake)
+        record = trials.run_cell(self.root, fixture, "opus-low", fake)
         self.assertEqual("ok", record["status"])
         self.assertFalse(record["pass"])
         self.assertEqual(self.checklist, [item["item"] for item in record["items"]])
@@ -390,7 +378,7 @@ class TrialRunnerTest(unittest.TestCase):
         recovered = FakeTransport(
             "subject answer", "not json", judge_json(self.checklist)
         )
-        record = trials.run_cell(self.root, fixture, "sol-low", recovered)
+        record = trials.run_cell(self.root, fixture, "opus-low", recovered)
         self.assertEqual("ok", record["status"])
         self.assertTrue(record["pass"])
         self.assertEqual(3, len(recovered.calls))
@@ -398,7 +386,7 @@ class TrialRunnerTest(unittest.TestCase):
         failed = FakeTransport(
             "subject answer", "first invalid verdict", "last invalid verdict"
         )
-        record = trials.run_cell(self.root, fixture, "sol-low", failed)
+        record = trials.run_cell(self.root, fixture, "opus-low", failed)
         self.assertEqual("judge_failure", record["status"])
         self.assertFalse(record["pass"])
         self.assertEqual("subject answer", record["response"])
@@ -458,7 +446,7 @@ class TrialRunnerTest(unittest.TestCase):
     def test_result_file_update_is_atomic_and_preserves_other_cells(self) -> None:
         results_path = self.root / "tests/fixtures/trials/results.json"
         results_path.write_text(
-            json.dumps({"other/cell@sol-low": {"pass": True}}), encoding="utf-8"
+            json.dumps({"other/cell@opus-low": {"pass": True}}), encoding="utf-8"
         )
         new_record = {"status": "ok", "pass": True}
         real_replace = os.replace
@@ -471,11 +459,11 @@ class TrialRunnerTest(unittest.TestCase):
             real_replace(source, destination)
 
         with mock.patch.object(trials.os, "replace", side_effect=recording_replace):
-            trials.store_result(self.root, "demo/basic@sol-low", new_record)
+            trials.store_result(self.root, "demo/basic@opus-low", new_record)
 
         stored = json.loads(results_path.read_text(encoding="utf-8"))
-        self.assertEqual({"pass": True}, stored["other/cell@sol-low"])
-        self.assertEqual(new_record, stored["demo/basic@sol-low"])
+        self.assertEqual({"pass": True}, stored["other/cell@opus-low"])
+        self.assertEqual(new_record, stored["demo/basic@opus-low"])
         self.assertEqual(1, len(replacements))
         self.assertNotEqual(results_path, replacements[0][0])
         self.assertEqual(results_path, replacements[0][1])
@@ -504,8 +492,8 @@ class TrialRunnerTest(unittest.TestCase):
                 failures.append(error)
 
         threads = [
-            threading.Thread(target=write, args=("demo/first@sol-low",)),
-            threading.Thread(target=write, args=("demo/second@sol-low",)),
+            threading.Thread(target=write, args=("demo/first@opus-low",)),
+            threading.Thread(target=write, args=("demo/second@opus-low",)),
         ]
         with mock.patch.object(
             trials, "load_results", side_effect=synchronized_load
@@ -519,7 +507,7 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertEqual([], failures)
         stored = trials.load_results(self.root)
         self.assertEqual(
-            {"demo/first@sol-low", "demo/second@sol-low"}, set(stored)
+            {"demo/first@opus-low", "demo/second@opus-low"}, set(stored)
         )
         fixture_directory = self.root / "tests/fixtures/trials"
         self.assertEqual(
@@ -633,13 +621,13 @@ class TrialRunnerTest(unittest.TestCase):
             checklist=other_checklist,
         )
         fake = FakeTransport(
-            "demo sol",
+            "demo opus",
             judge_json(self.checklist),
-            "demo astra",
+            "demo fable",
             judge_json(self.checklist),
-            "other sol",
+            "other opus",
             judge_json(other_checklist),
-            "other astra",
+            "other fable",
             judge_json(other_checklist),
         )
         self.assertEqual(
@@ -651,63 +639,69 @@ class TrialRunnerTest(unittest.TestCase):
         results = trials.load_results(self.root)
         self.assertEqual(
             {
-                "demo/basic@sol-low",
-                "demo/basic@astra-high",
-                "other/second@sol-low",
-                "other/second@astra-high",
+                "demo/basic@opus-low",
+                "demo/basic@fable-high",
+                "other/second@opus-low",
+                "other/second@fable-high",
             },
             set(results),
         )
 
-    def test_http_transport_sends_confirmed_messages_api_fields(self) -> None:
-        key_path = self.root / "patchbay-key"
-        key_path.write_text("secret-key\n", encoding="utf-8")
+    def test_claude_transport_prints_with_model_effort_and_no_api_credentials(
+        self,
+    ) -> None:
         captured: dict[str, object] = {}
 
-        class Response:
-            status = 200
+        def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+            captured["argv"] = argv
+            captured["kwargs"] = kwargs
+            return subprocess.CompletedProcess(
+                args=argv, returncode=0, stdout="transport reply\n", stderr=""
+            )
 
-            def __enter__(self) -> "Response":
-                return self
-
-            def __exit__(self, *args: object) -> None:
-                return None
-
-            def read(self) -> bytes:
-                return json.dumps(
-                    {
-                        "content": [
-                            {"type": "text", "text": "transport reply"}
-                        ]
-                    }
-                ).encode("utf-8")
-
-        def urlopen(request: object, timeout: int) -> Response:
-            captured["request"] = request
-            captured["timeout"] = timeout
-            return Response()
-
+        environment = {
+            "PATH": "/usr/bin",
+            "CLAUDECODE": "1",
+            "CLAUDE_CODE_ENTRYPOINT": "cli",
+            "ANTHROPIC_API_KEY": "key-secret",
+            "ANTHROPIC_AUTH_TOKEN": "token-secret",
+        }
         with (
-            mock.patch.object(trials, "PATCHBAY_KEY_FILE", key_path),
-            mock.patch.object(trials.urllib.request, "urlopen", side_effect=urlopen),
+            mock.patch.dict(os.environ, environment, clear=True),
+            mock.patch.object(trials.subprocess, "run", side_effect=run),
         ):
-            reply = trials.patchbay_transport("chatgpt/sol", "low", "prompt")
+            reply = trials.claude_transport("claude-opus-5", "low", "prompt")
 
         self.assertEqual("transport reply", reply)
-        request = captured["request"]
-        body = json.loads(request.data.decode("utf-8"))
         self.assertEqual(
-            {
-                "model": "chatgpt/sol",
-                "max_tokens": 4096,
-                "messages": [{"role": "user", "content": "prompt"}],
-                "output_config": {"effort": "low"},
-            },
-            body,
+            [
+                "claude",
+                "-p",
+                "--model",
+                "claude-opus-5",
+                "--effort",
+                "low",
+                "--output-format",
+                "text",
+            ],
+            captured["argv"],
         )
-        self.assertEqual(300, captured["timeout"])
-        self.assertEqual("2023-06-01", request.get_header("Anthropic-version"))
-        self.assertEqual("secret-key", request.get_header("X-patchbay-key"))
+        kwargs = captured["kwargs"]
+        self.assertEqual("prompt", kwargs["input"])
+        self.assertEqual(300, kwargs["timeout"])
+        self.assertEqual({"PATH": "/usr/bin"}, kwargs["env"])
+        self.assertIs(True, kwargs["capture_output"])
+        self.assertIs(True, kwargs["text"])
+
+    def test_claude_nonzero_exit_carries_the_exit_code(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=2, stdout="", stderr="unknown option --effort"
+        )
+        with mock.patch.object(trials.subprocess, "run", return_value=completed):
+            with self.assertRaises(trials.TransportError) as raised:
+                trials.claude_transport("claude-opus-5", "low", "prompt")
+        self.assertEqual(2, raised.exception.status)
+        self.assertIn("unknown option --effort", str(raised.exception))
 
     def test_cli_dry_run_prints_both_prompts_without_transport(self) -> None:
         self.write_fixture()
@@ -730,7 +724,7 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertEqual([], fake.calls)
 
     def test_cli_probe_calls_each_subject_and_judge(self) -> None:
-        fake = FakeTransport("sol reply", "astra reply", "judge reply")
+        fake = FakeTransport("opus reply", "fable reply", "judge reply")
         output = io.StringIO()
         self.assertEqual(
             0,
@@ -740,14 +734,14 @@ class TrialRunnerTest(unittest.TestCase):
         )
         self.assertEqual(
             [
-                ("chatgpt/sol", "low"),
-                ("chatgpt/astra", "high"),
-                ("chatgpt/sol", "xhigh"),
+                ("claude-opus-5", "low"),
+                ("claude-fable-5-1", "high"),
+                ("claude-fable-5-1", "xhigh"),
             ],
             [(model, effort) for model, effort, _ in fake.calls],
         )
-        self.assertIn("sol-low: 200 sol reply", output.getvalue())
-        self.assertIn("astra-high: 200 astra reply", output.getvalue())
+        self.assertIn("opus-low: 200 opus reply", output.getvalue())
+        self.assertIn("fable-high: 200 fable reply", output.getvalue())
         self.assertIn("judge: 200 judge reply", output.getvalue())
 
 
