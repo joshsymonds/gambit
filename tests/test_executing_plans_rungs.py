@@ -19,6 +19,11 @@ SECTIONS = (
     "Report and end",
     "Human boundaries",
 )
+RECORD_PATHS_BY_SECTION = {
+    "Start": ("state.json", "gates/", "efforts/", "orchestrator"),
+    "Build each task until good": ("gates/<task-slug>-<attempt>.md", "state.json"),
+    "Integrate and repeat": ("state.json", "efforts/<n>.md"),
+}
 GATE_FIELDS = (
     "Task",
     "Lineage",
@@ -81,16 +86,13 @@ class ExecutingPlansStructureTest(unittest.TestCase):
             r"(?is)\bevery task\b.*\bgap\b.*\bindependent\b.*\bno executable work remains\b",
         )
 
-    def test_record_paths_and_orchestrator_role_are_named(self) -> None:
-        for token in (
-            "state.json",
-            "gates/",
-            "efforts/",
-            "references/record.md",
-            "orchestrator",
-        ):
-            with self.subTest(token=token):
-                self.assertIn(token, self.text)
+    def test_record_paths_are_named_in_the_section_that_writes_them(self) -> None:
+        self.assertIn("references/record.md", self.text)
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        for section, tokens in RECORD_PATHS_BY_SECTION.items():
+            for token in tokens:
+                with self.subTest(section=section, token=token):
+                    self.assertIn(token, sections.get(section, ""))
 
     def test_start_dispatches_the_orchestrator_role(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))

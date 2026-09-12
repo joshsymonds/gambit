@@ -45,7 +45,7 @@ Isolate each worker in its own workspace from the effort's base, including a sin
 
 For every return, inspect the complete change set, including staged, unstaged, untracked, deleted, binary, symlink, and mode changes. Read the actual artifacts and fresh RED/GREEN evidence, not just a diff summary or a worker's verdict. Run any missing named check. For a Requirement whose evidence is a rendered result, build or capture that result and look at it yourself; record the observed result against that Requirement. Source inspection is not rendered evidence.
 
-Write this gate record, with exactly these fields:
+Write this gate record to `gates/<task-slug>-<attempt>.md`, with exactly these fields:
 
 | Field | Value |
 |---|---|
@@ -68,7 +68,7 @@ Worker returns DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, and BLOCKED are evidence
 
 Every NOT DONE record names its cause, and the cause decides the next action. An **exact fix** is one the gate can state completely: an owned path the brief omitted, a value or decision the brief left out, or one named check with its failing output. **Too large** means the return shows the task does not fit one pass. Everything else is a failure the gate cannot reduce to a fix; an unchanged re-dispatch is never the answer to one.
 
-Route each gate deterministically:
+Write the task's status to `state.json`, then route each gate deterministically:
 
 1. **DONE:** retain the complete accepted change set for integration.
 2. **NOT DONE with an exact fix, on this rung's first attempt:** dispatch the same rung again with the corrected brief, the gate record, the contract path, and the current work. A rung gets two attempts at a task and never a third; a second NOT DONE at that rung routes by its cause below.
@@ -80,7 +80,7 @@ This step has no separate review dispatch or corrective loop outside the ladder.
 
 ## Integrate and repeat
 
-Gate each complete worker change set before combining it. Commit accepted work onto the effort's candidate, one commit per task, and record the committed revision in its gate record. Workers never commit. A gap's work is not candidate material.
+Gate each complete worker change set before combining it. Commit accepted work onto the effort's candidate, one commit per task, and record the committed revision in its gate record and `state.json`. Workers never commit. A gap's work is not candidate material.
 
 For a multi-task effort, read `references/wave-dispatch.md` and run `scripts/integrate_wave.py` by absolute path with its manifest. Use the full Done gate as the manifest gate. The script combines complete worker trees as ordered commits in an isolated candidate and advances the epic only to the exact revision passing that gate. For a single task, create the candidate commit separately from the accepted base, run the same full Done gate, and advance only on green. Preserve the last accepted base until the combined candidate passes.
 
@@ -90,7 +90,7 @@ Use the build step's second-attempt, split, escalation, final-attempt, and gap r
 
 If an integration lineage exhausts, preserve its work and gate as a gap and retain the rejected candidate. Build any remaining candidate from the last accepted base and independent DONE changes, excluding work dependent on the gap, then run its full Done gate. Never advance the accepted base to a rejected revision.
 
-Repeat from decomposition until every Requirement is DONE with its named evidence or is a gap. When no executable work remains, a Requirement depending on a gap becomes a gap citing that dependency. Task completion alone does not establish Requirement completion.
+Write the effort's report to `efforts/<n>.md` when the effort ends. Repeat from decomposition until every Requirement is DONE with its named evidence or is a gap. When no executable work remains, a Requirement depending on a gap becomes a gap citing that dependency. Task completion alone does not establish Requirement completion.
 
 ## Review once
 
