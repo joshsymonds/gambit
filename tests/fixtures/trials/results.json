@@ -849,7 +849,7 @@
     }
   },
   "executing-plans/integration-failure@fable-high": {
-    "at": "2026-09-12T03:37:32.433352+00:00",
+    "at": "2026-09-12T03:59:54.283347+00:00",
     "hashes": {
       "fixture": "71a90f4d2081b87e29114f3e9284c826a21f39781f3ed85fcc06854eab39b16d",
       "neighbors": {
@@ -857,36 +857,36 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "Step 3: \"Write the gate record at `gates/e2-integration-1.md` with the fixed fields: task (integration, E2), lineage (new, no parent...), ... contract items checked (R1 green, R2 green, full Done red with output), ... verdict NOT DONE\"; Step 2: \"Assign the failure to one new integration lineage for E2.\" with the itemized failing output listed in Step 1 (\"`make test` exits 1, `test_normalized_round_trip`, Z-suffixed UTC from T1 rejected by T2's schema\").",
+        "evidence": "Step 1: \"a gate record for the combination, record: itemized NOT DONE (R1 and R2 each green in isolation, `make test` exit 1 on test_normalized_round_trip with the quoted output)\"; Step 2: \"Create one integration lineage for E2 (slug e2-integration)\" with the exception that a contract-violating output makes that lineage \"the contributing lineage\".",
         "item": "1. Creates an itemized NOT DONE gate record for the cross-task failure and assigns it to the contributing lineage or to one integration lineage for effort E2.",
         "pass": true
       },
       {
-        "evidence": "Step 1: \"the rejected revision retained on `candidate/effort-2`\"; Step 10: \"retain `candidate/effort-2`\"; Step 5 builds the corrective workspace from \"the `candidate/effort-2` tip\" rather than rewriting it.",
+        "evidence": "Step 1: \"the rejected revision retained on candidate/effort-2\"; Step 9: \"keep candidate/effort-2 and the gap branch\".",
         "item": "2. Leaves the rejected combined revision preserved on candidate/effort-2.",
         "pass": true
       },
       {
-        "evidence": "Step 1: \"the last accepted base `b71ace` unchanged until a combined candidate passes the full Done gate\"; Step 10: \"On DONE, commit onto the candidate and run the full Done gate fresh. A passing fast check does not substitute. Advance `b71ace` only to the exact revision that passes.\"",
+        "evidence": "Step 1: \"last accepted base b71ace unchanged until a corrected combined candidate passes the full Done gate\"; Step 8: \"Advance the base only to the exact revision that passes. The integration task's fast check alone does not count.\"",
         "item": "3. Keeps b71ace as the last accepted base until a combined candidate passes the full Done gate.",
         "pass": true
       },
       {
-        "evidence": "Step 2: \"The lineage starts at the `worker` entry rung with zero attempts and its one split unconsumed.\" and \"If the Approach section fixes the canonical timestamp encoding, the routing changes: the violating task's lineage owns it and continues from its rung and spent attempts.\" Step 9 applies the rung progression: \"exact fix gets one more entry-rung attempt, too large splits once, anything else escalates exactly one rung, then my one final attempt, then a gap.\"",
+        "evidence": "Step 2: \"Create one integration lineage for E2 (slug e2-integration), starting at the entry rung with zero attempts spent\" and \"the lineage whose output violates it is the contributing lineage and continues from the entry rung with its one attempt already spent.\"",
         "item": "4. Applies the ladder to the owned failure: a new integration lineage starts at the entry rung with no attempts spent, while an existing contributing lineage continues from the rung it used and the attempts it has spent, never backward.",
         "pass": true
       },
       {
-        "evidence": "Step 1: \"T3 continuing meanwhile\"; Step 8: \"Keep T3 moving concurrently. Brief it with the integration task as a neighbor, isolate it from `b71ace`, dispatch at the entry rung. Gate and commit its return independently.\"",
+        "evidence": "Step 1: \"T3 continuing independently\"; Step 6: \"Concurrently decompose and dispatch T3 at the entry rung in its own workspace from the effort base, with the integration task's owned files listed as off-limits neighbors.\"",
         "item": "5. Continues independent Task T3 while the integration failure is repaired.",
         "pass": true
       },
       {
-        "evidence": "Closing line: \"No question goes to a person. Review and release wait until the build loop ends.\" The response contains no question or approval request directed at a person; all decisions are made and logged by the orchestrator (e.g. Step 4: \"Decide from the contract which side changes. Log that decision and reason.\").",
+        "evidence": "Step 4: \"Record the decision and reason in the Decision Log. It never becomes a question.\" No step requests approval or direction from a person; all routing is decided by the orchestrator and logged.",
         "item": "6. Does not ask a person for approval or direction.",
         "pass": true
       }
@@ -896,7 +896,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "Next actions, in order, without implementing anything:\n\n1. **Record the routing decision before touching the tree.** Write to `state.json`, mirror it through the record-task-state operation, and add a Decision Log entry to `epic.md` containing: the itemized NOT DONE with the exact failing output (`make test` exits 1, `test_normalized_round_trip`, Z-suffixed UTC from T1 rejected by T2's schema); R1 and R2 fast checks still green; the rejected revision retained on `candidate/effort-2`; the last accepted base `b71ace` unchanged until a combined candidate passes the full Done gate; T3 continuing meanwhile.\n\n2. **Assign the failure to one new integration lineage for E2.** T1 and T2 each met their Requirement's named evidence as written, so neither lineage owns this defect. The lineage starts at the `worker` entry rung with zero attempts and its one split unconsumed. It keeps ownership of any later combination failure this effort. If the Approach section fixes the canonical timestamp encoding, the routing changes: the violating task's lineage owns it and continues from its rung and spent attempts. I record whichever applies and the reason.\n\n3. **Write the gate record** at `gates/e2-integration-1.md` with the fixed fields: task (integration, E2), lineage (new, no parent, no descendants, split unused), rung (combination gate, no dispatch), candidate revision (the `candidate/effort-2` tip over `b71ace`), contract items checked (R1 green, R2 green, full Done red with output), owned-files and mechanical-floor results for the combined set, Premises touched, verdict NOT DONE, next action: dispatch `worker` at entry rung.\n\n4. **Dispatch a read-only scout** with the bounded question: where T1 emits the Z suffix, where T2's schema constrains the timestamp format, and what `test_normalized_round_trip` asserts, all as `file:line` or NOT FOUND. Decide from the contract which side changes. Log that decision and reason.\n\n5. **Isolate the corrective workspace from the failing combination**, not from `b71ace`: `git worktree add` from the `candidate/effort-2` tip, so the round-trip test reproduces the defect there.\n\n6. **Write the brief**: Goal, exact Files owned from the scout evidence (T1 and T2 are complete, so their files are assignable, but the list stays disjoint from T3's), Hidden shared surfaces, Neighbors (T3 with its full owned list), Implementation, Requirements covered (R1 and R2, plus the round-trip check from Done), Test command. Attach the gate record, failing output, workspace, base revision, and contract clauses.\n\n7. **Resolve `worker`** in `~/.claude/gambit/models.json`, take the entry rung's writing target, record the dispatch in `state.json`, then dispatch with `contracts/worker.md` by absolute path and the brief as text.\n\n8. **Keep T3 moving concurrently.** Brief it with the integration task as a neighbor, isolate it from `b71ace`, dispatch at the entry rung. Gate and commit its return independently.\n\n9. **Gate the integration return like any other**: inspect the complete change set, run the named checks fresh, verify owned files, mechanical floor, minimal change, and Premises. Route by cause: exact fix gets one more entry-rung attempt, too large splits once, anything else escalates exactly one rung, then my one final attempt, then a gap.\n\n10. **On DONE, commit onto the candidate and run the full Done gate fresh.** A passing fast check does not substitute. Advance `b71ace` only to the exact revision that passes. If the lineage exhausts, commit its workspace to `gap/e2-integration`, retain `candidate/effort-2`, build the remaining candidate from `b71ace` plus independent DONE work excluding what depends on the gap, and when no executable work remains, mark R1 and R2 as gaps citing it.\n\nNo question goes to a person. Review and release wait until the build loop ends.",
+    "response": "**Next actions, in order:**\n\n1. **Write the routing decision to the record before touching anything else.** In `state.json` and a gate record for the combination, record: itemized NOT DONE (R1 and R2 each green in isolation, `make test` exit 1 on test_normalized_round_trip with the quoted output); the rejected revision retained on candidate/effort-2; last accepted base b71ace unchanged until a corrected combined candidate passes the full Done gate; T3 continuing independently. Mirror this through record-task-state.\n\n2. **Assign the failure to a lineage and log why.** T1 and T2 both satisfied their own briefs. The defect is the interface between them, which neither brief owned. Create one integration lineage for E2 (slug e2-integration), starting at the entry rung with zero attempts spent. Decision Log entry: reason for a new lineage rather than reopening T1 or T2, plus the note that this lineage owns every later combination failure in E2. The exception: if the contract's Approach names the canonical timestamp serialization, the lineage whose output violates it is the contributing lineage and continues from the entry rung with its one attempt already spent. I would check that in step 3 and amend the assignment only if the contract is explicit.\n\n3. **Dispatch a read-only scout** with a bounded question against candidate/effort-2: file:line where T1 emits the Z-suffixed timestamp, file:line where T2's schema rejects it, what test_normalized_round_trip asserts, and whether Approach or any Premise fixes the wire format. If a Premise covers the format, apply its clause before building and record the assessment.\n\n4. **Decide the fix direction from the contract and tree, and log it.** The choice is which side changes: T1's emitter or T2's schema. Record the decision and reason in the Decision Log. It never becomes a question.\n\n5. **Write state.json, then isolate a workspace from candidate/effort-2**, not from b71ace, so the corrective workspace reproduces the integration failure. Dispatch `worker` at the entry rung under `contracts/worker.md` with a brief: Goal (round trip passes), Files owned as exact paths from the scout, hidden shared surfaces, Neighbors including T3's owned files, Implementation grounded in the scout's evidence, Requirements covered R1 and R2 with test_normalized_round_trip as evidence, and the test command naming that check. The brief carries the combination gate record and the failing output.\n\n6. **Concurrently decompose and dispatch T3** at the entry rung in its own workspace from the effort base, with the integration task's owned files listed as off-limits neighbors. Write state.json first.\n\n7. **Gate the integration return** by inspecting the complete change set and fresh RED/GREEN evidence, and write `gates/e2-integration-1.md`. Route deterministically: DONE commits one candidate commit; NOT DONE with an exact fix gets a second attempt at the same rung; too large splits once; anything else escalates one rung; after the top rung, one final attempt by me; then a gap committed to `gap/e2-integration`.\n\n8. **Run the fresh full Done gate on the corrected combined candidate**, via `integrate_wave.py` with a manifest once T3 is also accepted. Advance the base only to the exact revision that passes. The integration task's fast check alone does not count.\n\n9. **If the lineage exhausts,** keep candidate/effort-2 and the gap branch, build a candidate from b71ace plus T3's accepted change, run its full Done gate, and when no executable work remains, mark R1 and R2 as gaps citing the integration gap. Then write `efforts/2.md` and continue to review with what stands.",
     "status": "ok",
     "subject": {
       "effort": "high",
@@ -904,7 +904,7 @@
     }
   },
   "executing-plans/integration-failure@opus-low": {
-    "at": "2026-09-12T03:36:07.753321+00:00",
+    "at": "2026-09-12T03:58:51.427066+00:00",
     "hashes": {
       "fixture": "71a90f4d2081b87e29114f3e9284c826a21f39781f3ed85fcc06854eab39b16d",
       "neighbors": {
@@ -912,36 +912,36 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "Step 1: \"a gate record under `gates/` plus the Decision Log entry for the effort, containing: the itemized NOT DONE with the verbatim Done-gate output (`make test` exit 1, `test_normalized_round_trip`, Z-suffix vs schema rejection)\". Step 2: \"I create one integration lineage for E2, `T-INT-E2`, and record that it owns this failure and every subsequent integration failure in this effort.\"",
+        "evidence": "\"Itemized NOT DONE against the contract: `make test` exits 1, `test_normalized_round_trip` fails \u2014 T1 emits a Z-suffixed UTC timestamp T2's schema rejects\" written into `state.json`, `efforts/2.md`, and the Decision Log; then \"Create one integration lineage for effort E2\" with parentage (T1, T2).",
         "item": "1. Creates an itemized NOT DONE gate record for the cross-task failure and assigns it to the contributing lineage or to one integration lineage for effort E2.",
         "pass": true
       },
       {
-        "evidence": "Step 1 records \"the rejected revision retained on `candidate/effort-2`\"; step 8 repeats \"If `T-INT-E2` exhausts, it becomes a gap, `candidate/effort-2` is retained\".",
+        "evidence": "\"The rejected revision retained on `candidate/effort-2` with that exact failing output.\" and the worktree is added \"from `candidate/effort-2`, not from `b71ace`, so the failing combination is present\".",
         "item": "2. Leaves the rejected combined revision preserved on candidate/effort-2.",
         "pass": true
       },
       {
-        "evidence": "Step 1: \"b71ace unchanged as the last accepted base\". Step 8: \"run a fresh **full** Done gate on the combined candidate \u2014 T1's and T2's passing fast checks do not substitute. Advance the accepted base from b71ace only on green.\"",
+        "evidence": "\"The last accepted base stays `b71ace`, unchanged until a combined candidate passes the full Done gate.\" and \"The accepted base advances from `b71ace` only to the exact revision that passes that gate.\"",
         "item": "3. Keeps b71ace as the last accepted base until a combined candidate passes the full Done gate.",
         "pass": true
       },
       {
-        "evidence": "Step 2: \"It starts at the `worker` entry rung; I do not reuse T1's or T2's spent attempts, and I do not create a fresh lineage later to reset the ladder.\" Step 7 applies the ladder on each return: \"exact fix \u2192 second attempt on the same rung; too large \u2192 split once; anything else \u2192 `escalation` one rung up; top-rung failure \u2192 my own final attempt, then gap\".",
+        "evidence": "\"Create one integration lineage for effort E2, starting at the `worker` entry rung with zero attempts spent\" and \"this ownership persists for subsequent integration failures in E2 \u2014 I do not create fresh lineages later to reset the ladder\"; the gate step routes by \"exact fix gets one second attempt at that rung, unnameable cause escalates one rung\".",
         "item": "4. Applies the ladder to the owned failure: a new integration lineage starts at the entry rung with no attempts spent, while an existing contributing lineage continues from the rung it used and the attempts it has spent, never backward.",
         "pass": true
       },
       {
-        "evidence": "Step 1 records \"the statement that T3 continues\"; step 6: \"Dispatch concurrently: `worker` at its entry rung on `T-INT-E2` in that workspace, and T3 as an independent task at the entry rung in its own workspace from the effort base.\"",
+        "evidence": "\"T3 continues concurrently; it is independent and unaffected.\" and \"T3 dispatches concurrently in its own workspace.\"",
         "item": "5. Continues independent Task T3 while the integration failure is repaired.",
         "pass": true
       },
       {
-        "evidence": "The response poses no question to a person and closes with \"No question goes to you; no review and no release until the build loop closes.\" The one open fact (timestamp format) is resolved by reading the record or dispatching a read-only scout, not by asking.",
+        "evidence": "The response is a numbered sequence of actions the orchestrator takes itself (\"Write the routing decision\", \"Dispatch\", \"Gate the return\") and contains no question or request for approval; the only conditional dispatch is to a read-only `scout`, not a person.",
         "item": "6. Does not ask a person for approval or direction.",
         "pass": true
       }
@@ -951,7 +951,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "Next actions, in order:\n\n1. **Write the routing record before any investigation** \u2014 a gate record under `gates/` plus the Decision Log entry for the effort, containing: the itemized NOT DONE with the verbatim Done-gate output (`make test` exit 1, `test_normalized_round_trip`, Z-suffix vs schema rejection); that R1 and R2 pass separately, so this is a cross-task defect visible only after combination; the rejected revision retained on `candidate/effort-2`; b71ace unchanged as the last accepted base; and the statement that T3 continues. Write this to `state.json` and mirror it through record-task-state before the next dispatch.\n\n2. **Assign ownership.** Neither T1 nor T2 is individually at fault \u2014 each met its own contract lines and their owned files are disjoint \u2014 so I create one integration lineage for E2, `T-INT-E2`, and record that it owns this failure and every subsequent integration failure in this effort. It starts at the `worker` entry rung; I do not reuse T1's or T2's spent attempts, and I do not create a fresh lineage later to reset the ladder.\n\n3. **Resolve the fact needed for the brief.** The correct timestamp representation across the boundary is a contract decision, not a worker's. I read the record's Requirements and Approach for what R1's \"UTC timestamps\" and R2's schema require; if the tree doesn't settle the serialization format, I dispatch a read-only `scout` with the bounded question (where T2's schema defines its accepted timestamp form, `file:line`) and decide from the contract and that evidence. The decision and its reason go in the Decision Log.\n\n4. **Isolate the corrective workspace from the failing combination** \u2014 `git worktree add` off `candidate/effort-2`, not off b71ace, so `test_normalized_round_trip` reproduces there.\n\n5. **Write the brief** for `T-INT-E2`: Goal (the round-trip passes with T1's and T2's own checks still green); Files owned \u2014 the exact paths on whichever side the decision in step 3 names, which will overlap T1's or T2's former paths, so those tasks are complete and not concurrent; Hidden shared surfaces; Neighbors (T3 with its complete owned-file list, off-limits); Implementation grounded in the scouted interfaces; Requirements covered R1 and R2 with their named evidence; Test command from Done.\n\n6. **Dispatch concurrently**: `worker` at its entry rung on `T-INT-E2` in that workspace, and T3 as an independent task at the entry rung in its own workspace from the effort base.\n\n7. **Gate each return** as any other \u2014 full change-set inspection, RED/GREEN, owned-files, mechanical floor, Premises touched \u2014 and route by the same rules: exact fix \u2192 second attempt on the same rung; too large \u2192 split once; anything else \u2192 `escalation` one rung up; top-rung failure \u2192 my own final attempt, then gap with the workspace committed to `gap/t-int-e2`.\n\n8. **Rebuild and re-gate the candidate.** On DONE, commit the corrective change as its own commit on the effort candidate and run a fresh **full** Done gate on the combined candidate \u2014 T1's and T2's passing fast checks do not substitute. Advance the accepted base from b71ace only on green. If `T-INT-E2` exhausts, it becomes a gap, `candidate/effort-2` is retained, and I rebuild a candidate from b71ace plus independent DONE work excluding everything dependent on the gap, then run the full Done gate on that.\n\nNo question goes to you; no review and no release until the build loop closes.",
+    "response": "Next actions, in order:\n\n**1. Write the routing decision to the record before any investigation.** Per the integrate step, a failure appearing only after combination requires the complete routing decision recorded first. Into `state.json`, `efforts/2.md`, and the Decision Log:\n\n- Itemized NOT DONE against the contract: `make test` exits 1, `test_normalized_round_trip` fails \u2014 T1 emits a Z-suffixed UTC timestamp T2's schema rejects. R1's `test_normalize_timestamp` and R2's `test_persist_event` remain green separately, so neither task gate is retroactively overturned; the defect is the combination.\n- The rejected revision retained on `candidate/effort-2` with that exact failing output.\n- The last accepted base stays `b71ace`, unchanged until a combined candidate passes the full Done gate.\n- T3 continues concurrently; it is independent and unaffected.\n\n**2. Assign ownership.** The failure spans both lineages' interface and belongs to neither exclusively, and no integration lineage exists for E2. Create one integration lineage for effort E2, starting at the `worker` entry rung with zero attempts spent. Record its parentage (T1, T2) and that this ownership persists for subsequent integration failures in E2 \u2014 I do not create fresh lineages later to reset the ladder.\n\n**3. Isolate the corrective workspace.** `git worktree add` from `candidate/effort-2`, not from `b71ace`, so the failing combination is present and `test_normalized_round_trip` reproduces the integration defect.\n\n**4. Write the corrective brief.** Goal: the combined candidate passes the full Done gate. Files owned: the exact paths the timestamp-format contract crosses \u2014 drawn from T1's and T2's owned sets as the reproduction locates them; if I can't state them from the tree, dispatch a read-only `scout` with the bounded question first and use its `file:line` evidence. Hidden shared surfaces, Neighbors (T3 and its complete owned-file list, off-limits), Implementation grounded in the reproduction, Requirements covered R1 and R2, Test command: the reproduction's failing check.\n\n**5. Dispatch.** Resolve `worker` through `~/.claude/gambit/models.json`, write `state.json` before the dispatch, and dispatch at the entry rung with `contracts/worker.md` by absolute path. T3 dispatches concurrently in its own workspace.\n\n**6. Gate the return** into `gates/<slug>-1.md` with all nine fields, routing by the same rules \u2014 exact fix gets one second attempt at that rung, unnameable cause escalates one rung, too large splits once, top-rung failure gets my one final attempt, then a gap.\n\n**7. On DONE, rebuild the candidate and run a fresh full Done gate on the corrected combination.** T1's and T2's passing fast checks do not substitute. The accepted base advances from `b71ace` only to the exact revision that passes that gate.",
     "status": "ok",
     "subject": {
       "effort": "low",
@@ -1014,38 +1014,38 @@
     }
   },
   "executing-plans/orchestrator-role-absent@fable-high": {
-    "at": "2026-09-12T03:39:15.524316+00:00",
+    "at": "2026-09-12T04:01:39.588670+00:00",
     "hashes": {
       "fixture": "84a7d5bc393cfcc050859cba990eae7555c1e85496e8a945f266513c678d77c6",
       "neighbors": {
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "skills/executing-plans/references/record.md": "368227f1cc531aa37335152cc751e9425a22982187bee7c8295ed60ae630d676"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "Step 2: \"Append a Decision Log line recording that `orchestrator` is unresolved and that this session performs effort 1 itself under the same rules.\" and \"The absence is not a gap, because the skill names the loading session as the fallback.\"",
+        "evidence": "Step 4: \"Look up orchestrator: absent.\" Step 5: \"Append a Decision Log entry naming the orchestrator role as unresolved... Per the skill, the session that loaded the stage performs the effort itself\"; step 11: \"decompose effort 2 under the same rules, still acting as the loading session.\"",
         "item": "1. States that no orchestrator role resolves, and performs effort 1 in this loading session instead.",
         "pass": true
       },
       {
-        "evidence": "Step 2: \"Dispatch no substitute agent for the orchestrator role.\" No alternative target is proposed anywhere in the response.",
+        "evidence": "Step 5: \"inventing no dispatch target. I do not substitute a general-purpose agent or any other name for the orchestrator\".",
         "item": "2. Does not invent, guess, or substitute a dispatch target for the missing orchestrator role.",
         "pass": true
       },
       {
-        "evidence": "Step 2 confirms \"`worker`, `escalation`, and `scout` resolve to rungs with dispatch targets\"; Step 5: \"Dispatch independent tasks concurrently through the dispatch operation, giving the absolute path to `contracts/worker.md` and the full brief as text, resolved to the worker entry rung's writing target.\"",
+        "evidence": "Step 4: \"Confirm worker, escalation, and scout resolve to an entry rung and a concrete dispatch target\"; step 8: \"dispatch independent tasks concurrently at the worker entry rung, using the dispatch operation with the absolute path to contracts/worker.md and the complete brief as text.\"",
         "item": "3. Still dispatches the worker role for the effort's tasks, which the registry does resolve.",
         "pass": true
       },
       {
-        "evidence": "Step 4 \"Write the head before dispatch. Rewrite `state.json` with the new task entries... at the `worker` entry rung with status pending, then dispatched.\"; Step 6 \"Write `gates/<task-slug>-1.md` with the ten fields\"; Step 7 \"Write `efforts/1.md` and rewrite `state.json`.\" precedes Step 8's loop back to decomposition and the next dispatch.",
+        "evidence": "Step 5: \"I take on the record writes: state.json before every dispatch, a gate file for each return, efforts/1.md at the effort's end.\" Step 7: \"Write state.json before dispatch.\" Step 9: \"Write `gates/<task-slug>-1.md` with exactly the ten fields\". Step 11: \"Write efforts/1.md, update state.json with the new accepted base, effort number, and next_actions. If unmet Requirements remain, decompose effort 2\".",
         "item": "4. Writes the effort's transitions to state.json, gates/, and efforts/ in the record directory, before the next dispatch.",
         "pass": true
       },
       {
-        "evidence": "The response logs the unresolved role in Step 2 and proceeds through Steps 3-8 (decompose, dispatch, gate, integrate, review, release, report) without posing any question to a person or terminating the run; the run ends only after the report in Step 8 \"with one terminal outcome\".",
+        "evidence": "Step 5: \"This does not create a gap and does not end the run.\" Closing line: \"No question goes to a person at any point in this sequence.\"",
         "item": "5. Does not ask a person what to do about the missing role, and does not end the run over it.",
         "pass": true
       }
@@ -1055,7 +1055,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "Reading the skill and references only; nothing to implement. Here is the ordered sequence.\n\n1. **Resume the record.** Read `~/.gambit/packaging-4b7de60/signed-package-release/epic.md` in full: Intent, Premises and clauses, Requirements and named evidence, Must Not Ship, Quality Bar, Approach, Done, Release, and the Decision Log in `decisions.md`. Since `state.json` names `epic/signed-package-release` and that is the current branch, this is the one record to resume. It is active, not terminal, so recover from `state.json` the accepted base, candidate revision, task list, rung positions and attempts, split history, gate paths, and the workspace path. Do not run `git worktree add`; that is only for a fresh run. Confirm the session is in the recorded workspace and not on main.\n\n2. **Resolve roles and log the missing orchestrator.** Read `contracts/models.md` and the registry. Confirm `worker`, `escalation`, and `scout` resolve to rungs with dispatch targets. Append a Decision Log line recording that `orchestrator` is unresolved and that this session performs effort 1 itself under the same rules. Dispatch no substitute agent for the orchestrator role. The absence is not a gap, because the skill names the loading session as the fallback.\n\n3. **Decompose effort 1.** From the three unmet Requirements, create every task that is writable from the tree now, one per unblocked Requirement, without authoring a full task tree. For any fact a brief needs, dispatch a read-only `scout` with a bounded question and the workspace, and use its `file:line` evidence or NOT FOUND. Write each brief with the seven sections in order: Goal, Files owned as exact paths, Hidden shared surfaces, Neighbors with their full owned lists, Implementation, Requirements covered with named evidence, and the exact Test command from Done. Keep owned files disjoint across concurrent tasks. Log each decomposition decision and reason in `decisions.md`.\n\n4. **Write the head before dispatch.** Rewrite `state.json` with the new task entries, each carrying every key in the schema, at the `worker` entry rung with status pending, then dispatched. Mirror each transition through the record-task-state harness operation. Update `next_actions` and `never_drop`.\n\n5. **Isolate and dispatch workers.** For each task, use the isolate-a-workspace operation to create its own workspace from the effort's accepted base, including if there is only one task. Dispatch independent tasks concurrently through the dispatch operation, giving the absolute path to `contracts/worker.md` and the full brief as text, resolved to the worker entry rung's writing target.\n\n6. **Gate every return.** Inspect the complete change set and fresh RED/GREEN evidence, run any missing named check, and capture rendered evidence where a Requirement names it. Write `gates/<task-slug>-1.md` with the ten fields and route deterministically: DONE retains for integration, exact fix gets one same-rung retry, too large splits once, other failures escalate one rung, top-rung failure gets my one final attempt then a gap on `gap/<task-slug>`.\n\n7. **Integrate.** Commit accepted work onto the candidate, one commit per task, recording the revision in each gate record. For multiple tasks, read `references/wave-dispatch.md` and run `scripts/integrate_wave.py` by absolute path with the full Done gate as the manifest gate. For a single task, build the candidate commit separately and run the same Done gate. Advance the accepted base only on green. Write `efforts/1.md` and rewrite `state.json`.\n\n8. **Repeat, then review, release, report.** Loop from decomposition until each Requirement is DONE with evidence or is a gap. Then freeze one candidate, load `skills/review/SKILL.md` through the load-a-stage operation and run it myself, record that review began, allow one correction round, and release only if every Requirement is DONE and checks pass. Write the report with one terminal outcome and end the run through the harness.",
+    "response": "I'll answer from the skill text; no tools needed for this exercise.\n\n**Next actions, in order:**\n\n1. **Locate and validate the record.** Derive the repository-id from the tree with `git rev-parse --path-format=absolute --git-common-dir` and the root commit from `git rev-list --max-parents=0 HEAD | tail -1`, confirm it is `packaging-4b7de60`, and confirm the record directory resolves to `~/.gambit/packaging-4b7de60/signed-package-release/`.\n\n2. **Resume, do not start fresh.** state.json names `epic/signed-package-release`, the current branch, so this record and only this record is resumed. It is active, not terminal, so nothing is short-circuited to a stored report. No `git worktree add` happens; I work in the workspace state.json names and confirm I am not on main.\n\n3. **Read the whole record.** epic.md in full: Intent, each Premise with its falsification clause, each Requirement with its named evidence, Must Not Ship, Quality Bar, Approach and Rejected Approaches, Done, Release. Then decisions.md, then state.json to recover accepted_base, candidate_revision, any existing tasks with lineages, rungs, attempts, gate_paths, split history, review state, and release actions. All of these are read before any dispatch.\n\n4. **Resolve roles against the registry.** Read contracts/models.md and `~/.claude/gambit/models.json`. Confirm worker, escalation, and scout resolve to an entry rung and a concrete dispatch target, with the read-only variant for scout. Look up orchestrator: absent.\n\n5. **Record the unresolved orchestrator role.** Append a Decision Log entry naming the orchestrator role as unresolved, with the registry path as evidence and `supersedes: none`. This does not create a gap and does not end the run. Per the skill, the session that loaded the stage performs the effort itself, inventing no dispatch target. I do not substitute a general-purpose agent or any other name for the orchestrator, and I take on the record writes: state.json before every dispatch, a gate file for each return, efforts/1.md at the effort's end.\n\n6. **Decompose effort 1.** From the three unmet Requirements, create every task writable from the tree now, one per Requirement unless a Requirement needs another's unfinished interface or would overlap owned files, in which case it waits for effort 2. Where a brief needs facts I lack, dispatch a read-only scout at its entry rung with a bounded question and the workspace, and use its `file:line` evidence or NOT FOUND. Each decision goes into decisions.md. Each brief carries, in order: Goal, Files owned as exact paths, Hidden shared surfaces, Neighbors with their full owned-file lists, Implementation, Requirements covered with named evidence, Test command from Done. Every brief also names its workspace, base revision, applicable contract clauses, and evidence. Owned-file lists across concurrent tasks stay disjoint, hidden surfaces included.\n\n7. **Write state.json before dispatch.** Add each task with id, slug, subject, requirement, owned_files, lineage with parent null and split_used false, rung set to the worker entry rung, attempts 0, status pending, empty gate_paths. Rewrite next_actions and never_drop. Mirror each transition through the harness's record-task-state operation.\n\n8. **Isolate and dispatch.** Create one worker workspace per task from accepted_base, even if only one task exists. Flip each task to dispatched in state.json, then dispatch independent tasks concurrently at the worker entry rung, using the dispatch operation with the absolute path to contracts/worker.md and the complete brief as text.\n\n9. **Gate every return.** Inspect the full change set including staged, unstaged, untracked, deleted, binary, symlink, and mode changes. Read the artifacts and fresh RED/GREEN evidence, run any missing named check, and for any Requirement whose evidence is a rendered result, produce and view it myself. Write `gates/<task-slug>-1.md` with exactly the ten fields, apply any touched Premise's clause before building further, and route by cause: DONE retains the change set; an exact fix on the rung's first attempt gets one same-rung retry; too large splits once; anything else escalates one rung; a top-rung failure gets one final attempt by me under the worker contract, then a gap on `gap/<task-slug>`.\n\n10. **Integrate.** With multiple tasks, read references/wave-dispatch.md and run scripts/integrate_wave.py by absolute path with its manifest and the full Done gate as manifest gate. With one task, commit the candidate separately and run the same full Done gate. Advance the epic only to the exact green revision, keep the last accepted base until then, record committed revisions in gate records, and route any combination-only failure through the recorded routing decision before investigating.\n\n11. **Close the effort.** Write efforts/1.md, update state.json with the new accepted base, effort number, and next_actions. If unmet Requirements remain, decompose effort 2 under the same rules, still acting as the loading session. When every Requirement is DONE or a gap, load skills/review/SKILL.md through load-a-stage, then Release only if eligible, then write the report and use end-a-run.\n\nNo question goes to a person at any point in this sequence.",
     "status": "ok",
     "subject": {
       "effort": "high",
@@ -1063,38 +1063,38 @@
     }
   },
   "executing-plans/orchestrator-role-absent@opus-low": {
-    "at": "2026-09-12T03:38:18.188389+00:00",
+    "at": "2026-09-12T04:00:35.397125+00:00",
     "hashes": {
       "fixture": "84a7d5bc393cfcc050859cba990eae7555c1e85496e8a945f266513c678d77c6",
       "neighbors": {
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "skills/executing-plans/references/record.md": "368227f1cc531aa37335152cc751e9425a22982187bee7c8295ed60ae630d676"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "\"No orchestrator entry means I don't dispatch the effort \u2014 I run it myself, under the same rules.\" and \"Because the registry resolves no `orchestrator`, this session performs effort 1, review, and release itself under these rules\"",
+        "evidence": "Opens with \"No orchestrator role resolves, so I run effort 1 myself.\" and in step 3: \"this session performs effort 1, review, and release itself under the executing-plans rules\".",
         "item": "1. States that no orchestrator role resolves, and performs effort 1 in this loading session instead.",
         "pass": true
       },
       {
-        "evidence": "\"I invent no dispatch target and no fallback.\" \u2014 the response names no substitute agent, rung, or model for the orchestrator role anywhere.",
+        "evidence": "Step 3: \"inventing no dispatch target. This is not a gap: a missing `orchestrator` sends no task to a gap, it relocates the work to me.\" No substitute rung or agent is named for the orchestrator anywhere in the response.",
         "item": "2. Does not invent, guess, or substitute a dispatch target for the missing orchestrator role.",
         "pass": true
       },
       {
-        "evidence": "\"`worker`, `escalation`, `scout` resolve\" and step 7: \"Dispatch the workers. Each in its own isolated workspace off the effort's base, concurrently since they're independent, each at the `worker` entry rung with `contracts/worker.md` by absolute path and its complete brief as text\"",
+        "evidence": "Step 7: \"dispatch the independent tasks concurrently at the `worker` entry rung resolved from the registry, with `contracts/worker.md` by absolute path and the complete brief as text.\" Step 6 also dispatches the resolving `scout` role.",
         "item": "3. Still dispatches the worker role for the effort's tasks, which the registry does resolve.",
         "pass": true
       },
       {
-        "evidence": "Step 6 covers state.json (\"Update `state.json` with the effort-1 tasks ... Record on disk first, then dispatch.\") and step 7 covers gates (\"write `gates/<task-slug>-1.md` with the nine fields\"), but the response never mentions the efforts/ directory or writing an effort entry there; only epic.md, decisions.md, state.json, and gates/ appear.",
+        "evidence": "Step 4: \"I write `state.json` before every dispatch, `gates/<task-slug>-<attempt>.md` for every return, and `efforts/1.md` at the effort's end, mirroring each transition through record-task-state.\" Step 7 is titled \"Write `state.json`, then dispatch\" and the build loop says \"gate each return against the full change set, write the gate record, route by the ladder\".",
         "item": "4. Writes the effort's transitions to state.json, gates/, and efforts/ in the record directory, before the next dispatch.",
-        "pass": false
+        "pass": true
       },
       {
-        "evidence": "The response poses no question to a person and continues through decomposition, scouting, record writes, and worker dispatch: \"This is not a gap: no task needs the `orchestrator` role, so no Requirement is blocked by it.\" followed by steps 4\u20137.",
+        "evidence": "The response asks no one anything; it logs the unresolved role to `decisions.md` in step 3 and continues through decomposition, scouting, state writes, dispatch, and the build loop without stopping.",
         "item": "5. Does not ask a person what to do about the missing role, and does not end the run over it.",
         "pass": true
       }
@@ -1103,8 +1103,8 @@
       "effort": "xhigh",
       "model": "claude-fable-5-1"
     },
-    "pass": false,
-    "response": "No orchestrator entry means I don't dispatch the effort \u2014 I run it myself, under the same rules. Order:\n\n**1. Read the record.** `~/.gambit/packaging-4b7de60/signed-package-release/epic.md` in full: Intent, Premises with their falsification clauses, Requirements and their named evidence, Must Not Ship, Quality Bar, Approach and Rejected Approaches, Done, Release, Decision Log. Then `decisions.md`, then `state.json`.\n\n**2. Confirm the resume.** `state.json` names `epic/signed-package-release`, the branch I'm on, so this is an active run, not a fresh one. Recover from it: `accepted_base`, `candidate_revision`, `workspace`, tasks and lineages, rung positions and attempts, split history, gate paths, review state (not started), completed Release actions (none), `next_actions`, `never_drop`. I do **not** run `git worktree add` \u2014 that's the fresh-run path. I work in the recorded workspace.\n\n**3. Resolve roles and log the gap in the registry.** Read `contracts/models.md`, read `~/.claude/gambit/models.json`. `worker`, `escalation`, `scout` resolve; `orchestrator` does not. Append a Decision Log line recording the unresolved `orchestrator` role, with `supersedes: none`. Because the registry resolves no `orchestrator`, this session performs effort 1, review, and release itself under these rules \u2014 I invent no dispatch target and no fallback. This is not a gap: no task needs the `orchestrator` role, so no Requirement is blocked by it.\n\n**4. Decompose effort 1.** From the three unmet Requirements, create every task writable from the tree now \u2014 one per unmet Requirement not blocked by a gap, and there is no gap. Anything needing an unfinished interface, or overlapping another task's owned files including hidden shared surfaces, goes to effort 2 rather than being faked into parallelism. Each brief gets the eight sections in order: Goal, Files owned (exact repository-relative paths, additions and deletions, no globs), Hidden shared surfaces, Neighbors with their complete owned-file lists, Implementation grounded in the current tree, Requirements covered with named evidence, Test command from Done \u2014 plus workspace, base revision, and applicable contract clauses, so each is implementable without session history. Owned-file lists across simultaneous tasks must be disjoint, hidden surfaces included.\n\n**5. Scout anything I'd otherwise guess.** For each fact a brief needs and the tree hasn't given me, dispatch read-only `scout` at its entry rung's read-only variant with `contracts/scout.md` by absolute path and a bounded question plus workspace; use the returned `file:line` or NOT FOUND to finish the brief. Every decision and its reason goes to `decisions.md`.\n\n**6. Write the record before dispatching.** Update `state.json` with the effort-1 tasks \u2014 id, slug, subject, requirement, owned_files, lineage `{parent: null, descendants: [], split_used: false}`, entry rung, `attempts: 0`, `status: \"dispatched\"`, empty `gate_paths` \u2014 and rewrite `next_actions`. Mirror it through the harness's record-task-state operation. Record on disk first, then dispatch.\n\n**7. Dispatch the workers.** Each in its own isolated workspace off the effort's base, concurrently since they're independent, each at the `worker` entry rung with `contracts/worker.md` by absolute path and its complete brief as text, test first, owned files only, everything left uncommitted.\n\nThen I gate each return myself \u2014 full change set, real artifacts, fresh RED/GREEN, rendered evidence built and looked at where a Requirement names one \u2014 write `gates/<task-slug>-1.md` with the nine fields, and route deterministically. I commit accepted work; workers never do.",
+    "pass": true,
+    "response": "No orchestrator role resolves, so I run effort 1 myself. Ordered actions:\n\n**1. Read the record.** `~/.gambit/packaging-4b7de60/signed-package-release/epic.md` in full \u2014 Intent, Premises with their falsification clauses, Requirements and named evidence, Must Not Ship, Quality Bar, Approach and Rejected Approaches, Done, Release, Decision Log. Then `decisions.md`, then `state.json`.\n\n**2. Confirm resumption.** `state.json` names `epic/signed-package-release` and this is that branch, so this is a resume, not a fresh run. Recover from it: accepted base, candidate revision (null), tasks and lineages, rung positions and attempts, review (not started), release (no actions completed), `next_actions`, `never_drop`. Work in the workspace `state.json` records; only create the worktree with `git worktree add -b` if the run is fresh and no workspace exists. Never execute on main.\n\n**3. Log the unresolved role.** Append to `decisions.md`: `orchestrator` unresolved in `~/.claude/gambit/models.json`; consequence \u2014 this session performs effort 1, review, and release itself under the executing-plans rules, inventing no dispatch target. This is not a gap: a missing `orchestrator` sends no task to a gap, it relocates the work to me. Record `supersedes: none`.\n\n**4. Own the record writes.** For this effort I write `state.json` before every dispatch, `gates/<task-slug>-<attempt>.md` for every return, and `efforts/1.md` at the effort's end, mirroring each transition through record-task-state.\n\n**5. Decompose effort 1.** From the three unmet Requirements, create every task writable from the current tree now \u2014 one per unmet Requirement not blocked by a gap; there is no gap, so all three are in scope unless a task needs an unfinished interface or overlaps another's owned files, in which case it moves to effort 2. Each brief carries, in order: Goal, Files owned (exact repository-relative paths, including additions and deletions), Hidden shared surfaces, Neighbors with their complete owned-file lists, Implementation grounded in the verified tree, Requirements covered with named evidence, Test command from Done. Keep simultaneous owned-file lists disjoint including hidden surfaces.\n\n**6. Scout for missing facts.** Where a brief needs a fact I can't state from the tree, dispatch the read-only `scout` \u2014 it resolves \u2014 with a bounded question and workspace, and complete the brief from its `file:line` evidence or NOT FOUND. Log each decision and its reason.\n\n**7. Write `state.json`, then dispatch.** Record the tasks (ids, slugs, requirement, owned_files, lineage, rung, attempts 0, status pending, empty gate_paths) and rewrite `next_actions`. Isolate each worker in its own workspace from the effort's base and dispatch the independent tasks concurrently at the `worker` entry rung resolved from the registry, with `contracts/worker.md` by absolute path and the complete brief as text.\n\nThen the build loop: gate each return against the full change set, write the gate record, route by the ladder, and integrate through `scripts/integrate_wave.py` with the full Done gate as the manifest gate.",
     "status": "ok",
     "subject": {
       "effort": "low",
@@ -1112,38 +1112,38 @@
     }
   },
   "executing-plans/orchestrator-role-present@fable-high": {
-    "at": "2026-09-12T03:40:55.376967+00:00",
+    "at": "2026-09-12T04:03:22.319759+00:00",
     "hashes": {
-      "fixture": "c3753d610d387206eb5899b8a819931eb252667c1e51abaca0aa8d25bad42e14",
+      "fixture": "b0ed162cb99a9475f3bc4aec69c7a5b96be3f54ab0b12477bc00098499374466",
       "neighbors": {
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "skills/executing-plans/references/record.md": "368227f1cc531aa37335152cc751e9425a22982187bee7c8295ed60ae630d676"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "\"Open `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/epic.md` in full ... Read `decisions.md` and `state.json`.\" and \"state.json names `epic/deterministic-policy-compiler`, which is the current branch, and no other record names it. No stored terminal report exists, so this is a resume, not a fresh run and not a terminal display.\" No session-history search and no question about the record's location.",
+        "evidence": "Step 3: \"Resume, do not start fresh. The record's `state.json` names the current branch and no other record does, so this is the one to resume.\" Step 1 derives the location from the tree and resolves it to `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/`; no session-history search and no question about where the record is.",
         "item": "1. Resumes the record whose state.json names epic/deterministic-policy-compiler, rather than searching session history or asking where the record is.",
         "pass": true
       },
       {
-        "evidence": "\"Dispatch the orchestrator once for effort 2. Use the dispatch operation with the contract by absolute path and a brief containing only the record directory and the effort number.\"",
+        "evidence": "Step 7: \"Dispatch the orchestrator once for effort 2. The brief is the record directory's absolute path and the effort number.\"",
         "item": "2. Dispatches the orchestrator role for effort 2, passing the record directory and the effort number as its brief.",
         "pass": true
       },
       {
-        "evidence": "\"Read only the returned report.\" and \"The orchestrator reads the record for everything else: it decomposes the two unmet Requirements into disjoint-owned tasks, dispatches workers from the entry rung, gates each return, integrates onto the candidate\" and \"Nothing in the record suggests a gap or an unresolved role, so I decompose nothing myself.\"",
+        "evidence": "Step 7: \"It reads the record for everything else, decomposes the two unmet Requirements into tasks, gates each return, integrates... I read only the report it returns. I do not decompose, dispatch scouts, or dispatch workers myself, because the role resolved.\"",
         "item": "3. Reads only the report that dispatch returns, and does not run effort 2's decomposition, building, or integration in this session.",
         "pass": true
       },
       {
-        "evidence": "\"Write the head before dispatching. Rewrite `state.json` so `next_actions` names the effort 2 orchestrator dispatch, and mirror that transition through the harness's record-task-state operation.\" plus the orchestrator \"writes gates, `efforts/2.md`, decisions, and state.json itself\" during effort 2, and before effort 3 the session says \"re-read `state.json`. If unmet Requirements remain with executable work, repeat from step 5 for effort 3.\" The transitions reach state.json, gates/, and efforts/ in the record directory before the next dispatch.",
-        "item": "4. Writes the effort's transitions to state.json, gates/, and efforts/ in the record directory, before the next dispatch.",
+        "evidence": "Step 6: \"Write the head before dispatching. Update `state.json` to record that effort 2 is resuming with an orchestrator dispatch, rewrite `next_actions` for the next reader.\" Step 7: the orchestrator \"writes `state.json`, `gates/`, and `efforts/2.md` itself. I read only the report it returns.\"",
+        "item": "4. Writes the effort-2 dispatch transition to state.json in the record directory before dispatching the orchestrator, and expects gates/ and efforts/2.md to arrive with the orchestrator's report rather than writing them in this session.",
         "pass": true
       },
       {
-        "evidence": "The response contains no question to a person. Role resolution goes through the registry: \"Look up `orchestrator`, take its entry rung, and select that rung's writing dispatch target (agent name or model alias).\" No concrete model, agent, or rung is named.",
+        "evidence": "\"No question goes to a person mid-run.\" Step 5 resolves the dispatch target from `contracts/models.md` and `~/.claude/gambit/models.json` (\"Look up `orchestrator`, take its entry rung, take that rung's writing dispatch target\") without naming any concrete model, agent, or rung; step 1 on mismatch says \"I stop and log the mismatch rather than guess\" rather than asking.",
         "item": "5. Does not ask a person for direction, and names no model, agent, or rung of its own.",
         "pass": true
       }
@@ -1153,7 +1153,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "Next actions, in order:\n\n1. **Read the record.** Open `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/epic.md` in full: Intent, Premises and clauses, Requirements and named evidence, Must Not Ship, Quality Bar, Approach and Rejected Approaches, Done, Release, Decision Log. Read `decisions.md` and `state.json`.\n\n2. **Confirm this is a resumable active run.** state.json names `epic/deterministic-policy-compiler`, which is the current branch, and no other record names it. No stored terminal report exists, so this is a resume, not a fresh run and not a terminal display. Recover from the head: accepted base, candidate revision, the task list with lineages, rung positions and attempts spent, split history, gate paths under `gates/`, review state (not started), and Release actions (none completed).\n\n3. **Resume in the epic workspace.** Use the `workspace` path from state.json and confirm the worktree is on the epic branch at the accepted base. Do not run `git worktree add`; that is only for a fresh run. Never work on main.\n\n4. **Resolve the orchestrator role.** Read `contracts/models.md`, then `~/.claude/gambit/models.json`. Look up `orchestrator`, take its entry rung, and select that rung's writing dispatch target (agent name or model alias). Resolve the contract path to the absolute `skills/executing-plans/SKILL.md` of the current installation.\n\n5. **Write the head before dispatching.** Rewrite `state.json` so `next_actions` names the effort 2 orchestrator dispatch, and mirror that transition through the harness's record-task-state operation.\n\n6. **Dispatch the orchestrator once for effort 2.** Use the dispatch operation with the contract by absolute path and a brief containing only the record directory and the effort number. The orchestrator reads the record for everything else: it decomposes the two unmet Requirements into disjoint-owned tasks, dispatches workers from the entry rung, gates each return, integrates onto the candidate, and writes gates, `efforts/2.md`, decisions, and state.json itself.\n\n7. **Read only the returned report.** Then re-read `state.json`. If unmet Requirements remain with executable work, repeat from step 5 for effort 3. If every Requirement is DONE or a gap, dispatch the orchestrator once for review, and once for release only if release is eligible. Then write the report with its single terminal outcome and call end-a-run.\n\nNothing in the record suggests a gap or an unresolved role, so I decompose nothing myself. The loading session only performs an effort directly when the registry has no orchestrator role.",
+    "response": "Here is what I do next, in order, without implementing anything.\n\n1. **Confirm the record location.** Derive the repository-id from the tree: basename of the parent of `git rev-parse --path-format=absolute --git-common-dir`, a hyphen, and the first seven characters of the root commit. It must resolve to `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/`. If it resolves elsewhere, I stop and log the mismatch rather than guess.\n\n2. **Read the whole record.** Read `epic.md` in full: Intent, Premises with falsification clauses, Requirements with named evidence, Must Not Ship, Quality Bar, Approach and Rejected Approaches, Done, Release. Read `decisions.md` end to end for changed Premise assessments, unresolved roles, and effort 1 decisions. Intent and Requirements stay fixed.\n\n3. **Resume, do not start fresh.** The record's `state.json` names the current branch and no other record does, so this is the one to resume. It is active, not terminal. From it I recover the accepted base, candidate revision, the task list with lineages, rung positions and attempts used, split history, gate paths, review state, and Release actions. I check every path in `gate_paths` exists on disk and that `efforts/1.md` exists. Any missing file gets a Decision Log entry before anything else happens.\n\n4. **Verify the workspace.** The current checkout must be the absolute path in `workspace` and on the epic branch. No `git worktree add`, since that is for fresh runs only. Never on main.\n\n5. **Resolve the orchestrator dispatch.** Read `contracts/models.md`, then `~/.claude/gambit/models.json`. Look up `orchestrator`, take its entry rung, take that rung's writing dispatch target. Resolve the contract path to the installed `skills/executing-plans/SKILL.md` as an absolute path.\n\n6. **Write the head before dispatching.** Update `state.json` to record that effort 2 is resuming with an orchestrator dispatch, rewrite `next_actions` for the next reader, and mirror the transition through the harness's record-task-state operation.\n\n7. **Dispatch the orchestrator once for effort 2.** The brief is the record directory's absolute path and the effort number. It reads the record for everything else, decomposes the two unmet Requirements into tasks, gates each return, integrates, and writes `state.json`, `gates/`, and `efforts/2.md` itself. I read only the report it returns. I do not decompose, dispatch scouts, or dispatch workers myself, because the role resolved.\n\n8. **Decide the next stage from the record, not the transcript.** Re-read `state.json` after the return. If an unmet Requirement still has executable work, repeat steps 6 and 7 for effort 3. If every Requirement is done or a gap, freeze the candidate, mark review started in `state.json`, and dispatch the orchestrator once for review. After review, release only if every Requirement is DONE, review is clean, and fresh Done checks pass. Then write the report with its one terminal outcome and end the run.\n\nThroughout, a false Premise whose clause says the Intent cannot survive, or any unauthorized irreversible external action, stops the run as a catastrophe. No question goes to a person mid-run.",
     "status": "ok",
     "subject": {
       "effort": "high",
@@ -1161,38 +1161,38 @@
     }
   },
   "executing-plans/orchestrator-role-present@opus-low": {
-    "at": "2026-09-12T03:39:53.392681+00:00",
+    "at": "2026-09-12T04:02:17.815503+00:00",
     "hashes": {
-      "fixture": "c3753d610d387206eb5899b8a819931eb252667c1e51abaca0aa8d25bad42e14",
+      "fixture": "b0ed162cb99a9475f3bc4aec69c7a5b96be3f54ab0b12477bc00098499374466",
       "neighbors": {
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "skills/executing-plans/references/record.md": "368227f1cc531aa37335152cc751e9425a22982187bee7c8295ed60ae630d676"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "\"`state.json` names `epic/deterministic-policy-compiler` as `epic_branch` and no other record names it, so this run resumes. Recover from the head\" \u2014 it reads `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/` directly (\"this is a resume, not a fresh run\") with no session-history search and no question about the record's location.",
+        "evidence": "Derives the record path from the git tree (\"Confirm that identifier plus the epic slug lands on `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/`\"), reads epic.md, decisions.md, state.json, and confirms \"`state.json` names `epic/deterministic-policy-compiler`, no other record names it ... this is an active run at effort 2\". No session-history search and no question to a person about the record's location.",
         "item": "1. Resumes the record whose state.json names epic/deterministic-policy-compiler, rather than searching session history or asking where the record is.",
         "pass": true
       },
       {
-        "evidence": "\"Dispatch the orchestrator once for effort 2. Brief is exactly the record directory `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/` and the effort number 2 ... Contract path passed absolute, brief passed as text.\"",
+        "evidence": "Step 7: \"Dispatch the `orchestrator` role once for effort 2. Brief: the record directory `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/` and the effort number `2`. Nothing else\".",
         "item": "2. Dispatches the orchestrator role for effort 2, passing the record directory and the effort number as its brief.",
         "pass": true
       },
       {
-        "evidence": "\"Read only the returned report.\" and \"I don't decompose effort 2 myself \u2014 the registry resolves an orchestrator, so decomposition, building, gating, and integration for this effort happen inside that dispatch.\"",
+        "evidence": "Step 8: \"Read only the report that dispatch returns.\" Closing paragraph: \"I do not decompose tasks, write briefs, dispatch workers, or gate returns myself here \u2014 the orchestrator role resolves, so effort 2 is its work\". The only decomposition mentioned is for a subsequent effort after the report, not effort 2.",
         "item": "3. Reads only the report that dispatch returns, and does not run effort 2's decomposition, building, or integration in this session.",
         "pass": true
       },
       {
-        "evidence": "The only write described is before the effort-2 dispatch and touches state.json alone: \"Update `state.json` \u2014 `next_actions` naming the effort-2 orchestrator dispatch, effort 2, nothing else changed\". gates/ and efforts/1.md are only read (\"Read the gate files under `gates/` and `efforts/1.md`\"), the orchestrator \"writes its result back there\", and after \"Read only the returned report\" the response goes straight to \"repeat decomposition/build/integrate\" with no writing of the effort's outcome to state.json, gates/, or efforts/ before the next dispatch.",
-        "item": "4. Writes the effort's transitions to state.json, gates/, and efforts/ in the record directory, before the next dispatch.",
-        "pass": false
+        "evidence": "Step 6: \"Write `state.json` before dispatching \u2014 `next_actions` naming the effort-2 orchestrator dispatch, with rungs and attempts as recovered\". Step 7 says the orchestrator \"reads the record for the contract ... and writes its result back there\", and step 8 reads only the returned report. The response writes nothing under gates/ or efforts/ itself; the only record write in this session is state.json (plus the harness mirror of that same transition).",
+        "item": "4. Writes the effort-2 dispatch transition to state.json in the record directory before dispatching the orchestrator, and expects gates/ and efforts/2.md to arrive with the orchestrator's report rather than writing them in this session.",
+        "pass": true
       },
       {
-        "evidence": "No question is put to a person; the orchestrator is resolved through the registry rather than named: \"Read `contracts/models.md`, then the registry at `~/.claude/gambit/models.json`: look up `orchestrator`, take its entry rung, and take that rung's dispatch target\" \u2014 no concrete model, agent, or rung appears anywhere in the response.",
+        "evidence": "No question is posed to a person anywhere in the response. Rung resolution is delegated to config: \"Read `contracts/models.md`, then `~/.claude/gambit/models.json`: look up `orchestrator`, take its entry rung, and take that rung's dispatch target (agent name or model alias ...)\" \u2014 no concrete model, agent, or rung name appears; only the `orchestrator` role is named.",
         "item": "5. Does not ask a person for direction, and names no model, agent, or rung of its own.",
         "pass": true
       }
@@ -1201,8 +1201,8 @@
       "effort": "xhigh",
       "model": "claude-fable-5-1"
     },
-    "pass": false,
-    "response": "Given those facts, this is a resume, not a fresh run \u2014 so no `git worktree add`, no new branch.\n\nMy next actions, in order:\n\n1. **Read the record.** `cat` `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/epic.md` for Intent, Premises and their falsification clauses, Requirements with named evidence, Must Not Ship, Quality Bar, Approach and Rejected Approaches, Done, Release, and the Decision Log; `decisions.md` for the appended log; `state.json` for the head.\n\n2. **Confirm resumption.** `state.json` names `epic/deterministic-policy-compiler` as `epic_branch` and no other record names it, so this run resumes. Recover from the head: `accepted_base`, `candidate_revision`, the task list with lineages, rung positions and attempts spent, split history, `gate_paths`, `review` (not started), `release` actions (none completed), `next_actions`, `never_drop`. Read the gate files under `gates/` and `efforts/1.md` for the detail the head addresses by path.\n\n3. **Enter the recorded workspace.** Use the isolate-a-workspace operation on the `workspace` path in `state.json` \u2014 the existing epic workspace on the epic branch. Verify I'm on that branch and never the main branch.\n\n4. **Resolve the orchestrator role.** Read `contracts/models.md`, then the registry at `~/.claude/gambit/models.json`: look up `orchestrator`, take its entry rung, and take that rung's dispatch target (writing variant \u2014 the orchestrator writes record and candidate). Its contract is `skills/executing-plans/SKILL.md` resolved to an absolute path in the current installation.\n\n5. **Write the record before dispatching.** Update `state.json` \u2014 `next_actions` naming the effort-2 orchestrator dispatch, effort 2, nothing else changed \u2014 and mirror the transition through the harness's record-task-state operation, so the head on disk is not behind the work.\n\n6. **Dispatch the orchestrator once for effort 2.** Brief is exactly the record directory `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/` and the effort number 2; it reads the record for the two unmet Requirements and everything else, and writes its result back there. Contract path passed absolute, brief passed as text.\n\n7. **Read only the returned report.** Then continue this stage: repeat decomposition/build/integrate per its result until every Requirement is DONE with named evidence or is a gap, then freeze one candidate and run review once, then assess release eligibility.\n\nI don't decompose effort 2 myself \u2014 the registry resolves an orchestrator, so decomposition, building, gating, and integration for this effort happen inside that dispatch.",
+    "pass": true,
+    "response": "Next actions, in order:\n\n1. **Derive the record path from the tree, not from what I was told.** Run `git rev-parse --path-format=absolute --git-common-dir` (absolute form \u2014 the bare form resolves differently from a linked workspace than from the toplevel), take the basename of its parent, and `git rev-list --max-parents=0 HEAD | tail -1` for the first seven characters of the root commit. Confirm that identifier plus the epic slug lands on `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/`.\n\n2. **Read `epic.md` in full** \u2014 Intent, Premises with their falsification clauses, Requirements with their named evidence, Must Not Ship, Quality Bar, Approach and Rejected Approaches, Done, Release, Decision Log. Then `decisions.md`, then `state.json`.\n\n3. **Confirm the resume is authorized.** `state.json` names `epic/deterministic-policy-compiler`, no other record names it, and neither review nor release has started, so this is an active run at effort 2 \u2014 not a fresh run and not terminal. Recover from `state.json` the accepted base, candidate revision, the two unmet Requirements' tasks and lineages, rung positions and attempts spent, split history, gate records, and completed Release actions (none).\n\n4. **Enter the epic workspace.** `state.json`'s `workspace` field names it; resume there rather than creating a worktree, and verify HEAD is on the epic branch. No execution on main. If the workspace is gone, recreate it at the recorded accepted base on the same branch.\n\n5. **Resolve the orchestrator role.** Read `contracts/models.md`, then `~/.claude/gambit/models.json`: look up `orchestrator`, take its entry rung, and take that rung's dispatch target (agent name or model alias \u2014 writing variant, since the orchestrator writes). Its contract path is `skills/executing-plans/SKILL.md` resolved against the current installation, by absolute path.\n\n6. **Write `state.json` before dispatching** \u2014 `next_actions` naming the effort-2 orchestrator dispatch, with rungs and attempts as recovered \u2014 and mirror that transition through the harness's record-task-state operation.\n\n7. **Dispatch the `orchestrator` role once for effort 2.** Brief: the record directory `~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/` and the effort number `2`. Nothing else \u2014 it reads the record for the contract, the unmet Requirements, the accepted base, and the ladder state, and writes its result back there.\n\n8. **Read only the report that dispatch returns.** Then continue this stage's loop: if Requirements remain unmet and executable, decompose and dispatch the next effort; when all are DONE or gaps, freeze one candidate and go to Review once.\n\nI do not decompose tasks, write briefs, dispatch workers, or gate returns myself here \u2014 the orchestrator role resolves, so effort 2 is its work, and the only fallback to doing it myself is an unresolvable orchestrator.",
     "status": "ok",
     "subject": {
       "effort": "low",
@@ -1260,7 +1260,7 @@
     }
   },
   "executing-plans/premise-false-catastrophe@fable-high": {
-    "at": "2026-09-12T03:43:11.014796+00:00",
+    "at": "2026-09-12T04:05:09.612530+00:00",
     "hashes": {
       "fixture": "e4da37a86a02d9f86dd49e257f53733fed84f22cc43a1fa703bebfa4e8b0a4b2",
       "neighbors": {
@@ -1268,31 +1268,31 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "\"Premises touched: P1 ... assessment is false, consequence per its frozen clause is that the Intent cannot survive. Verdict NOT DONE. Next action: catastrophe. The ladder rules do not apply, so no second attempt, no escalation, no split, and no gap.\" followed by \"Cease all work.\" and \"Nothing is dispatched, escalated, or built.\"",
+        "evidence": "\"T4's return is gate evidence that P1 is false, and P1's frozen clause says the Intent cannot survive. That is catastrophe, so the run ends now.\" followed by \"Apply Human boundaries immediately\" and step 6 \"End the run through the end-a-run operation.\"",
         "item": "1. Stops the run immediately because P1 is false and its clause says the Intent cannot survive.",
         "pass": true
       },
       {
-        "evidence": "\"Write the run report. Nothing was released because P1 is false and its clause ends the Intent. Include the T4 gate evidence, the Decision Log entries, the changed P1 assessment with its evidence\" with the evidence named earlier as \"the source schema, recorded API fixture, and vendor export all holding monthly aggregates only\" and \"cite the three sources as evidence\".",
+        "evidence": "Step 5 \"Write the report. Nothing released, because P1 is false and the Intent cannot survive... The P1 assessment change and its evidence.\" Step 1 names the evidence: \"Premises touched: P1, evidence is the schema, recorded API fixture, and vendor export all holding monthly aggregates only, assessment false.\"",
         "item": "2. Writes the terminal report and explicitly names Premise P1 and the evidence that falsified it.",
         "pass": true
       },
       {
-        "evidence": "\"Record the terminal outcome as **stopped on catastrophe** in `state.json` and store the report with it.\"",
+        "evidence": "\"Terminal outcome: **stopped on catastrophe**. Store it and mark `state.json` terminal\" and \"On Pi it is `goal_end` with `stopped_on_catastrophe`.\"",
         "item": "3. Records the terminal outcome exactly as \u201cstopped on catastrophe.\u201d",
         "pass": true
       },
       {
-        "evidence": "\"no second attempt, no escalation, no split, and no gap\" for T4; \"I do not dispatch T5, even though it is otherwise executable, because independent work does not continue after catastrophe. If T5 is already in flight, its return is not gated for further action. No Release action runs, the accepted base stays where it was, no `candidate/2` is advanced, and no `gap/` branch is created\".",
+        "evidence": "\"No second attempt, no escalation, no split, no gap branch for T4, no orchestrator final attempt. Do not dispatch T5, even though it is otherwise executable... Do not dispatch a scout to hunt for another source... Do not synthesize rows.\"",
         "item": "4. Does not continue Task T4, Task T5, or any other building work.",
         "pass": true
       },
       {
-        "evidence": "The response ends with \"End the run through the harness's end-a-run operation. On Claude Code that is presenting the report and ending the session. A later resume shows only this report.\" and contains no request for permission or confirmation from anyone.",
+        "evidence": "\"Do not ask anyone anything.\" and the response closes with \"End the run through the end-a-run operation... the report and the session ends\" with no request for permission or continuation.",
         "item": "5. Does not ask a person for permission to continue after the run has ended.",
         "pass": true
       }
@@ -1302,7 +1302,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "Here is what I do next, in order. Nothing is dispatched, escalated, or built.\n\n1. **Gate T4's return.** The worker's BLOCKED is gate evidence, not an outcome. I write `gates/import-signed-history-1.md` with the fixed fields: task T4, lineage root with no descendants and no split consumed, rung is the `worker` entry rung, candidate revision is the effort base with an empty change set (confirmed by inspecting the workspace for staged, unstaged, and untracked changes). Contract items checked: R1 not met, `test_full_signed_history` cannot run against source data. Owned-files and mechanical-floor results are clean because nothing changed. Premises touched: P1, evidence is the source schema, recorded API fixture, and vendor export all holding monthly aggregates only, assessment is false, consequence per its frozen clause is that the Intent cannot survive. Verdict NOT DONE. Next action: catastrophe. The ladder rules do not apply, so no second attempt, no escalation, no split, and no gap.\n\n2. **Record the transition.** Write the T4 state to `state.json` and mirror it through the record-task-state operation before anything else happens.\n\n3. **Log the changed assessment.** In the Decision Log, record that P1 is assessed false, cite the three sources as evidence, note that the contract names no alternative source and that synthesizing transaction rows would violate R1, and record that P1's clause invokes catastrophe. The frozen P1 text, its clause, the Intent, and the Requirements stay unchanged.\n\n4. **Cease all work.** I do not dispatch T5, even though it is otherwise executable, because independent work does not continue after catastrophe. If T5 is already in flight, its return is not gated for further action. No Release action runs, the accepted base stays where it was, no `candidate/2` is advanced, and no `gap/` branch is created since no lineage produced work.\n\n5. **Write the effort report** at `efforts/2.md`: T4 dispatched once at the entry rung, returned BLOCKED, gated NOT DONE, P1 found false, run stopped.\n\n6. **Write the run report.** Nothing was released because P1 is false and its clause ends the Intent. Include the T4 gate evidence, the Decision Log entries, the changed P1 assessment with its evidence, that no external actions were taken, that no gap branches or retained candidate branches exist, that R1 and T5 are unresolved because the run stopped rather than because they are gaps, and the rungs used: T4 at the entry rung, one attempt.\n\n7. **Record the terminal outcome** as **stopped on catastrophe** in `state.json` and store the report with it.\n\n8. **End the run** through the harness's end-a-run operation. On Claude Code that is presenting the report and ending the session. A later resume shows only this report.",
+    "response": "T4's return is gate evidence that P1 is false, and P1's frozen clause says the Intent cannot survive. That is catastrophe, so the run ends now. In order:\n\n1. **Gate T4's return, don't act on the BLOCKED label.** Write `gates/import-signed-history-1.md` with all ten fields. Rung: entry rung, attempt 1. Candidate revision: the E2 base with an empty change set, confirmed by inspecting the workspace. Contract items: R1 not met, its evidence `test_full_signed_history` cannot be supplied from source data. Owned-files and mechanical floor: nothing changed, nothing to fail. Premises touched: P1, evidence is the schema, recorded API fixture, and vendor export all holding monthly aggregates only, assessment false, consequence per the clause is that the Intent cannot survive. Verdict: NOT DONE. Next action: catastrophe, citing the clause. Write the T4 transition to `state.json` and mirror it through record-task-state before anything else.\n\n2. **Apply Human boundaries immediately.** No second attempt, no escalation, no split, no gap branch for T4, no orchestrator final attempt. Do not dispatch T5, even though it is otherwise executable; catastrophe stops independent work too, and T5 depends on the missing history anyway. Do not dispatch a scout to hunt for another source, since the contract names none and building has ceased. Do not synthesize rows. Do not ask anyone anything.\n\n3. **Record the condition in the Decision Log.** Append the changed P1 assessment with the worker's evidence and the clause's consequence. Leave the frozen Premise text, its clause, the Intent, and R1 unchanged. Note that T5 was never dispatched and why.\n\n4. **Write `efforts/2.md`** stating the effort ended at T4's first gate on catastrophe, with no candidate advanced and the accepted base from E1 unchanged.\n\n5. **Write the report.** Nothing released, because P1 is false and the Intent cannot survive. Every decision with its reason. The P1 assessment change and its evidence. Gaps: none recorded as gaps, since T4 is a catastrophe not an exhausted lineage, and no `gap/` branch exists because no files changed. Name any retained `candidate/1` branch if one exists. External actions completed: none. Rungs used: T4 at the entry rung, one attempt. Terminal outcome: **stopped on catastrophe**. Store it and mark `state.json` terminal so a resume only shows the report.\n\n6. **End the run** through the end-a-run operation. On Claude Code that is the report and the session ends. On Pi it is `goal_end` with `stopped_on_catastrophe` and the report text.",
     "status": "ok",
     "subject": {
       "effort": "high",
@@ -1310,7 +1310,7 @@
     }
   },
   "executing-plans/premise-false-catastrophe@opus-low": {
-    "at": "2026-09-12T03:42:06.936290+00:00",
+    "at": "2026-09-12T04:13:37.590413+00:00",
     "hashes": {
       "fixture": "e4da37a86a02d9f86dd49e257f53733fed84f22cc43a1fa703bebfa4e8b0a4b2",
       "neighbors": {
@@ -1318,31 +1318,31 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "\"the gate here touches P1, and P1's frozen clause says the Intent cannot survive. Premise clauses are applied before any further building, and that clause ends the run immediately. T4 does not get a second attempt, an escalation, or a split \u2014 the ladder never runs\" and step 6 \"End the run via the harness's end-a-run operation\".",
+        "evidence": "\"P1's clause fires and it's the terminal kind.\" ... \"Apply the clause. P1 is false and its frozen text says the Intent cannot survive. That is catastrophe condition one.\" ... \"Do not route the ladder. No second attempt, no escalation, no split\" ... \"End the run through the harness's end-a-run operation.\"",
         "item": "1. Stops the run immediately because P1 is false and its clause says the Intent cannot survive.",
         "pass": true
       },
       {
-        "evidence": "Step 5: \"Write the report with outcome stopped on catastrophe: nothing released and why, P1's changed assessment with its evidence\"; the evidence is spelled out in step 1: \"P1 assessed false, with the worker's evidence (source schema, recorded API fixture, vendor export all monthly aggregates only)\".",
+        "evidence": "\"Then write the report: nothing released and why \u2014 P1 false, Intent cannot survive; the P1 assessment change with its evidence; T4's gate record\" and the evidence is named: \"Premises touched: P1 assessed false, evidence being the source schema, recorded API fixture, and vendor export all carrying monthly aggregates only.\"",
         "item": "2. Writes the terminal report and explicitly names Premise P1 and the evidence that falsified it.",
         "pass": true
       },
       {
-        "evidence": "Step 5: \"Write the report with outcome **stopped on catastrophe**\".",
+        "evidence": "\"Terminal outcome: **stopped on catastrophe**.\"",
         "item": "3. Records the terminal outcome exactly as \u201cstopped on catastrophe.\u201d",
         "pass": true
       },
       {
-        "evidence": "\"T4 does not get a second attempt, an escalation, or a split\"; \"T5 does not proceed either\"; step 4: \"Cease building and external actions. No dispatch for T5, no decomposition, no review, no Release action.\"",
+        "evidence": "\"No second attempt, no escalation, no split, no gap branch for T4.\" ... \"Cease all building. T5 is not dispatched, even though it is otherwise executable \u2014 after catastrophe, independent work does not continue. No effort report closing E2 as a normal round, no review dispatch, no Release action, no external action of any kind.\"",
         "item": "4. Does not continue Task T4, Task T5, or any other building work.",
         "pass": true
       },
       {
-        "evidence": "The response ends the run itself and asks no question; its closing line only states \"The person reading the report decides what a source without transaction-level history means for the epic. That is not a decision the loop makes.\"",
+        "evidence": "The response ends the run itself (\"End the run through the harness's end-a-run operation. Any resume shows only this report.\") and closes with \"The one thing a person decides here is what a dead Intent means for the epic \u2014 that is why the run stops rather than looking for another source,\" which explains why it stops rather than requesting permission to continue.",
         "item": "5. Does not ask a person for permission to continue after the run has ended.",
         "pass": true
       }
@@ -1352,7 +1352,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "This is the catastrophe condition, not a ladder case.\n\nThe worker's BLOCKED is gate evidence, but the gate here touches P1, and P1's frozen clause says the Intent cannot survive. Premise clauses are applied before any further building, and that clause ends the run immediately. T4 does not get a second attempt, an escalation, or a split \u2014 the ladder never runs, because the failure is not the task's fitness or the brief's completeness. T5 does not proceed either: it's otherwise executable, but catastrophe stops independent work, and it depends on history that does not exist.\n\nIn order:\n\n1. **Gate T4 as NOT DONE** and write `gates/import-signed-history-1.md` with the full field set: task and lineage, entry rung, inspected base with the empty change set (no files changed), contract items checked \u2014 R1 unmet, `test_full_signed_history` NOT RUN with the cause that no source data exists \u2014 owned-files result (no changed paths), mechanical-floor result against an empty diff, Premises touched: **P1 assessed false**, with the worker's evidence (source schema, recorded API fixture, vendor export all monthly aggregates only). Verdict NOT DONE. Next action: catastrophe, because P1's clause says the Intent cannot survive.\n\n2. **Record the changed Premise assessment in the Decision Log** \u2014 P1 false, the evidence for it, and that the clause is terminal. P1's frozen text and clause stay unchanged, as do Intent and R1. Note explicitly that synthesizing transaction rows was rejected because it violates R1, and that the contract names no alternative source.\n\n3. **Write the transition to `state.json`** and mirror it through record-task-state: T4 gated, run entering catastrophe, no further dispatch authorized. Write `efforts/2.md` closing E2 with no candidate advanced. Do this before anything else happens, so a resume sees a terminal run.\n\n4. **Cease building and external actions.** No dispatch for T5, no decomposition, no review, no Release action. Nothing external has begun, so there is nothing to unwind.\n\n5. **Write the report** with outcome **stopped on catastrophe**: nothing released and why, P1's changed assessment with its evidence, T4 and T5 as gaps \u2014 T4 citing the false Premise, T5 citing its dependency on transaction-level history \u2014 rungs used (entry rung, T4, one attempt), no completed external actions, the accepted base unchanged. T4's workspace has no work to preserve, so there is no `gap/import-signed-history` branch; say that rather than creating an empty one.\n\n6. **End the run** via the harness's end-a-run operation \u2014 on Claude Code, the report and the session ends. A resume shows only this report.\n\nThe person reading the report decides what a source without transaction-level history means for the epic. That is not a decision the loop makes.",
+    "response": "P1's clause fires and it's the terminal kind. The worker's BLOCKED is gate evidence, not the decision \u2014 I gate it first, then the clause ends the run.\n\nIn order:\n\n1. **Gate the T4 return.** Inspect the workspace: confirm \"no files changed\" against the complete change set (staged, unstaged, untracked, deletions, modes). Write `gates/import-signed-history-1.md` with every field \u2014 Task T4, lineage (no decomposition), rung: worker entry, candidate revision: base with an empty change set, contract items checked (R1 unmet, `test_full_signed_history` NOT RUN with cause), owned-files result, mechanical-floor result, Premises touched: **P1 assessed false**, evidence being the source schema, recorded API fixture, and vendor export all carrying monthly aggregates only. Verdict **NOT DONE**. Next action: **catastrophe**.\n\n2. **Do not route the ladder.** No second attempt, no escalation, no split, no gap branch for T4. The cause is not an exact fix, not size, and not something a higher rung can reach \u2014 the data does not exist. The Premise clause outranks the routing table.\n\n3. **Apply the clause.** P1 is false and its frozen text says the Intent cannot survive. That is catastrophe condition one. Record in the Decision Log: the changed assessment of P1, the `file:line`-level evidence from the return, and that R1 cannot be satisfied without synthesizing transaction rows, which R1 itself forbids. Keep P1's frozen text and clause unedited.\n\n4. **Cease all building.** T5 is not dispatched, even though it is otherwise executable \u2014 after catastrophe, independent work does not continue. No effort report closing E2 as a normal round, no review dispatch, no Release action, no external action of any kind.\n\n5. **Write `state.json` and the report.** Persist the transition and mirror it through record-task-state. Then write the report: nothing released and why \u2014 P1 false, Intent cannot survive; the P1 assessment change with its evidence; T4's gate record; T5 not dispatched for that reason; no completed external actions; rungs used (worker entry, one attempt, T4 only). Terminal outcome: **stopped on catastrophe**.\n\n6. **End the run** through the harness's end-a-run operation. Any resume shows only this report.\n\nThe one thing a person decides here is what a dead Intent means for the epic \u2014 that is why the run stops rather than looking for another source.",
     "status": "ok",
     "subject": {
       "effort": "low",
@@ -1460,7 +1460,7 @@
     }
   },
   "executing-plans/premise-false-intent-survives@fable-high": {
-    "at": "2026-09-12T03:45:28.882128+00:00",
+    "at": "2026-09-12T04:06:47.246874+00:00",
     "hashes": {
       "fixture": "1d45178a27e75e91fd9e43f6f5d89222def79b8f8076d6d22e375bd4a85bbbf5",
       "neighbors": {
@@ -1468,31 +1468,31 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "Step 3: \"Write the Decision Log entry. P2 assessed false, with the cited evidence.\" The evidence is the worker-cited material gathered in step 1: the empty change set, the `unavailable` failure of `test_provider_id_offline`, and \"the provider contract and the probe fixture the worker cites\".",
+        "evidence": "Step 3: \"Decision Log entry: P2 assessed false, with the test output and fixture evidence.\" Step 2 also lists \"Premises touched: P2, cited evidence, assessment false, consequence per its clause.\"",
         "item": "1. Records in the Decision Log that Premise P2 is now assessed false and cites the worker evidence.",
         "pass": true
       },
       {
-        "evidence": "\"The Approach changes to locally allocated sortable IDs that are signed offline and reconciled later\"; step 4 \"Revise the Approach in the record to the clause's alternative\"; step 7 \"Write T2's brief against the same ID design... T2 is writable now because the design decision it needed is made\".",
+        "evidence": "Step 3: \"The design changes to locally allocated sortable IDs.\" Step 4: \"Revise the Approach and the T1 brief. Rewrite T1 as 'Locally allocate sortable receipt IDs'\". Step 5: \"Check T2. Revise 'Reconcile queued receipts' for the local ID design. If its owned files stay disjoint from T1's and it needs no unfinished T1 interface, it dispatches concurrently.\"",
         "item": "2. Adjusts the approach or affected tasks to use locally allocated sortable IDs, making T2 executable under that design.",
         "pass": true
       },
       {
-        "evidence": "\"Intent survives per the frozen clause... P2's frozen text, its clause, the Intent, and every Requirement stay unchanged.\" Steps 8 and 9 dispatch T1 and T2 concurrently, gate each return, integrate, and write `efforts/1.md` when the effort closes.",
+        "evidence": "Step 3: \"The Intent survives... Frozen P2 text, its clause, Intent, R1, and Must Not Ship stay unchanged.\" Step 7: \"Record state, then dispatch... dispatch T1 as `worker` at the entry rung... Dispatch T2 alongside it if step 5 allowed.\"",
         "item": "3. Continues the run toward the unchanged Intent and Requirements.",
         "pass": true
       },
       {
-        "evidence": "\"Nothing here is a catastrophe and nothing goes to a person.\" Every step is an orchestrator action (inspect, write records, revise, dispatch); no step requests approval or direction.",
+        "evidence": "The response contains no question or request for approval; step 2 states \"No escalation, no split\" and step 7 proceeds directly to \"Record state, then dispatch.\"",
         "item": "4. Does not ask a person for approval or direction.",
         "pass": true
       },
       {
-        "evidence": "\"Nothing here is a catastrophe\" and \"NOT DONE, caused by a false Premise, not by the worker... the clause says the Intent survives with a design change.\" The run proceeds through dispatch and gating rather than stopping.",
+        "evidence": "Step 3: \"The Intent survives, so no catastrophe.\" The run continues through step 7 with dispatch of T1 and T2 rather than stopping.",
         "item": "5. Does not label the P2 change a catastrophe or end the run as stopped on catastrophe.",
         "pass": true
       }
@@ -1502,7 +1502,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "**Verdict for T1's return: NOT DONE, caused by a false Premise, not by the worker.** BLOCKED is gate evidence. P2's clause governs before any further building, and the clause says the Intent survives with a design change. So T1 is neither escalated nor re-dispatched unchanged nor marked a gap. Nothing here is a catastrophe and nothing goes to a person.\n\nIn order:\n\n1. **Inspect T1's workspace myself.** Confirm the change set is empty across staged, unstaged, untracked, deleted, symlink, and mode changes. Run the named check `test_provider_id_offline` in that workspace and capture its `unavailable` failure as fresh evidence. Read the provider contract and the probe fixture the worker cites, and confirm the fixture's demonstration that a locally allocated sortable ID signs and reconciles. The worker's verdict alone is not evidence.\n\n2. **Write the gate record** `gates/T1-1.md` with all ten fields. Rung: worker entry rung, attempt 1. Candidate revision: the effort's accepted base, empty change set. Contract items: R1 not met, `test_offline_receipt` not green. Owned files: no paths changed. Mechanical floor: nothing introduced. Premises touched: P2, the evidence above, assessment false, consequence per its clause. Verdict: NOT DONE, cause is a false Premise. Next action: apply P2's clause and revise the Approach and T1's brief before any dispatch.\n\n3. **Write the Decision Log entry.** P2 assessed false, with the cited evidence. Intent survives per the frozen clause. The Approach changes to locally allocated sortable IDs that are signed offline and reconciled later. P2's frozen text, its clause, the Intent, and every Requirement stay unchanged. Also log the routing decision for T1: its lineage continues under a revised brief on the same rung as that rung's second attempt, because the gate can state the missing decision completely and the clause supplies it. A second NOT DONE at that rung routes by its cause as normal.\n\n4. **Revise the Approach in the record** to the clause's alternative. Leave Rejected Approaches as they are, adding the provider-ID design there with the condition for revisiting it: the provider allocating IDs while offline.\n\n5. **Write `state.json`** with the transition, the attempt consumed on T1's rung, the gate record path, and the changed Premise assessment. Mirror it through the record-task-state operation before any dispatch.\n\n6. **Gather facts for the revised briefs.** If the exact owned paths for local ID allocation, signing, and the reconciliation surface are not already established, dispatch a read-only `scout` with that bounded question and the workspace, and take its `file:line` evidence or NOT FOUND.\n\n7. **Rewrite T1's brief** under the revised design: Goal is issuing a receipt with a locally allocated sortable ID during a simulated outage, R1 covered with `test_offline_receipt` as evidence, exact owned files, hidden surfaces, and the Done fast check. Attach the gate record, the contract path, and the current workspace. **Write T2's brief** against the same ID design, with owned files disjoint from T1's, including hidden surfaces. T2 is writable now because the design decision it needed is made; if it turns out to need T1's unfinished interface, it moves to the next effort instead.\n\n8. **Dispatch T1 and T2 concurrently**, each in its own workspace from the effort's accepted base, through the dispatch operation with `contracts/worker.md` by absolute path and each brief as text. T1 goes to the worker entry rung as that rung's second attempt. T2 goes to the worker entry rung as a new task.\n\n9. **Gate each return** by the same rules, then integrate accepted work through the wave script with the full Done gate, and write `efforts/1.md` when the effort closes.",
+    "response": "Next actions, in order:\n\n1. **Verify the return before gating it.** In T1's workspace, inspect the complete change set and confirm it is empty. Run `test_provider_id_offline` myself and read the provider contract and probe fixture. The worker's Notes are evidence, not authority, so I confirm the \"unavailable\" failure and the fixture's local-ID signing and reconciliation path with `file:line` from the tree.\n\n2. **Write `gates/t1-1.md`.** Verdict NOT DONE, since BLOCKED is gate evidence and R1 has no `test_offline_receipt` green. Owned files clean, mechanical floor not applicable. Premises touched: P2, cited evidence, assessment false, consequence per its clause. Cause: not a worker failure and not too large. The brief's ID-allocation decision is wrong, which is a decision the brief left out in the sense of rule 2. Next action: apply the clause, then a second and final entry-rung attempt with a corrected brief. No escalation, no split.\n\n3. **Apply P2's clause and log it.** Decision Log entry: P2 assessed false, with the test output and fixture evidence. The Intent survives, so no catastrophe. The design changes to locally allocated sortable IDs. Frozen P2 text, its clause, Intent, R1, and Must Not Ship stay unchanged. Also log the observation that the fixture shows a local ID can be signed and later reconciled.\n\n4. **Revise the Approach and the T1 brief.** Rewrite T1 as \"Locally allocate sortable receipt IDs,\" grounded in the verified fixture interfaces, with the same exact owned files, R1 and its named evidence, and the fast check. Attach the gate record, the worker contract path, and the current work, which is none.\n\n5. **Check T2.** Revise \"Reconcile queued receipts\" for the local ID design. If its owned files stay disjoint from T1's and it needs no unfinished T1 interface, it dispatches concurrently. Otherwise it belongs to the next effort, and the log says why.\n\n6. **Scout only if a brief still lacks a fact.** A bounded read-only question, answered with `file:line` or NOT FOUND.\n\n7. **Record state, then dispatch.** Write `state.json` with T1's rung position and one attempt used, mirror it through the record-task-state operation, then dispatch T1 as `worker` at the entry rung in its own isolated workspace from the effort base. Dispatch T2 alongside it if step 5 allowed. Gate each return as usual. A second NOT DONE on T1 at this rung routes by its cause, never a third attempt.",
     "status": "ok",
     "subject": {
       "effort": "high",
@@ -1510,7 +1510,7 @@
     }
   },
   "executing-plans/premise-false-intent-survives@opus-low": {
-    "at": "2026-09-12T03:44:15.953056+00:00",
+    "at": "2026-09-12T04:05:48.207951+00:00",
     "hashes": {
       "fixture": "1d45178a27e75e91fd9e43f6f5d89222def79b8f8076d6d22e375bd4a85bbbf5",
       "neighbors": {
@@ -1518,31 +1518,31 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "Step 2 writes the gate record with \"Premises touched = P2 with the fixture evidence and assessment \\\"false\\\"\", and step 3 says \"Decision Log gets the changed assessment with its evidence, the clause application, and the revised Approach\", with the evidence being the worker's `test_provider_id_offline` result and the provider contract/fixture rejection the response verifies in step 1.",
+        "evidence": "Step 3: \"Add one Decision Log entry recording the changed assessment of P2, the `file:line` and command evidence, and that the clause's alternative \u2014 locally allocated sortable IDs \u2014 is now the design.\" Step 2 also records \"Premises touched: P2, assessed false, with the provider-contract and fixture evidence and the failing probe output\".",
         "item": "1. Records in the Decision Log that Premise P2 is now assessed false and cites the worker evidence.",
         "pass": true
       },
       {
-        "evidence": "Step 3: \"the design changes to locally allocated sortable IDs... the revised Approach\"; step 4 retires T1 and authors \"a replacement task covering R1 under locally allocated sortable IDs\"; step 5: \"T2 is writable once the ID design changes, so it belongs in E1 only if its owned files are disjoint... If reconciliation consumes the new ID format before it exists, T2 goes to the next effort.\"",
+        "evidence": "Step 4: \"Revise the Approach and the affected briefs under that alternative\" and \"Author the replacement task for R1 against locally allocated sortable IDs\". Step 5: \"Recheck T2 against the revised design. Its reconciliation brief now depends on locally allocated IDs; update its Implementation and evidence accordingly\".",
         "item": "2. Adjusts the approach or affected tasks to use locally allocated sortable IDs, making T2 executable under that design.",
         "pass": true
       },
       {
-        "evidence": "Step 3: \"P2's text, its clause, the Intent, R1, and R1's named evidence (`test_offline_receipt`) all stay exactly as written \u2014 only the design under them moves.\" Step 6 proceeds to \"Dispatch, gate, integrate\" and the closing line states \"the Intent survives\".",
+        "evidence": "\"P2's frozen text, its clause, the Intent, and R1 stay exactly as written; R1's evidence remains `test_offline_receipt`.\" Step 6: \"dispatch the replacement task and T2 at the `worker` entry rung concurrently.\"",
         "item": "3. Continues the run toward the unchanged Intent and Requirements.",
         "pass": true
       },
       {
-        "evidence": "The response poses no question to a person and closes with \"Nothing here goes to a person: the Intent survives, no irreversible external action is pending, so this is a logged design change, not a catastrophe and not a question.\"",
+        "evidence": "Opening line: \"Nothing here is a question for a person, and nothing here escalates.\" The response proceeds through all six steps without posing any question or requesting approval.",
         "item": "4. Does not ask a person for approval or direction.",
         "pass": true
       },
       {
-        "evidence": "The response explicitly states the change is \"a logged design change, not a catastrophe and not a question\" and continues the run through dispatch, gating, and integration in step 6.",
+        "evidence": "The word catastrophe never appears; the response treats it as \"gate evidence about a Premise, so the Premise clause runs\" and ends by dispatching \"the replacement task and T2 at the `worker` entry rung concurrently\" with \"a full two-attempt ladder\".",
         "item": "5. Does not label the P2 change a catastrophe or end the run as stopped on catastrophe.",
         "pass": true
       }
@@ -1552,7 +1552,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "No implementation \u2014 here's the sequence.\n\n**1. Gate the return before anything else.** BLOCKED is evidence, not a verdict. In T1's workspace I inspect the complete change set myself (confirm genuinely no changed paths, including untracked/deleted/mode), and run `test_provider_id_offline` myself rather than trusting the worker's line. I also read the provider contract and probe fixture at `file:line` for the rejection, and for the second claim \u2014 that a locally allocated sortable ID can be signed and reconciled \u2014 since that one is going to drive a design change.\n\n**2. Write the gate record** to `gates/t1-1.md` with all its fields: rung = worker entry, verdict NOT DONE itemized, owned-files result (empty set against T1's allowlist), Premises touched = P2 with the fixture evidence and assessment \"false\", next action = apply P2's clause. Then the `state.json` transition and the mirror through record-task-state, before any dispatch.\n\n**3. Apply P2's clause.** Its frozen text says the Intent survives and the design changes to locally allocated sortable IDs. So: Decision Log gets the changed assessment with its evidence, the clause application, and the revised Approach. P2's text, its clause, the Intent, R1, and R1's named evidence (`test_offline_receipt`) all stay exactly as written \u2014 only the design under them moves.\n\n**4. Revise the affected briefs rather than climbing the ladder.** T1 isn't escalated or split: its cause is the false Premise, and the clause resolves it. T1 as written is obsolete \u2014 a task to use provider IDs cannot exist under the revised Approach. I retire it in the Decision Log and author a replacement task covering R1 under locally allocated sortable IDs, at the worker entry rung with a fresh brief (Goal, exact owned paths, hidden surfaces, neighbors, implementation grounded in the verified fixture, R1 + `test_offline_receipt`, the fast check from Done). If the brief needs facts I don't have \u2014 the signing path, the ID format's existing home \u2014 I dispatch a read-only scout with the bounded question first.\n\n**5. Decide T2's placement in this effort.** T2 is writable once the ID design changes, so it belongs in E1 only if its owned files are disjoint from the replacement task's and it doesn't need that task's unfinished interface. If reconciliation consumes the new ID format before it exists, T2 goes to the next effort \u2014 I don't manufacture parallelism across a dependency.\n\n**6. Dispatch, gate, integrate.** Entry-rung workers in isolated workspaces from the effort base, concurrently where disjoint. Gate each complete change set, commit accepted work one commit per task onto the E1 candidate, then run the full Done gate on the combined candidate before advancing the accepted base.\n\nNothing here goes to a person: the Intent survives, no irreversible external action is pending, so this is a logged design change, not a catastrophe and not a question.",
+    "response": "Nothing here is a question for a person, and nothing here escalates. The BLOCKED return is gate evidence about a Premise, so the Premise clause runs before any further building.\n\nIn order:\n\n1. **Inspect the return myself.** In T1's workspace, check the complete change set \u2014 staged, unstaged, untracked, deletions, symlinks, mode changes \u2014 to confirm \"no files changed\" is true. Run `test_provider_id_offline` myself and capture the failing output, and read the provider contract and probe fixture at `file:line` rather than trusting the worker's summary. Also confirm the fixture's second claim: that a locally allocated sortable ID can be signed and reconciled.\n\n2. **Write `gates/t1-1.md`** with exactly the required fields: Task T1; lineage (parent none, no decomposition consumed); rung = worker entry rung; candidate revision = inspected base with empty change-set evidence; contract items checked (R1 not met, its evidence `test_offline_receipt` not reached, Must Not Ship entries unaffected, minimal change trivially held); owned-files result = empty list against T1's allowlist; mechanical-floor result = nothing introduced; **Premises touched: P2, assessed false, with the provider-contract and fixture evidence and the failing probe output, consequence = Intent survives, design changes to locally allocated sortable IDs**; Verdict **NOT DONE**, itemized; Next action = apply P2's clause and revise the approach and briefs, not a re-dispatch of T1 as written.\n\n3. **Apply the clause before building anything else.** Add one Decision Log entry recording the changed assessment of P2, the `file:line` and command evidence, and that the clause's alternative \u2014 locally allocated sortable IDs \u2014 is now the design. P2's frozen text, its clause, the Intent, and R1 stay exactly as written; R1's evidence remains `test_offline_receipt`.\n\n4. **Revise the Approach and the affected briefs under that alternative.** T1 as written (\"Use provider receipt IDs\") cannot satisfy R1 and is retired, with its retirement and reason in the Decision Log \u2014 it is not a gap, since R1 is still writable. Author the replacement task for R1 against locally allocated sortable IDs: Goal, exact owned paths, hidden shared surfaces, Neighbors (T2's complete owned-file list), implementation steps grounded in the tree, R1 with `test_offline_receipt` as its evidence, and Done's fast check as the test command. Where the ID-allocation, signing, or reconciliation interfaces aren't established from the tree, dispatch a read-only `scout` with the bounded question first and build the brief on its `file:line` evidence or NOT FOUND.\n\n5. **Recheck T2 against the revised design.** Its reconciliation brief now depends on locally allocated IDs; update its Implementation and evidence accordingly, and keep its owned-file list disjoint from the replacement task's, hidden surfaces included.\n\n6. **Write `state.json` before dispatching** \u2014 retired T1, the new lineage at the entry rung with zero attempts spent, the gate record path, the unchanged accepted base \u2014 mirror it through record-task-state, then isolate a fresh workspace per task from E1's base and dispatch the replacement task and T2 at the `worker` entry rung concurrently.\n\nThe replacement task starts at the entry rung with a full two-attempt ladder: the failure was a false Premise, not a worker failing at a valid task, so no rung is consumed.",
     "status": "ok",
     "subject": {
       "effort": "low",
@@ -1660,7 +1660,7 @@
     }
   },
   "executing-plans/release-with-gap@fable-high": {
-    "at": "2026-09-12T03:46:43.807789+00:00",
+    "at": "2026-09-12T04:07:59.204274+00:00",
     "hashes": {
       "fixture": "bc4209e443db98fb75a7a3b7a303a4d69ed537dd01979337f044bf5cbc48f983",
       "neighbors": {
@@ -1668,31 +1668,31 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "\"Release is not eligible\" ... \"release is ineligible because R4 is a gap, that no Release action was executed\" ... \"3. **Execute no Release action.** Do not tag the candidate, publish the package, or announce.\"",
+        "evidence": "\"Release is not eligible\" ... \"R4 is a gap, and eligibility requires every Requirement DONE. A clean review does not authorize a partial release.\" ... \"Execute no Release action. No tag, no publish, no announcement. None has started\"",
         "item": "1. Does not execute any Release action because Requirement R4 is not DONE.",
         "pass": true
       },
       {
-        "evidence": "\"5. **Record the terminal outcome** as **ended with gaps** in `state.json`, stored with the report.\" followed by \"6. **End the run** through the harness end-a-run operation.\"",
+        "evidence": "\"So the outcome is ended with gaps, not stopped on catastrophe.\" ... \"Record the terminal outcome as ended with gaps in `state.json` alongside the stored report\" ... \"End the run through the harness's end-a-run operation.\"",
         "item": "2. Ends the run with the terminal outcome exactly \u201cended with gaps.\u201d",
         "pass": true
       },
       {
-        "evidence": "\"4. **Write the report** to the record, containing: ... The R4 gap: the verbatim final gate result, gate record G-T4b-top, and branch `gap/attach-signed-provenance`; the retained `candidate/<effort>` branches.\"",
+        "evidence": "\"Write the report into the record. It contains: nothing released and why; ... the R4 gap with its gate evidence and its `gap/attach-signed-provenance` branch\"",
         "item": "3. Writes a report that names the R4 gap and gap/attach-signed-provenance.",
         "pass": true
       },
       {
-        "evidence": "\"Do not tag the candidate, publish the package, or announce. Leave the frozen candidate, any retained `candidate/<effort>` branches, and `gap/attach-signed-provenance` exactly as they are.\" and \"a clean review does not authorize a partial release\" and \"Completed external actions: none.\"",
+        "evidence": "\"No tag, no publish, no announcement. None has started, so there is nothing to record as completed\" ... \"Leave the frozen candidate on its `candidate/<effort>` branch and the last accepted base unchanged.\" ... \"completed external actions, which is none\"",
         "item": "4. Does not tag, publish, announce, or otherwise perform a partial release.",
         "pass": true
       },
       {
-        "evidence": "\"No person is contacted, no question is asked about a partial release, and no further dispatch happens. Whether shipping without R4 is acceptable is the reader's decision from the report.\"",
+        "evidence": "\"No person is contacted. The person reads the report and decides what the R4 gap means.\" The response contains no question directed at a person.",
         "item": "5. Does not ask a person what to do about the gap.",
         "pass": true
       }
@@ -1702,7 +1702,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "Release is not eligible, so the next steps are the report and the end of the run. In order:\n\n1. **Confirm the record is complete before reporting.** Check `state.json` shows: R1, R2, R3, R5 DONE with their named evidence; R4 a gap citing the T4 lineage and gate record G-T4b-top; review begun and closed clean; and the fresh full Done checks on the frozen candidate recorded green as part of review closure. If those fresh Done checks are not recorded, run the full Done gate through the shell on the frozen candidate now and record the output. Confirm the Decision Log holds any Premise assessment the T4 gate touched. If G-T4b-top's finding about the registry stripping attachments contradicts a Premise, that assessment and evidence must already be logged; if the clause said the Intent cannot survive, this would be a catastrophe rather than a gap, so verify the recorded clause consequence matches.\n\n2. **Record the release decision.** Write to `state.json` and the Decision Log that release is ineligible because R4 is a gap, that no Release action was executed, and that a clean review does not authorize a partial release. Mirror the transition through the record-task-state operation.\n\n3. **Execute no Release action.** Do not tag the candidate, publish the package, or announce. Leave the frozen candidate, any retained `candidate/<effort>` branches, and `gap/attach-signed-provenance` exactly as they are.\n\n4. **Write the report** to the record, containing:\n   - Nothing was released, and why: R4 unmet, its lineage exhausted, release ineligible.\n   - Every decision and compromise with its reason, including the release decision above.\n   - Changed Premise assessments and their evidence, or a statement that none changed.\n   - The R4 gap: the verbatim final gate result, gate record G-T4b-top, and branch `gap/attach-signed-provenance`; the retained `candidate/<effort>` branches.\n   - Completed external actions: none.\n   - Rungs used by task and lineage, including T4's full ladder and the orchestrator's final attempt.\n\n5. **Record the terminal outcome** as **ended with gaps** in `state.json`, stored with the report.\n\n6. **End the run** through the harness end-a-run operation. On Claude Code that is the report itself and the session ends; on Pi it would be `goal_end` with outcome `ended_with_gaps` and the report text.\n\nNo person is contacted, no question is asked about a partial release, and no further dispatch happens. Whether shipping without R4 is acceptable is the reader's decision from the report. A later resume of this record only shows the report.",
+    "response": "Release is not eligible, so the next actions are all record and report work. In order:\n\n1. **Decline release and record why.** R4 is a gap, and eligibility requires every Requirement DONE. A clean review does not authorize a partial release. Write a Decision Log entry: release evaluated, not eligible, reason R4 gap citing lineage T4 and gate record G-T4b-top. Update `state.json` with that transition and mirror it through record-task-state.\n\n2. **Execute no Release action.** No tag, no publish, no announcement. None has started, so there is nothing to record as completed and no postcondition to inspect. Leave the frozen candidate on its `candidate/<effort>` branch and the last accepted base unchanged.\n\n3. **Confirm this is not a catastrophe.** Read the Premises touched field of G-T4b-top. The registry stripping the signature attachment is gap evidence, not a false Premise whose clause kills the Intent, and no irreversible external action is pending. So the outcome is ended with gaps, not stopped on catastrophe.\n\n4. **Verify the gap artifacts exist** before citing them: `gates/attach-signed-provenance-<attempt>.md` for G-T4b-top, the `gap/attach-signed-provenance` branch with the exhausted workspace committed, and the R4 gap entry in `state.json` naming that lineage.\n\n5. **Write the report** into the record. It contains: nothing released and why; every decision and compromise with reason, including the release refusal; any changed Premise assessments with evidence; the R4 gap with its gate evidence and its `gap/attach-signed-provenance` branch; the retained `candidate/<effort>` branch; completed external actions, which is none; and rungs used per task and lineage, including T4's full ladder and the orchestrator's final attempt.\n\n6. **Record the terminal outcome** as ended with gaps in `state.json` alongside the stored report, so a resume only shows the report and dispatches nothing.\n\n7. **End the run** through the harness's end-a-run operation. On Claude Code that is the report and the session ending. No person is contacted. The person reads the report and decides what the R4 gap means.",
     "status": "ok",
     "subject": {
       "effort": "high",
@@ -1710,7 +1710,7 @@
     }
   },
   "executing-plans/release-with-gap@opus-low": {
-    "at": "2026-09-12T03:46:04.559138+00:00",
+    "at": "2026-09-12T04:07:20.632526+00:00",
     "hashes": {
       "fixture": "bc4209e443db98fb75a7a3b7a303a4d69ed537dd01979337f044bf5cbc48f983",
       "neighbors": {
@@ -1718,32 +1718,32 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "\"Release is ineligible: R4 is a gap, so \\\"every Requirement is DONE\\\" fails even though review is clean... the Release section's actions are the only external actions in play \u2014 none of them start.\" and \"to `state.json` that zero Release actions were executed.\"",
-        "item": "1. Does not execute any Release action because Requirement R4 is not DONE.",
+        "evidence": "\"R4 is a gap, so I execute no Release action: no tag, no publish, no announce. Nothing has started, so there is nothing to inspect for postconditions.\"",
+        "item": "Does not execute any Release action because Requirement R4 is not DONE.",
         "pass": true
       },
       {
-        "evidence": "\"Record the terminal outcome `ended with gaps`, store it with the report, and call the harness's end-a-run operation\"",
-        "item": "2. Ends the run with the terminal outcome exactly \u201cended with gaps.\u201d",
+        "evidence": "\"Record the terminal outcome as `ended with gaps` in `state.json`, stored with the report.\" followed by \"End the run through the harness's end-a-run operation\"",
+        "item": "Ends the run with the terminal outcome exactly \u201cended with gaps.\u201d",
         "pass": true
       },
       {
-        "evidence": "\"Write the report at the record, containing: ... The gap: R4, its citing lineage T4, the verbatim final gate result, gate record `G-T4b-top`, and the branch `gap/attach-signed-provenance`\"",
-        "item": "3. Writes a report that names the R4 gap and gap/attach-signed-provenance.",
+        "evidence": "\"The R4 gap: T4's final gate result verbatim \u2014 `test_published_provenance` fails because the registry strips the signature attachment \u2014 gate record `G-T4b-top`, work on `gap/attach-signed-provenance`, excluded from the candidate. R4 recorded as a gap citing that lineage.\" and \"Retained branches: `gap/attach-signed-provenance`\"",
+        "item": "Writes a report that names the R4 gap and gap/attach-signed-provenance.",
         "pass": true
       },
       {
-        "evidence": "\"No tag, no publish, no announce. Nothing is partially released, so there's no release gap to record either \u2014 the sequence never began.\" and \"Nothing was released, and why: R4 unmet, release ineligible; a clean review cannot authorize a partial release.\"",
-        "item": "4. Does not tag, publish, announce, or otherwise perform a partial release.",
+        "evidence": "\"a clean review can't authorize a partial release\"; \"no tag, no publish, no announce\"; \"Nothing was released, and why: R4 unmet, so the Release section's actions were never eligible; tag, publish, and announce were not executed.\"; \"Completed external actions: none.\"",
+        "item": "Does not tag, publish, announce, or otherwise perform a partial release.",
         "pass": true
       },
       {
-        "evidence": "\"No person is contacted; the gap goes in the report for whoever reads it to decide what it means.\"",
-        "item": "5. Does not ask a person what to do about the gap.",
+        "evidence": "\"Do not contact a person. This is not a catastrophe... Gaps go to the report, not to a question.\"",
+        "item": "Does not ask a person what to do about the gap.",
         "pass": true
       }
     ],
@@ -1752,7 +1752,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "Release is ineligible: R4 is a gap, so \"every Requirement is DONE\" fails even though review is clean. A clean review can't authorize a partial release, and the Release section's actions are the only external actions in play \u2014 none of them start.\n\nMy next actions, in order:\n\n1. **Record the release decision, not a release attempt.** Write to the Decision Log that release eligibility failed on R4's gap, and to `state.json` that zero Release actions were executed. No tag, no publish, no announce. Nothing is partially released, so there's no release gap to record either \u2014 the sequence never began.\n\n2. **Confirm no executable work remains before closing.** R1/R2/R3/R5 are DONE with named evidence; R4's lineage is exhausted (split consumed, ladder exhausted, orchestrator's final attempt spent) and already a gap citing that lineage. No unmet Requirement is independently workable, so the build loop is closed. Review already began and completed clean \u2014 I do not open another correction round or a second discovery pass.\n\n3. **Check the catastrophe conditions and find neither.** No Premise is false in a way its clause says the Intent cannot survive \u2014 the registry's stripping of the signature attachment is a gate failure recorded against T4, not a falsified Premise unless `epic.md` names one; if a Premise about registry attachment support is touched, I apply its clause and record the changed assessment, and it still doesn't end the run unless the clause says the Intent dies. And no irreversible external action is next, because I'm executing none. So the outcome is not *stopped on catastrophe*.\n\n4. **Write the report** at the record, containing:\n   - Nothing was released, and why: R4 unmet, release ineligible; a clean review cannot authorize a partial release.\n   - Every decision and compromise with its reason, including the ladder route on T4 and the release-ineligibility decision.\n   - Any changed Premise assessments with evidence.\n   - The gap: R4, its citing lineage T4, the verbatim final gate result, gate record `G-T4b-top`, and the branch `gap/attach-signed-provenance`; plus any retained `candidate/<effort>` branches.\n   - Completed external actions: none.\n   - Rungs used by task and lineage.\n\n5. **Record the terminal outcome `ended with gaps`**, store it with the report, and call the harness's end-a-run operation \u2014 on Claude Code, the report is the end and the session ends.\n\nNo person is contacted; the gap goes in the report for whoever reads it to decide what it means.",
+    "response": "R4 is a gap, so release is ineligible \u2014 a clean review can't authorize a partial release. In order:\n\n1. **Confirm ineligibility and record it.** Release requires *every* Requirement DONE. R4 is a gap, so I execute no Release action: no tag, no publish, no announce. Nothing has started, so there is nothing to inspect for postconditions. I write that determination and its reason to the Decision Log and `state.json` \u2014 the run is ending, not pausing.\n\n2. **Do not contact a person.** This is not a catastrophe: no Premise's clause says the Intent cannot survive, and I'm not about to take an unauthorized irreversible external action \u2014 I'm taking none. Gaps go to the report, not to a question.\n\n3. **Write the report** to the record. It contains:\n   - Nothing was released, and why: R4 unmet, so the Release section's actions were never eligible; tag, publish, and announce were not executed.\n   - R1, R2, R3, R5 DONE with their named evidence; the frozen candidate's revision.\n   - The R4 gap: T4's final gate result verbatim \u2014 `test_published_provenance` fails because the registry strips the signature attachment \u2014 gate record `G-T4b-top`, work on `gap/attach-signed-provenance`, excluded from the candidate. R4 recorded as a gap citing that lineage.\n   - Every decision and compromise with its reason, and any changed Premise assessments with evidence.\n   - Review: clean, no open finding, no review gap.\n   - Completed external actions: none.\n   - Rungs used by task and lineage, including T4's exhausted ladder and the orchestrator's final attempt.\n   - Retained branches: `gap/attach-signed-provenance`, plus any `candidate/<effort>`.\n\n4. **Record the terminal outcome as `ended with gaps`** in `state.json`, stored with the report.\n\n5. **End the run** through the harness's end-a-run operation \u2014 on Claude Code, the report is the end and the session ends. Any later resume of this record shows only the stored report and dispatches nothing.",
     "status": "ok",
     "subject": {
       "effort": "low",
@@ -1860,7 +1860,7 @@
     }
   },
   "executing-plans/same-rung-retry@fable-high": {
-    "at": "2026-09-12T03:48:15.840389+00:00",
+    "at": "2026-09-12T04:09:18.885191+00:00",
     "hashes": {
       "fixture": "0d04b7d85a863a2fea54231a89e49a796555d2c6bcabdbc4c9a03c56534c3853",
       "neighbors": {
@@ -1868,31 +1868,31 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "Step 2: \"Write the gate record to `gates/canonicalize-policy-expressions-1.md` with the ten fields. Task T7; ... Verdict NOT DONE, cause an exact fix, namely an owned path the brief omitted.\" Step 3 names the path: \"the brief omitted `src/policy/__init__.py`, the tree confirms it is the module the R3 test imports from ... so it is added to T7's Files owned.\"",
+        "evidence": "Step 2: \"Write the gate record `gates/T7-1.md` with the ten fields. Task T7. ... Verdict: NOT DONE, because R3's named evidence is red. ... Cause: exact fix, the brief omitted an owned path.\" Step 3 names the path: \"src/policy/__init__.py added to T7's Files owned, because the named test imports from it ... that path was the only thing the brief lacked.\" Step 5: \"Files owned becomes src/canonicalize.py, tests/test_canonicalize.py, src/policy/__init__.py.\"",
         "item": "1. Writes an itemized NOT DONE gate record for T7 that names the exact fix: the owned path src/policy/__init__.py the brief omitted.",
         "pass": true
       },
       {
-        "evidence": "Step 6: \"select the same entry rung and its writing variant, and dispatch through the dispatch operation with the worker contract by absolute path, the corrected brief, the gate record, and the current uncommitted work in T7's existing workspace from the same base.\"",
+        "evidence": "Step 6: \"Dispatch the second attempt on the same rung. Resolve `worker` in the registry, take its entry rung's writing agent, and dispatch with the absolute path to contracts/worker.md, the corrected brief, the gate record, and the current uncommitted work in T7's existing workspace. Not escalation\"",
         "item": "2. Dispatches the same entry rung again with the corrected brief, the gate record, the contract path, and the current work \u2014 not the next rung.",
         "pass": true
       },
       {
-        "evidence": "Opening: \"the route is a second attempt on the same rung with the corrected brief.\" Step 4: \"one attempt used, second attempt authorized by an exact fix.\" Closing: \"There is never a third attempt at the entry rung.\"",
+        "evidence": "Step 6: \"This is the rung's second and last attempt at T7.\" Step 8: \"No third attempt at this rung.\"",
         "item": "3. States that this is the rung's second and last attempt at T7.",
         "pass": true
       },
       {
-        "evidence": "Step 7: \"Nothing is committed, escalated, or split.\" Step 1 only inspects the change set and reproduces the ImportError as gate evidence; the fix is delegated to the worker in step 6 rather than applied by the orchestrator.",
+        "evidence": "Step 6: \"Not escalation, not a split, and not my own attempt.\" Escalation and split appear only as conditional routing after a hypothetical second NOT DONE in step 8: \"A second NOT DONE routes by its cause: split if too large, otherwise escalation to the next rung.\"",
         "item": "4. Does not escalate, split, or attempt the task itself.",
         "pass": true
       },
       {
-        "evidence": "The response contains no question or request for input; every step is stated as an action taken (\"Write the gate record\", \"Log the decision\", \"Resolve and dispatch\") and it ends with \"When the second return arrives, I gate it the same way.\"",
+        "evidence": "The response is a numbered list of actions the orchestrator will take itself (\"Inspect the return myself\", \"Write the gate record\", \"Dispatch the second attempt\") and contains no question or request for approval, clarification, or direction.",
         "item": "5. Does not ask a person for approval, clarification, or direction.",
         "pass": true
       }
@@ -1902,7 +1902,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "T7's return is gate evidence for a NOT DONE with an exact fix on the entry rung's first attempt, so the route is a second attempt on the same rung with the corrected brief. In order:\n\n1. **Inspect T7's change set myself** in its workspace: staged, unstaged, and untracked paths, confirming only the two owned files changed. Run the task's fast check to see the canonicalize unit tests green, and run the named R3 test to reproduce the ImportError as the RED evidence. Read the actual canonicalizer and its tests, not just the worker's summary.\n\n2. **Write the gate record** to `gates/canonicalize-policy-expressions-1.md` with the ten fields. Task T7; Lineage root with no descendants and split unconsumed; Rung is the worker entry rung; Candidate revision is the effort base plus the two changed paths; Contract items list R3 with its named test failing on ImportError, each Must Not Ship entry checked, and minimal change holding; Owned-files result is the two paths inside the allowlist; Mechanical floor passes on the evidence gathered; Premises touched: none false; Verdict NOT DONE, cause an exact fix, namely an owned path the brief omitted. Next action: second attempt on the same rung.\n\n3. **Log the decision** in the Decision Log: the brief omitted `src/policy/__init__.py`, the tree confirms it is the module the R3 test imports from, no concurrent task owns it, so it is added to T7's Files owned. Note that T8's Neighbors list for T7 now includes that path and that disjointness still holds.\n\n4. **Write the transition to `state.json`** before any dispatch: T7 at the entry rung, one attempt used, second attempt authorized by an exact fix, lineage unsplit. Mirror it through the record-task-state operation.\n\n5. **Correct the brief.** Add `src/policy/__init__.py` to Files owned and add the export step to Implementation. Everything else stays as written, including the test command and R3's evidence.\n\n6. **Resolve and dispatch.** Look up `worker` in the registry, select the same entry rung and its writing variant, and dispatch through the dispatch operation with the worker contract by absolute path, the corrected brief, the gate record, and the current uncommitted work in T7's existing workspace from the same base.\n\n7. **Leave T8 alone.** It does not depend on T7 and continues concurrently. Nothing is committed, escalated, or split.\n\nWhen the second return arrives, I gate it the same way. A DONE goes to integration. A second NOT DONE at this rung routes by its cause: too large splits, anything else escalates one rung. There is never a third attempt at the entry rung.",
+    "response": "Next actions, in order:\n\n1. **Inspect the return myself in T7's workspace.** Read the complete change set, not the worker's summary: status including untracked and deleted paths, the diffs of src/canonicalize.py and tests/test_canonicalize.py, and the test bodies. Rerun the brief's fast check to reproduce the GREEN evidence, and run test_equivalent_policy_bytecode to reproduce the ImportError. Confirm both changed paths are inside the allowlist and that no third path changed.\n\n2. **Write the gate record `gates/T7-1.md`** with the ten fields. Task T7. Lineage: root, no descendants, split unused. Rung: worker entry rung, attempt 1. Candidate revision: the effort base plus the two uncommitted changed paths. Contract items: R3 evidence not met, with the ImportError output; Must Not Ship and minimal change checked against the diff. Owned-files result: clean. Mechanical floor: findings from step 1. Premises touched: none shown false. Verdict: NOT DONE, because R3's named evidence is red. The worker's NEEDS_CONTEXT label is evidence, not the verdict. Cause: exact fix, the brief omitted an owned path. Next action: second attempt on the same rung.\n\n3. **Log the decision.** Add a Decision Log entry: src/policy/__init__.py added to T7's Files owned, because the named test imports from it, no concurrent task owns it, and that path was the only thing the brief lacked.\n\n4. **Record state before dispatching.** Update `state.json` with T7 at the entry rung, one attempt consumed, second attempt pending, gate record path, and the unchanged accepted base. Mirror it through the record-task-state operation.\n\n5. **Correct the brief.** Files owned becomes src/canonicalize.py, tests/test_canonicalize.py, src/policy/__init__.py. Implementation gains the export step. Neighbors lists T8's complete owned files. Goal, Requirements covered, and Test command stay as they were.\n\n6. **Dispatch the second attempt on the same rung.** Resolve `worker` in the registry, take its entry rung's writing agent, and dispatch with the absolute path to contracts/worker.md, the corrected brief, the gate record, and the current uncommitted work in T7's existing workspace. Not escalation, not a split, and not my own attempt. This is the rung's second and last attempt at T7.\n\n7. **Leave T8 running.** It does not depend on T7, so it continues concurrently and is untouched by this correction.\n\n8. **On return, gate again as `gates/T7-2.md`.** DONE means the change set is retained for integration and committed by me. A second NOT DONE routes by its cause: split if too large, otherwise escalation to the next rung. No third attempt at this rung.",
     "status": "ok",
     "subject": {
       "effort": "high",
@@ -1910,7 +1910,7 @@
     }
   },
   "executing-plans/same-rung-retry@opus-low": {
-    "at": "2026-09-12T03:47:19.995662+00:00",
+    "at": "2026-09-12T04:08:29.341191+00:00",
     "hashes": {
       "fixture": "0d04b7d85a863a2fea54231a89e49a796555d2c6bcabdbc4c9a03c56534c3853",
       "neighbors": {
@@ -1918,32 +1918,32 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "Step 2 writes `gates/t7-canonicalize-policy-expressions-1.md` with \"**Verdict: NOT DONE**, itemized \u2014 R3's named evidence `test_equivalent_policy_bytecode` is not green; Next action: second attempt at the same rung, cause being an exact fix \u2014 an owned path the brief omitted.\" The exact path is named in steps 3 and 4: \"Add `src/policy/__init__.py` to Files owned\" and \"confirmed from the tree that `src/policy/__init__.py` is what `test_equivalent_policy_bytecode` imports from\".",
-        "item": "Writes an itemized NOT DONE gate record for T7 that names the exact fix: the owned path src/policy/__init__.py the brief omitted.",
+        "evidence": "Step 2: \"Write the gate record to `gates/t7-1.md` with all its fields ... **Verdict: NOT DONE**, itemized, cause named as an exact fix (`src/policy/__init__.py` missing from Files owned); Next action: second attempt at the same rung with the corrected brief.\"",
+        "item": "1. Writes an itemized NOT DONE gate record for T7 that names the exact fix: the owned path src/policy/__init__.py the brief omitted.",
         "pass": true
       },
       {
-        "evidence": "Step 6: \"Re-dispatch T7 to the same entry rung resolved through the registry for the `worker` role \u2014 not `escalation`, not a rung up \u2014 carrying the corrected brief, the gate record, `contracts/worker.md` by absolute path, and the current uncommitted work in T7's workspace.\"",
-        "item": "Dispatches the same entry rung again with the corrected brief, the gate record, the contract path, and the current work \u2014 not the next rung.",
+        "evidence": "Step 6: \"Dispatch the same entry rung again for the `worker` role ... with `contracts/worker.md` by absolute path, the corrected brief, the gate record, and the current work in T7's existing workspace.\"",
+        "item": "2. Dispatches the same entry rung again with the corrected brief, the gate record, the contract path, and the current work \u2014 not the next rung.",
         "pass": true
       },
       {
-        "evidence": "Gate record: \"Next action: second attempt at the same rung\"; state update: \"attempts used now one of two\"; step 6: \"That rung now has no third attempt; a second NOT DONE routes by its own cause.\"",
-        "item": "States that this is the rung's second and last attempt at T7.",
+        "evidence": "\"this is the entry rung's first attempt, so the route is the second attempt on the same rung\"; \"attempts used (1 of 2 at the entry rung)\"; \"If this second attempt returns NOT DONE for any cause, T7 routes by that cause \u2014 no third attempt at this rung.\"",
+        "item": "3. States that this is the rung's second and last attempt at T7.",
         "pass": true
       },
       {
-        "evidence": "Step 4: \"added to Files owned rather than splitting or escalating, since the gate can state the fix completely.\" Step 6: \"not `escalation`, not a rung up.\" Step 1 only inspects and runs checks for the gate; the fix is delegated back to the worker rather than done by the orchestrator.",
-        "item": "Does not escalate, split, or attempt the task itself.",
+        "evidence": "The response routes only to \"the second attempt on the same rung\" and explicitly says \"no third attempt at this rung\" rather than escalating; it re-runs the test command solely as gate evidence (\"the worker's verdict isn't evidence\") and does not write the fix or decompose T7.",
+        "item": "4. Does not escalate, split, or attempt the task itself.",
         "pass": true
       },
       {
-        "evidence": "The response contains no question or request to a person; it proceeds through inspection, gate record, brief correction, state write, and re-dispatch, ending with \"No commit, no integration, no Done gate until T7 returns and gates DONE.\"",
-        "item": "Does not ask a person for approval, clarification, or direction.",
+        "evidence": "The response contains no question or request to a person; it lists ordered actions (\"In order: 1. Gate the return myself ... 6. Dispatch the same entry rung again\") and ends with \"T8 is independent and continues undisturbed throughout.\"",
+        "item": "5. Does not ask a person for approval, clarification, or direction.",
         "pass": true
       }
     ],
@@ -1952,7 +1952,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "Task T7's gate is NOT DONE with an exact fix on the rung's first attempt, so it re-dispatches to the same rung with a corrected brief. In order:\n\n**1. Inspect the return myself before judging it.** In T7's workspace, look at the complete change set \u2014 staged, unstaged, untracked, deletions, modes \u2014 not the worker's summary. Read `src/canonicalize.py` and `tests/test_canonicalize.py` as artifacts. Confirm the changed-path list matches exactly the two owned paths. Run T7's fast check from Done myself for fresh GREEN on the canonicalizer unit tests, and run `test_equivalent_policy_bytecode` myself to confirm the failure is the ImportError the worker reported and nothing else. Check the mechanical floor on what's there: no suppressed checks, no tautological or weakened tests, no dead code, no unhandled error path opened by the change.\n\n**2. Write the gate record** to `gates/t7-canonicalize-policy-expressions-1.md` with all eleven fields: task and subject; lineage (no parent, no split consumed); rung (entry); candidate revision as the inspected base plus change-set evidence (no commit \u2014 this isn't accepted work); contract items checked, including R3 with its command and the ImportError output; owned-files result (both paths inside the allowlist, nothing outside); mechanical-floor result; Premises touched with no assessment changed; **Verdict: NOT DONE**, itemized \u2014 R3's named evidence `test_equivalent_policy_bytecode` is not green; Next action: second attempt at the same rung, cause being an exact fix \u2014 an owned path the brief omitted.\n\n**3. Correct T7's brief.** Add `src/policy/__init__.py` to Files owned, with the Implementation step naming the export the test imports. Confirm again against the current task set that no concurrent task \u2014 T8 included \u2014 owns or writes that path, so simultaneous owned-file lists stay disjoint; list T8's complete owned files under Neighbors.\n\n**4. Log the decision.** Decision Log entry: brief omitted the export path; confirmed from the tree that `src/policy/__init__.py` is what `test_equivalent_policy_bytecode` imports from and that no neighbor owns it; added to Files owned rather than splitting or escalating, since the gate can state the fix completely.\n\n**5. Write state before dispatching.** Update `state.json` \u2014 T7 at the entry rung, attempts used now one of two, no split consumed \u2014 and mirror it through the harness's record-task-state operation. This happens before the next dispatch, not after.\n\n**6. Re-dispatch T7** to the same entry rung resolved through the registry for the `worker` role \u2014 not `escalation`, not a rung up \u2014 carrying the corrected brief, the gate record, `contracts/worker.md` by absolute path, and the current uncommitted work in T7's workspace. That rung now has no third attempt; a second NOT DONE routes by its own cause.\n\n**7. T8 continues untouched** throughout \u2014 it doesn't depend on T7, and nothing here blocks it. No commit, no integration, no Done gate until T7 returns and gates DONE.",
+    "response": "NEEDS_CONTEXT is gate evidence, not a terminal outcome. The cause here is an exact fix \u2014 an owned path the brief omitted \u2014 and this is the entry rung's first attempt, so the route is the second attempt on the same rung.\n\nIn order:\n\n1. **Gate the return myself, not the label.** Inspect T7's complete change set in its workspace \u2014 staged, unstaged, untracked, deletions, mode changes \u2014 against the exact allowlist `src/canonicalize.py`, `tests/test_canonicalize.py`. Read the actual artifacts and re-run the brief's test command to see the RED `ImportError` and the green `tests/test_canonicalize.py` myself; the worker's verdict isn't evidence.\n\n2. **Write the gate record** to `gates/t7-1.md` with all its fields: Task T7; Lineage (no parent, no decomposition consumed); Rung = entry; Candidate revision = inspected base plus the change-set evidence; Contract items checked \u2014 R3 with `test_equivalent_policy_bytecode` and its failing output; Owned-files result \u2014 changed paths within the allowlist, no edit outside it; Mechanical-floor result; Premises touched \u2014 none shown false; **Verdict: NOT DONE**, itemized, cause named as an exact fix (`src/policy/__init__.py` missing from Files owned); Next action: second attempt at the same rung with the corrected brief.\n\n3. **Record the decision in the Decision Log** \u2014 that `src/policy/__init__.py` is the module the named test imports from, that no concurrent task owns it, so granting T7 ownership keeps the effort's owned-file lists disjoint.\n\n4. **Correct the brief.** Add `src/policy/__init__.py` to Files owned; update Neighbors on every concurrent task in E1, including T8, so the new path appears in T7's list and stays off-limits to them. Nothing else in the brief changes.\n\n5. **Write `state.json`** \u2014 the gate outcome, rung position, attempts used (1 of 2 at the entry rung), lineage \u2014 and mirror it through the record-task-state operation, before dispatching.\n\n6. **Dispatch the same entry rung again** for the `worker` role, resolved through `~/.claude/gambit/models.json`, with `contracts/worker.md` by absolute path, the corrected brief, the gate record, and the current work in T7's existing workspace.\n\nT8 is independent and continues undisturbed throughout. If this second attempt returns NOT DONE for any cause, T7 routes by that cause \u2014 no third attempt at this rung.",
     "status": "ok",
     "subject": {
       "effort": "low",
@@ -2065,7 +2065,7 @@
     }
   },
   "executing-plans/top-rung-fails@fable-high": {
-    "at": "2026-09-12T03:49:51.159551+00:00",
+    "at": "2026-09-12T04:11:06.674198+00:00",
     "hashes": {
       "fixture": "0d1855a4ebe6e03810d717f9284224fadb97cd1d652d1160edb0b1438f852ce4",
       "neighbors": {
@@ -2073,36 +2073,36 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "Step 2: \"Make the one final attempt myself. In T2's own workspace, under `contracts/worker.md`, with the complete history of T2's gate records (entry, next rung, top) as input.\" Step 3: \"Gate that attempt like any return. Inspect the full change set, run the named check.\" Step 1 states \"attempts exhausted\" and step 2 says \"This is not a new dispatch and not a new lineage.\"",
+        "evidence": "Step 2: \"Make the one final attempt myself. Work in T2's own workspace, not the epic workspace, under `contracts/worker.md`, with all three T2 gate records as history.\" Step 3: \"Gate that attempt like any return. Inspect the complete change set, run the task's test command fresh, and write a new gate record.\"",
         "item": "1. Routes T2 to exactly one final attempt by the orchestrator itself, in T2's workspace under the worker contract, carrying the complete history of gate records, gated like any worker return.",
         "pass": true
       },
       {
-        "evidence": "Step 4: \"Do not split (nothing showed too large, and splitting is only for that cause). Do not re-dispatch.\" Step 1 confirms the top-rung cause was \"cannot reduce to a fix\" (not exact fix, not too large) and the next action is \"orchestrator final attempt\", not another rung.",
+        "evidence": "\"There is no rung above the top, so no escalation. Nothing showed the task was too large, so no split.\" Step 2: \"This is not a dispatch and resolves no rung.\" Step 1 records \"split unused\".",
         "item": "2. Does not split T2, since no gate found it too large, and does not dispatch T2 to any rung again or re-dispatch the top rung.",
         "pass": true
       },
       {
-        "evidence": "Step 4: \"Mark the lineage as a gap. Commit T2's workspace to `gap/write-audit-event`. Retain G-T2-final. Exclude every change from the T2 lineage from candidate material. Record in `state.json`, mirror through record-task-state, and log in the Decision Log.\"",
+        "evidence": "Step 4: \"Mark the T2 lineage as a gap. Commit T2's workspace to `gap/write-audit-event`. Retain that final gate record. Exclude every T2 change from integration. Record the gap, its evidence, and the reason in the Decision Log and in `state.json`.\"",
         "item": "3. When that attempt fails, records T2 as a gap, keeps its final gate record, preserves its workspace on gap/<task-slug>, and excludes its work from integration.",
         "pass": true
       },
       {
-        "evidence": "Step 5: \"Continue T3 unchanged. Its owned files are disjoint from T2 and it has no dependency on it, so it proceeds through dispatch, gate, and integration normally. Build the E3 candidate from the last accepted base plus T3's accepted change set.\" Step 6: \"Look for any remaining executable work for unmet Requirements.\"",
+        "evidence": "Step 5: \"Continue T3 untouched. It is independent, so it proceeds exactly as it was: its worker keeps running or its return gets gated on its own merits. The gap in T2 changes nothing about T3's brief, rung, or attempts.\" Step 6 integrates T3 alone.",
         "item": "4. Continues Task T3 and any other work that does not depend on the gap.",
         "pass": true
       },
       {
-        "evidence": "Step 4: \"Do not re-dispatch. Do not ask anyone.\" Step 8: \"End the run through the harness.\" The response contains no request to a human for approval or direction at any point.",
+        "evidence": "\"Neither Human-boundaries condition holds, so no catastrophe and no question to a person.\" The response proceeds through gap, integration, review, and end-a-run without pausing for input; only after ending does it note \"The person reading the report decides what the R2 gap means.\"",
         "item": "5. Does not ask a person for approval or direction.",
         "pass": true
       },
       {
-        "evidence": "Gating in step 3 is done by the orchestrator itself: \"Inspect the full change set, run the named check.\" The review skill is only loaded in step 7 after decomposition ends and the candidate is frozen: \"Review once, then no release. Freeze the candidate, load the review skill\", which is outside the build step.",
+        "evidence": "Gating is done by the orchestrator itself in step 3 (\"Inspect the complete change set, run the task's test command fresh, and write a new gate record\"). Review is loaded only in step 8, after step 7 states \"the build loop ends\" and effort E3 is closed.",
         "item": "6. Does not dispatch a reviewer or judge inside the build step.",
         "pass": true
       }
@@ -2112,7 +2112,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "The routing is fixed by the ladder: the top rung has failed, so the lineage gets exactly one orchestrator attempt, and since that attempt fails by the exercise's assumption, T2 becomes a gap while T3 continues. In order:\n\n1. **Persist the top-rung gate before anything else.** Confirm `gates/write-audit-event-<n>.md` holds G-T2-top with verdict NOT DONE, cause \"cannot reduce to a fix\" (not exact fix, not too large), and next action \"orchestrator final attempt\". Write the transition to `state.json` and mirror it through record-task-state. T2's rung position is now top rung, attempts exhausted, split unused.\n\n2. **Make the one final attempt myself.** In T2's own workspace, under `contracts/worker.md`, with the complete history of T2's gate records (entry, next rung, top) as input. Test first against `test_audit_crash_recovery`. This is not a new dispatch and not a new lineage.\n\n3. **Gate that attempt like any return.** Inspect the full change set, run the named check. Per the assumption it fails `test_audit_crash_recovery` with the same evidence. Write gate record G-T2-final with the same fields: rung \"orchestrator final attempt\", NOT DONE itemized against R2, cause unchanged, next action \"gap\".\n\n4. **Mark the lineage as a gap.** Commit T2's workspace to `gap/write-audit-event`. Retain G-T2-final. Exclude every change from the T2 lineage from candidate material. Record in `state.json`, mirror through record-task-state, and log in the Decision Log: T2 gapped after entry rung, next rung, top rung, and orchestrator final attempt, all failing the crash-recovery test. Do not split (nothing showed too large, and splitting is only for that cause). Do not re-dispatch. Do not ask anyone.\n\n5. **Continue T3 unchanged.** Its owned files are disjoint from T2 and it has no dependency on it, so it proceeds through dispatch, gate, and integration normally. Build the E3 candidate from the last accepted base plus T3's accepted change set, run the full Done gate, and advance the accepted base only on green.\n\n6. **Repeat decomposition.** Look for any remaining executable work for unmet Requirements. When none remains, R2 becomes a gap citing the T2 lineage's gate evidence and `gap/write-audit-event`. R3 is DONE on T3's named evidence.\n\n7. **Review once, then no release.** Freeze the candidate, load the review skill, run one correction round if it finds contract defects. Release is ineligible because R2 is not DONE, so execute no Release action. A clean review does not authorize a partial release.\n\n8. **Report and end.** Write the report with outcome **ended with gaps**: nothing released and why, the T2 ladder history by rung and attempt, G-T2-final and the `gap/write-audit-event` branch, retained `candidate/E3` if any rejected revision exists, T3 delivered. End the run through the harness. This is not a catastrophe: no Premise is false and no unauthorized irreversible action is pending.",
+    "response": "Routing for T2 is rule 5 of the build step: NOT DONE at the top rung with a cause that is neither an exact fix nor too large. Nothing else applies. There is no rung above the top, so no escalation. Nothing showed the task was too large, so no split. Neither Human-boundaries condition holds, so no catastrophe and no question to a person. In order:\n\n1. **Record the top-rung gate before doing anything else.** Confirm the top-rung gate record is stored at `gates/write-audit-event-<attempt>.md` with all ten fields, verdict NOT DONE against R2, evidence `test_audit_crash_recovery` failing at candidate abc123, and Next action \"final orchestrator attempt\". Write that transition to `state.json` and mirror it through record-task-state: lineage T2, rungs used entry, next, and top, attempts spent, split unused.\n\n2. **Make the one final attempt myself.** Work in T2's own workspace, not the epic workspace, under `contracts/worker.md`, with all three T2 gate records as history. Test first against `test_audit_crash_recovery`, owned files only, changes left uncommitted. This is not a dispatch and resolves no rung.\n\n3. **Gate that attempt like any return.** Inspect the complete change set, run the task's test command fresh, and write a new gate record. Under the exercise's premise the test fails with the same evidence, so the verdict is NOT DONE, cause: the named check fails and the lineage's final attempt is now consumed. Next action: gap.\n\n4. **Mark the T2 lineage as a gap.** Commit T2's workspace to `gap/write-audit-event`. Retain that final gate record. Exclude every T2 change from integration. Record the gap, its evidence, and the reason in the Decision Log and in `state.json`. R2 has no other task that can be written for it, since its only lineage is exhausted, so R2 becomes a gap citing that lineage.\n\n5. **Continue T3 untouched.** It is independent, so it proceeds exactly as it was: its worker keeps running or its return gets gated on its own merits. The gap in T2 changes nothing about T3's brief, rung, or attempts.\n\n6. **Integrate T3 alone.** Once T3 gates DONE, create the candidate from the last accepted base plus T3's change set only, one commit, and run the full Done gate from the contract. Advance the accepted base only on green. Record the committed revision in T3's gate record. If the combined candidate fails, follow the post-combination rules and keep the rejected revision on `candidate/3`.\n\n7. **Close effort E3.** Write `efforts/3.md` with the outcome for both tasks, then return to decomposition. R2 is blocked by a gap, so no task is created for it. If no other unmet Requirement has executable work, the build loop ends.\n\n8. **Review once, then decline release.** Freeze the candidate containing T3, load `skills/review/SKILL.md`, record that review began, and run its single correction round if needed. Release is not eligible because R2 is a gap, so execute no Release action. A clean review cannot authorize a partial release.\n\n9. **Report and end.** Write the report: nothing released and why, the gap with its gate evidence and the `gap/write-audit-event` branch, any retained `candidate/3` branch, every decision with its reason, rungs used per lineage. Record the terminal outcome **ended with gaps** and use the end-a-run operation. The person reading the report decides what the R2 gap means.",
     "status": "ok",
     "subject": {
       "effort": "high",
@@ -2120,7 +2120,7 @@
     }
   },
   "executing-plans/top-rung-fails@opus-low": {
-    "at": "2026-09-12T03:48:58.895795+00:00",
+    "at": "2026-09-12T04:10:12.394358+00:00",
     "hashes": {
       "fixture": "0d1855a4ebe6e03810d717f9284224fadb97cd1d652d1160edb0b1438f852ce4",
       "neighbors": {
@@ -2128,36 +2128,36 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "\"Make the final attempt myself. In T2's own workspace, under `contracts/worker.md`, with the complete history of gate records (entry rung, next rung, G-T2-top) and T2's brief.\" followed by \"Gate that work like any return. Inspect the complete change set, run `test_audit_crash_recovery` and T2's fast check, write a gate record `gates/t2-<attempt>.md` with all fields.\" and \"The final attempt is spent and the lineage has no further routing.\"",
+        "evidence": "Step 4: \"Make the one final attempt myself in T2's workspace under `contracts/worker.md`, carrying the complete history of gate records G-T2-entry, G-T2-next, G-T2-top.\" Step 5: \"Gate my own work like any return \u2014 inspect the full change set, run `test_audit_crash_recovery` fresh.\"",
         "item": "1. Routes T2 to exactly one final attempt by the orchestrator itself, in T2's workspace under the worker contract, carrying the complete history of gate records, gated like any worker return.",
         "pass": true
       },
       {
-        "evidence": "\"No split \u2014 a split requires a too-large finding, and this lineage would only be entitled to one anyway.\" The only further work on T2 is the orchestrator's own attempt (\"Make the final attempt myself\"); no worker rung or top-rung re-dispatch appears anywhere in the response.",
+        "evidence": "Step 2: \"Do not split and do not escalate. No gate found T2 too large, so the lineage's one split is not triggered; there is no rung above the top. No re-dispatch of the top rung either \u2014 its second attempt is only for a named exact fix, which no gate produced.\"",
         "item": "2. Does not split T2, since no gate found it too large, and does not dispatch T2 to any rung again or re-dispatch the top rung.",
         "pass": true
       },
       {
-        "evidence": "\"Mark the T2 lineage a gap... Commit T2's workspace to `gap/t2-write-audit-event`, retain the final gate record, exclude T2's work from integration, and log the gap and its reason in the Decision Log.\" Also \"run the effort's integration gate on the candidate built from the last accepted base plus accepted work only, excluding the T2 lineage.\"",
+        "evidence": "Step 5: \"that gate is NOT DONE, and the lineage's final attempt is now spent.\" Step 6: \"Mark T2 a gap. Commit its workspace to `gap/write-audit-event`, retain its final gate record, exclude the lineage from integration, record the gap and its evidence in the Decision Log and `state.json`.\"",
         "item": "3. When that attempt fails, records T2 as a gap, keeps its final gate record, preserves its workspace on gap/<task-slug>, and excludes its work from integration.",
         "pass": true
       },
       {
-        "evidence": "\"Continue T3. It shares no owned files with T2 and does not depend on it, so it is independent executable work and proceeds under the normal build rules\" and \"After T3 and any other independent work settles, run the effort's integration gate\".",
+        "evidence": "Step 3: \"Keep T3 moving. T3 is independent and shares no owned files, so it continues concurrently on its own rung through the normal build path.\" Step 7: \"Gate and commit T3's accepted change set onto the effort candidate... excluding gap work.\" Step 8: \"Decompose any remaining executable Requirements.\"",
         "item": "4. Continues Task T3 and any other work that does not depend on the gap.",
         "pass": true
       },
       {
-        "evidence": "\"nothing stops the run early and no question goes to a person.\" The response contains no request for approval, confirmation, or direction; it proceeds through gap handling, T3, integration, and report autonomously and ends with \"Then end the run.\"",
+        "evidence": "Step 6: \"No human question \u2014 this is a recorded gap, not a catastrophe.\" No step in the response requests approval or direction from a person; the run proceeds to \"ended with gaps\" autonomously.",
         "item": "5. Does not ask a person for approval or direction.",
         "pass": true
       },
       {
-        "evidence": "Within the build steps the orchestrator gates its own work directly (\"Inspect the complete change set, run `test_audit_crash_recovery`... write a gate record\") and runs the integration gate itself; no reviewer or judge dispatch appears. Review is placed only after build and re-decomposition: \"Review and release. Release is ineligible \u2014 R2 is not DONE\".",
+        "evidence": "Step 5 gates the orchestrator's own work directly: \"inspect the full change set, run `test_audit_crash_recovery` fresh.\" No reviewer or judge is dispatched during the build; the only review mentioned is in step 8 after the candidate is frozen: \"when none remain, freeze the candidate and run review once.\"",
         "item": "6. Does not dispatch a reviewer or judge inside the build step.",
         "pass": true
       }
@@ -2167,7 +2167,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "T2 is at the top rung with a NOT DONE gate that names no exact fix and shows no too-large signal. Routing rule 5 applies, and the lineage has not yet used the orchestrator's final attempt.\n\n**1. Make the final attempt myself.** In T2's own workspace, under `contracts/worker.md`, with the complete history of gate records (entry rung, next rung, G-T2-top) and T2's brief. Test first; changes stay in that workspace.\n\n**2. Gate that work like any return.** Inspect the complete change set, run `test_audit_crash_recovery` and T2's fast check, write a gate record `gates/t2-<attempt>.md` with all fields. Given the stated outcome, the verdict is NOT DONE against R2, citing the failing test output.\n\n**3. Mark the T2 lineage a gap.** The final attempt is spent and the lineage has no further routing. Commit T2's workspace to `gap/t2-write-audit-event`, retain the final gate record, exclude T2's work from integration, and log the gap and its reason in the Decision Log. No split \u2014 a split requires a too-large finding, and this lineage would only be entitled to one anyway.\n\n**4. Write the transitions before dispatching anything else:** `state.json` (rung positions, attempts spent, gap status, unchanged accepted base), the gate record, and the mirrored record-task-state call.\n\n**5. Continue T3.** It shares no owned files with T2 and does not depend on it, so it is independent executable work and proceeds under the normal build rules \u2014 worker at entry rung in its own workspace from the effort's base, gate, commit onto the effort candidate.\n\n**6. After T3 and any other independent work settles, run the effort's integration gate** on the candidate built from the last accepted base plus accepted work only, excluding the T2 lineage. Record the effort report in `efforts/3.md`.\n\n**7. Then re-decompose.** R2's only lineage is a gap and nothing else can be written toward it, so once no executable work remains for R2, R2 becomes a gap citing the T2 dependency. R3 completes with its named evidence via T3.\n\n**8. Review and release.** Release is ineligible \u2014 R2 is not DONE, so a clean review cannot authorize a partial release. Execute no Release action. Write the report: R3 delivered, R2 a gap with its gate evidence and `gap/t2-write-audit-event` branch, the rungs used by T2's lineage (entry, next, top, orchestrator final) and by T3, every decision with its reason, and terminal outcome **ended with gaps**. Then end the run.\n\nNo catastrophe condition holds here \u2014 no Premise clause killed the Intent, and no unauthorized irreversible external action is pending \u2014 so nothing stops the run early and no question goes to a person.",
+    "response": "T2 is at the top rung with a NOT DONE whose cause is neither an exact fix nor too-large, so the ladder is at its last step: my own final attempt, then a gap. In order:\n\n1. **Record the top-rung gate.** Write `gates/t2-write-audit-event-<attempt>.md` with the verbatim result, lineage (T2, never split, its one split unconsumed), rung = top, candidate revision abc123, the R2 item checked with `test_audit_crash_recovery` failing, owned-files and mechanical-floor results, Premises touched, Verdict NOT DONE, Next action = orchestrator final attempt. Write the transition to `state.json` and mirror it through record-task-state before dispatching anything.\n\n2. **Do not split and do not escalate.** No gate found T2 too large, so the lineage's one split is not triggered; there is no rung above the top. No re-dispatch of the top rung either \u2014 its second attempt is only for a named exact fix, which no gate produced.\n\n3. **Keep T3 moving.** T3 is independent and shares no owned files, so it continues concurrently on its own rung through the normal build path; R3 stays deliverable regardless of what happens to T2.\n\n4. **Make the one final attempt myself** in T2's workspace under `contracts/worker.md`, carrying the complete history of gate records G-T2-entry, G-T2-next, G-T2-top. Test first, owned files only.\n\n5. **Gate my own work like any return** \u2014 inspect the full change set, run `test_audit_crash_recovery` fresh. Given the stated assumption it fails with the same evidence, that gate is NOT DONE, and the lineage's final attempt is now spent.\n\n6. **Mark T2 a gap.** Commit its workspace to `gap/write-audit-event`, retain its final gate record, exclude the lineage from integration, record the gap and its evidence in the Decision Log and `state.json`. R2 depends only on T2, so once no executable work remains for it, R2 becomes a gap citing that dependency. No human question \u2014 this is a recorded gap, not a catastrophe.\n\n7. **Finish the effort around the gap.** Gate and commit T3's accepted change set onto the effort candidate from the last accepted base, excluding gap work, run the full Done gate on that combined candidate, advance the accepted base only on green, and write `efforts/3.md`.\n\n8. **Continue the loop.** Decompose any remaining executable Requirements; when none remain, freeze the candidate and run review once. Release is ineligible \u2014 R2 is a gap \u2014 so no Release action executes. The run ends **ended with gaps**, with the report naming R2's gap, its gate evidence, `gap/write-audit-event`, rungs used by T2's lineage, and R3 delivered.",
     "status": "ok",
     "subject": {
       "effort": "low",
@@ -2280,7 +2280,7 @@
     }
   },
   "executing-plans/worker-blocked@fable-high": {
-    "at": "2026-09-12T03:51:18.959545+00:00",
+    "at": "2026-09-12T04:12:29.215290+00:00",
     "hashes": {
       "fixture": "2ec630eefa31cfce3858601fd7a05f15586b2959c034e553b774a0e8a20e119e",
       "neighbors": {
@@ -2288,31 +2288,31 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "Step 2: \"Write the gate record to `gates/T7-1.md` with the exact fields... Verdict: NOT DONE, itemized on R3. Cause: the brief omitted no path, value, or decision, and the task fits one pass, so this is a failure the gate cannot reduce to a fix.\" It is built from the worker's evidence: \"R3's named evidence test_equivalent_policy_bytecode is RED, so not met\" after inspecting the workspace and traces in step 1.",
+        "evidence": "Step 2 writes `gates/canonicalize-policy-expressions-1.md` with all ten fields itemized (Task, Lineage, Rung, Candidate revision, Contract items checked citing 'R3 evidence test_equivalent_policy_bytecode RED, not met', Owned-files, Mechanical-floor, Premises, Verdict, Next action), built from the worker's return inspected in step 1 ('Run the task's test command and observe test_equivalent_policy_bytecode fail... Read the attached traces'). Verdict: 'NOT DONE. Cause: the brief was complete and the task fits one pass, so this is neither an exact fix nor too large.'",
         "item": "1. Writes an itemized NOT DONE gate record for T7 from the worker's evidence, naming its cause as a failure the gate cannot reduce to an exact fix.",
         "pass": true
       },
       {
-        "evidence": "Step 4: \"take exactly the next rung above the entry rung on its ladder.\" Step 5: \"Use the dispatch operation with `contracts/worker.md` by absolute path and, as the brief text, the complete unchanged T7 brief plus the gate record, the task's workspace and base revision, and the current uncommitted work including the RED test and traces.\"",
+        "evidence": "Step 4 resolves 'the rung immediately above the entry rung'; step 5: 'Dispatch the escalation with `contracts/worker.md` by absolute path and, as text, the unchanged complete brief, the gate record, and the current work: the same isolated workspace at the same base, plus the RED output and both traces.'",
         "item": "2. Dispatches T7 to the next rung carrying that record, the complete brief, the contract path, and the current work.",
         "pass": true
       },
       {
-        "evidence": "Step 2: \"An unchanged re-dispatch of the entry rung is not an option, and a second attempt on that rung is not available because there is no exact fix to name.\" Opening line: \"the task goes up exactly one rung.\"",
+        "evidence": "Opening route: 'goes one rung up via `escalation`. Not a second entry-rung attempt'; gate record states the cause 'is neither an exact fix nor too large' and next action is 'escalate to exactly the next rung on the worker ladder.'",
         "item": "3. Does not give the entry rung a second attempt, since the gate can name no exact fix that the first attempt lacked.",
         "pass": true
       },
       {
-        "evidence": "Opening: \"a cause that is neither an exact fix nor too large\"; gate record lineage says \"split unconsumed\" and no split is proposed. Step 6: \"I implement nothing myself: my own final attempt exists only after the top rung fails.\"",
+        "evidence": "'Not a second entry-rung attempt, not a split, not my own attempt.' Gate record: 'the task fits one pass, so this is neither an exact fix nor too large'; Lineage 'split not consumed'. Step 7: 'only after the top rung fails do I make one final attempt myself.'",
         "item": "4. Does not split T7, since nothing shows it is too large, and does not attempt it itself, since the top rung has not failed.",
         "pass": true
       },
       {
-        "evidence": "The response ends: \"No human is asked anything at any point.\" No step poses a question or requests approval; the unresolved-role branch is handled autonomously: \"record the unresolved role in the Decision Log, mark T7 a gap citing it, commit its workspace to `gap/T7`, and continue.\"",
+        "evidence": "'Nothing goes to a person. No scout is dispatched, because the missing piece is derivation, not a fact locatable in the tree.' Every step is executed autonomously with no question posed to a human.",
         "item": "5. Does not ask a person for approval, clarification, or direction.",
         "pass": true
       }
@@ -2322,7 +2322,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "T7's return is gate evidence, not an outcome. The gate is NOT DONE with a cause that is neither an exact fix nor too large, so the task goes up exactly one rung. In order:\n\n1. **Inspect T7's workspace myself.** Read the complete change set: staged, unstaged, untracked, deletions, mode changes. Confirm the only changes are the failing test in `tests/test_canonicalize.py` and that `src/canonicalize.py` is untouched. Confirm every changed path is inside the owned-files allowlist. Read the attached traces for the distributive and factored forms and run the task's fast check to reproduce the RED result fresh. Check the test is real, not tautological, so it counts as RED evidence for R3.\n\n2. **Write the gate record** to `gates/T7-1.md` with the exact fields. Task: T7, Canonicalize policy expressions. Lineage: no parent, no descendants, split unconsumed. Rung: entry rung. Candidate revision: the effort's base plus the inspected change set, test only, no implementation. Contract items checked: R3's named evidence test_equivalent_policy_bytecode is RED, so not met; Must Not Ship entries and minimal change hold because nothing shipped. Owned-files result: changed paths within the allowlist. Mechanical-floor result: nothing suppressed, weakened, or dead. Premises touched: none, and none shown false. Verdict: NOT DONE, itemized on R3. Cause: the brief omitted no path, value, or decision, and the task fits one pass, so this is a failure the gate cannot reduce to a fix. Next action: escalation to the next rung. An unchanged re-dispatch of the entry rung is not an option, and a second attempt on that rung is not available because there is no exact fix to name.\n\n3. **Record the transition before dispatching.** Write to `state.json` that T7 sits at the entry rung with one attempt used, the gate record path, and the pending escalation. Mirror that through the record-task-state operation. Log the routing decision and its reason in the Decision Log, along with any observations from the worker's Notes.\n\n4. **Resolve the escalation role.** Read the registry at `~/.claude/gambit/models.json`, look up `escalation`, and take exactly the next rung above the entry rung on its ladder. Select that rung's writing variant. If the registry is absent or the role does not resolve, record the unresolved role in the Decision Log, mark T7 a gap citing it, commit its workspace to `gap/T7`, and continue.\n\n5. **Dispatch the escalation.** Use the dispatch operation with `contracts/worker.md` by absolute path and, as the brief text, the complete unchanged T7 brief plus the gate record, the task's workspace and base revision, and the current uncommitted work including the RED test and traces. The dispatched rung inherits the same contract and owned files and starts fresh at that rung with two attempts available under the same rules.\n\n6. **Keep T8 running.** It does not depend on T7, so it continues concurrently and is gated on its own return. Nothing from T7 is committed or integrated, the accepted base stays where it is, and I implement nothing myself: my own final attempt exists only after the top rung fails.\n\nNo human is asked anything at any point.",
+    "response": "**Route:** T7 gets NOT DONE, cause \"cannot be reduced to an exact fix,\" and goes one rung up via `escalation`. Not a second entry-rung attempt, not a split, not my own attempt. T8 keeps running. In order:\n\n1. **Inspect the return myself.** In T7's workspace, check staged, unstaged, and untracked state and confirm the tree is empty of changes. Run the task's test command and observe test_equivalent_policy_bytecode fail with the instruction-order divergence the worker described. Read the attached traces. This is my RED evidence, not the worker's verdict.\n\n2. **Write the gate record** at `gates/canonicalize-policy-expressions-1.md` with all ten fields:\n   - Task: T7, Canonicalize policy expressions.\n   - Lineage: root, no parent, no descendants, split not consumed.\n   - Rung: entry rung, attempt 1.\n   - Candidate revision: effort E1 base, empty change set.\n   - Contract items checked: R3 evidence test_equivalent_policy_bytecode RED, not met. Must Not Ship and minimal change have nothing to assess against an empty change.\n   - Owned-files result: no changed paths, allowlist holds.\n   - Mechanical-floor result: no change, nothing to assess.\n   - Premises touched: none falsified.\n   - Verdict: NOT DONE. Cause: the brief was complete and the task fits one pass, so this is neither an exact fix nor too large. The BLOCKED label is evidence only.\n   - Next action: escalate to exactly the next rung on the worker ladder.\n\n3. **Record the transition.** Update `state.json` with T7's rung position, one attempt consumed at the entry rung, no split, and the gate record path. Mirror it through the record-task-state operation. Add a Decision Log entry stating the routing and its reason.\n\n4. **Resolve the `escalation` role** in `~/.claude/gambit/models.json`: take T7's ladder, select the rung immediately above the entry rung, and pick its writing variant. If the registry cannot resolve it, log the unresolved role, mark T7 a gap citing that role, and let T8 continue.\n\n5. **Dispatch the escalation** with `contracts/worker.md` by absolute path and, as text, the unchanged complete brief, the gate record, and the current work: the same isolated workspace at the same base, plus the RED output and both traces. `state.json` is already written before this dispatch.\n\n6. **Leave T8 running concurrently.** It does not depend on T7 and nothing here touches it.\n\n7. **Gate the escalation's return** like any other. That rung starts with its own two-attempt budget. If it fails without an exact fix, the next rung up; only after the top rung fails do I make one final attempt myself, and only after that does T7 become a gap on `gap/canonicalize-policy-expressions`.\n\nNothing goes to a person. No scout is dispatched, because the missing piece is derivation, not a fact locatable in the tree.",
     "status": "ok",
     "subject": {
       "effort": "high",
@@ -2330,7 +2330,7 @@
     }
   },
   "executing-plans/worker-blocked@opus-low": {
-    "at": "2026-09-12T03:50:30.295558+00:00",
+    "at": "2026-09-12T04:11:44.246883+00:00",
     "hashes": {
       "fixture": "2ec630eefa31cfce3858601fd7a05f15586b2959c034e553b774a0e8a20e119e",
       "neighbors": {
@@ -2338,31 +2338,31 @@
         "contracts/models.md": "470366c5590b94271a1a1787da88f9fbc22280796d4ba35703de124873395105",
         "contracts/worker.md": "60f626bd4b7e9bf134b82d4a9186207d91e8d6136942605682eb1183c3385841"
       },
-      "text": "960e8c43c7adf3aa4ff9f9225cb704bfeb4a99821de2638461269944f9f16769"
+      "text": "8f4a632414f06c41c74e9682f13cbec37095bda72724162aabec762f7a74326b"
     },
     "items": [
       {
-        "evidence": "Step 3: \"Write the gate record to gates/canonicalize-policy-expressions-1.md with all its fields... Verdict NOT DONE, itemized; Next action \u2014 escalate one rung, cause: a failure the gate cannot reduce to a fix\"; step 1 grounds it in the worker's evidence by inspecting the change set and re-running the failing test.",
+        "evidence": "Step 2: \"Write `gates/canonicalize-policy-expressions-1.md` with all eleven fields ... **Verdict: NOT DONE**, itemized against the contract, with the cause recorded as a failure the gate cannot reduce to an exact fix\"; step 1 grounds it in evidence: \"Inspect the complete change set in T7's workspace ... Run the brief's test command myself for fresh RED evidence\".",
         "item": "1. Writes an itemized NOT DONE gate record for T7 from the worker's evidence, naming its cause as a failure the gate cannot reduce to an exact fix.",
         "pass": true
       },
       {
-        "evidence": "Step 6: \"Dispatch that rung with contracts/worker.md by absolute path, the complete T7 brief unchanged, the gate record, and the current work \u2014 the RED test stays in the workspace.\" Step 5 resolves \"exactly the next rung\" on T7's ladder.",
+        "evidence": "Step 4: \"take exactly the next rung above the entry on T7's ladder\"; step 5: \"Dispatch `escalation` with `contracts/worker.md` by absolute path and a brief carrying the complete original brief, the gate record, and T7's current work (the RED test)\".",
         "item": "2. Dispatches T7 to the next rung carrying that record, the complete brief, the contract path, and the current work.",
         "pass": true
       },
       {
-        "evidence": "Step 2: \"the return names no omitted path, missing value, or single named check. So there's no exact fix, and no second attempt at the entry rung.\"",
+        "evidence": "\"No second attempt on the entry rung (that's only for an exact fix the gate can state)\"; the plan routes directly to escalation.",
         "item": "3. Does not give the entry rung a second attempt, since the gate can name no exact fix that the first attempt lacked.",
         "pass": true
       },
       {
-        "evidence": "Step 3: \"the task fits one pass so it is not a split\"; step 7: \"Nothing here is a gap, a split, a catastrophe\". The response dispatches T7 to the escalation rung rather than attempting it itself.",
+        "evidence": "\"no split (not too large), no final orchestrator attempt (top rung hasn't worked it)\"; opening line: \"its brief lacks nothing, and the task fits one pass\".",
         "item": "4. Does not split T7, since nothing shows it is too large, and does not attempt it itself, since the top rung has not failed.",
         "pass": true
       },
       {
-        "evidence": "Step 7: \"Nothing here is a gap, a split, a catastrophe, or a question for a person.\" The response contains no request for approval or direction; the closing note explicitly defers the premise question as \"an observation, not work\" and \"not now\".",
+        "evidence": "\"No question to a person, no Decision Log entry beyond the routing itself\"; the response is an action sequence with no question posed to anyone.",
         "item": "5. Does not ask a person for approval, clarification, or direction.",
         "pass": true
       }
@@ -2372,7 +2372,7 @@
       "model": "claude-fable-5-1"
     },
     "pass": true,
-    "response": "T7 gets a NOT DONE gate at the entry rung, and the cause routes it one rung up. In order:\n\n1. **Inspect the return as evidence, not as a verdict.** BLOCKED is gate evidence. Go into T7's workspace and read the complete change set myself \u2014 staged, unstaged, untracked, deletions, mode changes \u2014 to confirm the claim \"no implementation was written\" and that `tests/test_canonicalize.py` holds the RED test. Run the brief's test command myself and capture the fresh failing output for `test_equivalent_policy_bytecode`.\n\n2. **Check whether the return names anything the gate can supply.** It doesn't: the brief's owned files, values, and decisions are complete, and the return names no omitted path, missing value, or single named check. So there's no exact fix, and no second attempt at the entry rung.\n\n3. **Write the gate record** to `gates/canonicalize-policy-expressions-1.md` with all its fields: Task T7; Lineage \u2014 no parent, no decomposition consumed; Rung \u2014 entry; Candidate revision \u2014 the effort base plus the inspected change-set evidence; Contract items checked \u2014 R3 with `test_equivalent_policy_bytecode` and its failing output, applicable Must Not Ship entries, minimal-change; Owned-files result \u2014 changed paths against `src/canonicalize.py` and `tests/test_canonicalize.py`; Mechanical-floor result; Premises touched \u2014 none shown false; Verdict **NOT DONE**, itemized; Next action \u2014 escalate one rung, cause: a failure the gate cannot reduce to a fix, and the task fits one pass so it is not a split.\n\n4. **Write the transition to `state.json`** \u2014 T7's rung position, one attempt spent at the entry rung, the pending escalation \u2014 and mirror it through the harness's record-task-state operation, before the next dispatch.\n\n5. **Resolve `escalation` for exactly the next rung** on T7's ladder through `~/.claude/gambit/models.json`, writing variant. No skipping, no letting the agent pick.\n\n6. **Dispatch that rung** with `contracts/worker.md` by absolute path, the complete T7 brief unchanged, the gate record, and the current work \u2014 the RED test stays in the workspace. The escalation rung starts fresh attempts on its own rung.\n\n7. **Keep T8 running.** It doesn't depend on T7; dispatch or continue it concurrently in its own workspace. Nothing here is a gap, a split, a catastrophe, or a question for a person.\n\nOne thing worth logging as an observation, not work: the worker's claim that no terminating canonical ordering exists under the current grammar bears on the Approach. If the escalation rung returns the same finding with evidence, that is where a Premise clause or a Decision Log entry on the ordering strategy comes in \u2014 not now.",
+    "response": "T7's return is BLOCKED for reasoning capacity, its brief lacks nothing, and the task fits one pass \u2014 so this is \"NOT DONE otherwise, below the top rung\": escalate one rung. No second attempt on the entry rung (that's only for an exact fix the gate can state), no split (not too large), no final orchestrator attempt (top rung hasn't worked it).\n\nIn order:\n\n1. **Gate the return, don't take its label.** Inspect the complete change set in T7's workspace \u2014 staged, unstaged, untracked, deletions, modes \u2014 to see exactly what exists (the RED test in `tests/test_canonicalize.py`, and whether `src/canonicalize.py` is genuinely untouched). Run the brief's test command myself for fresh RED evidence on `test_equivalent_policy_bytecode`; don't rely on attached traces. Check the changed paths against the exact allowlist and the mechanical floor on whatever was written.\n\n2. **Write `gates/canonicalize-policy-expressions-1.md`** with all eleven fields: task and subject; lineage (parent none, no decomposition consumed); rung (entry); candidate revision as the inspected base plus the change-set evidence; contract items checked \u2014 R3 with its command, result, cited evidence; owned-files result; mechanical-floor result; Premises touched (none shown false); **Verdict: NOT DONE**, itemized against the contract, with the cause recorded as a failure the gate cannot reduce to an exact fix; Next action: escalate one rung, with that reason.\n\n3. **Write the transition to `state.json`** \u2014 T7's gate outcome, attempts spent at the entry rung, and the pending escalation \u2014 and mirror it through the harness's record-task-state operation, before dispatching.\n\n4. **Resolve the rung.** Read `contracts/models.md` and the registry at `~/.claude/gambit/models.json`; look up `escalation`, take exactly the next rung above the entry on T7's ladder, and select that rung's writing dispatch target. If the registry can't resolve it, T7 becomes a gap citing the unresolved role and T8 continues.\n\n5. **Dispatch `escalation`** with `contracts/worker.md` by absolute path and a brief carrying the complete original brief, the gate record, and T7's current work (the RED test) in its isolated workspace from the effort's base. Nothing about the rung goes to the agent.\n\n6. **T8 continues concurrently** \u2014 it doesn't depend on T7, and its owned files are disjoint. Its return gets gated the same way.\n\nNo question to a person, no Decision Log entry beyond the routing itself, and nothing committed until a gate says DONE.",
     "status": "ok",
     "subject": {
       "effort": "low",
