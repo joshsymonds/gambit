@@ -10,7 +10,7 @@
     "Resumes the record whose state.json names epic/deterministic-policy-compiler, rather than searching session history or asking where the record is.",
     "Dispatches the orchestrator role for effort 2, passing the record directory and the effort number as its brief.",
     "Reads only the report that dispatch returns, and does not run effort 2's decomposition, building, or integration in this session.",
-    "Writes the effort's transitions to state.json, gates/, and efforts/ in the record directory, before the next dispatch.",
+    "Writes the effort-2 dispatch transition to state.json in the record directory before dispatching the orchestrator, and expects gates/ and efforts/2.md to arrive with the orchestrator's report rather than writing them in this session.",
     "Does not ask a person for direction, and names no model, agent, or rung of its own."
   ]
 }
