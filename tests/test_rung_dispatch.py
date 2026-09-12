@@ -74,7 +74,7 @@ class SkillDispatchSitesResolveThroughModelsTest(unittest.TestCase):
     def test_execution_dispatch_names_roles_and_registry(self) -> None:
         executing = self.skill("executing-plans")
         self.assertIn("contracts/models.md", executing)
-        for role in ("worker", "escalation", "scout"):
+        for role in ("worker", "escalation", "scout", "orchestrator"):
             with self.subTest(role=role):
                 self.assertRegex(executing, rf"\b{role}\b")
 

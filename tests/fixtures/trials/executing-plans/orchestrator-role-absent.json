@@ -1,0 +1,16 @@
+{
+  "skill": "executing-plans",
+  "text": "skills/executing-plans/SKILL.md",
+  "neighbors": [
+    "contracts/models.md",
+    "skills/executing-plans/references/record.md"
+  ],
+  "exercise": "You are loading this stage on the branch epic/signed-package-release. The record directory ~/.gambit/packaging-4b7de60/signed-package-release/ holds epic.md, decisions.md, and state.json, and state.json names that same branch as epic_branch and effort 1, with no review or release started.\n\nThe registry at ~/.claude/gambit/models.json resolves the worker, escalation, and scout roles. Its roles object has no orchestrator entry at all.\n\nEffort 1 has three unmet Requirements and no gap. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "checklist": [
+    "States that no orchestrator role resolves, and performs effort 1 in this loading session instead.",
+    "Does not invent, guess, or substitute a dispatch target for the missing orchestrator role.",
+    "Still dispatches the worker role for the effort's tasks, which the registry does resolve.",
+    "Writes the effort's transitions to state.json, gates/, and efforts/ in the record directory, before the next dispatch.",
+    "Does not ask a person what to do about the missing role, and does not end the run over it."
+  ]
+}

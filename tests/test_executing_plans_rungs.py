@@ -81,6 +81,21 @@ class ExecutingPlansStructureTest(unittest.TestCase):
             r"(?is)\bevery task\b.*\bgap\b.*\bindependent\b.*\bno executable work remains\b",
         )
 
+    def test_record_paths_and_orchestrator_role_are_named(self) -> None:
+        for token in (
+            "state.json",
+            "gates/",
+            "efforts/",
+            "references/record.md",
+            "orchestrator",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, self.text)
+
+    def test_start_dispatches_the_orchestrator_role(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        self.assertIn("orchestrator", sections.get("Start", ""))
+
     def test_gate_record_has_exact_readme_fields(self) -> None:
         tables = re.findall(r"(?m)^\| Field \| Value \|\n\|[^\n]+\n((?:\|[^\n]+\n)+)", self.text)
         self.assertEqual(len(tables), 1, "one gate-record schema")

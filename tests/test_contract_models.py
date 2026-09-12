@@ -16,6 +16,7 @@ EXPECTED_SECTIONS = [
 ROLES = (
     "worker",
     "escalation",
+    "orchestrator",
     "scout",
     "steelman",
     "finder",

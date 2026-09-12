@@ -9,13 +9,17 @@ user_invokable: true
 
 ## Start
 
-Load the complete epic record: Intent, Premises and their falsification clauses, Requirements and their named evidence, Must Not Ship, Quality Bar, Approach and Rejected Approaches, Done, Release, and the Decision Log. The contract alone authorizes work. Keep the Intent and Requirements fixed; assess defects by the contract's Quality Bar, not a stronger standard.
+Find the record directory by the rule in `references/record.md` and read its `epic.md`: Intent, Premises and their falsification clauses, Requirements and their named evidence, Must Not Ship, Quality Bar, Approach and Rejected Approaches, Done, Release, and the Decision Log. The contract alone authorizes work. Keep the Intent and Requirements fixed; assess defects by the contract's Quality Bar, not a stronger standard.
 
-Resume from the epic record's task state. A terminal run only shows its stored report; it dispatches nothing and repeats no external action. For an active run, recover the accepted base, candidate revision, tasks and lineages, rung positions and attempts used, split history, gate records, review state, and completed Release actions. Record each transition through the harness's record-task-state operation so resumption preserves the ladder and review bounds.
+Resume the record whose `state.json` names the current epic branch, and only that one. When no record names it, refuse to resume: the run is fresh. A terminal run only shows its stored report; it dispatches nothing and repeats no external action. For an active run, recover from `state.json` the accepted base, candidate revision, tasks and lineages, rung positions and attempts used, split history, gate records, review state, and completed Release actions.
+
+Write every transition to `state.json`, each gate record to `gates/<task-slug>-<attempt>.md`, and each effort report to `efforts/<n>.md`, all before the next dispatch. Mirror each transition through the harness's record-task-state operation so resumption preserves the ladder and review bounds and needs nothing but the record.
 
 Use five harness operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. Run Git, Done checks, and Release actions through the harness's shell. On a fresh run, isolate the epic with `git worktree add -b <epic-branch> <epic-workspace> <base>`. Resume in that workspace. Never execute on the main branch.
 
 Read `contracts/models.md` and resolve every dispatched role through the registry at `~/.claude/gambit/models.json`. Look up the role, select its entry or gate-required next rung, and select the rung's dispatch target, using the read-only variant for a read-only role. Use the dispatch operation with the role's contract by absolute path and its complete brief as text. Resolve contract paths from the current installation. The `worker` and `escalation` roles use `contracts/worker.md`; `scout` uses `contracts/scout.md`. There is no fallback dispatch target. If the registry is absent or a role cannot be resolved, record the unresolved role in the Decision Log. Every task requiring it becomes a gap that cites the role. Independent work continues, and the run ends with gaps only when no executable work remains.
+
+Dispatch the `orchestrator` role once per effort, once for review, and once for release. Its brief is the record directory and the effort number; it reads the record for everything else and writes its result back there. Read only the report that dispatch returns. When the registry resolves no `orchestrator` role, the session that loaded this stage performs the effort, review, or release itself under these same rules, inventing no dispatch target.
 
 ## Decompose the next effort
 
