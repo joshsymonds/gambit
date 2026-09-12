@@ -62,7 +62,7 @@ After a non-`READY` closure, finish by revising the packet without another steel
 
 ## The contract
 
-Create the epic record through the record-task-state operation from the finalized design and decisions. Read `TEMPLATES.md`. Emit the full contract, with exactly these sections in this order:
+Create the epic record through the record-task-state operation from the finalized design and decisions. Read `TEMPLATES.md` and `skills/executing-plans/references/record.md`. Emit the full contract, with exactly these sections in this order:
 
 1. **Intent:** one paragraph stating the desired end state and reason, never a solution.
 2. **Premises:** falsifiable facts. Every one states whether the Intent survives if false and the consequence of that clause.
@@ -77,6 +77,8 @@ In live execution, bind evidence links, file paths, commands, and release target
 
 In conversation, present the complete contract for acceptance and settle requested changes here. With a goal file, accept it yourself on that file's behalf. Record acceptance and freeze Intent, Premises with their survival clauses, and Requirements. Later changes of assessment belong in the Decision Log, leaving those clauses intact. The contract alone authorizes the work that follows.
 
+At acceptance, and in addition to the record-task-state operation, write the epic's record directory `~/.gambit/<repository-id>/<epic-slug>/` as `skills/executing-plans/references/record.md` specifies: the frozen eight-section contract to `epic.md`, every Decision Log entry to `decisions.md` in its append-only line format, and the head to `state.json`. Derive repository-id from the tree by that reference's rule, never from a workspace name. The record carries this epic for a reader holding no transcript.
+
 ## The first effort
 
 Create every task writable from the tree now for the first effort, with complete briefs. Cover each unmet Requirement that has executable work now; leave work needing unfinished interfaces for later decomposition. Never produce a full future task tree or split one behavior just to create parallel work.
@@ -86,6 +88,8 @@ Use the task template's fields in order: Goal, Files owned, Hidden shared surfac
 Give every concurrent task a disjoint exact owned-file list, including tests, additions, deletions, and implicit writes. Hidden shared surfaces and neighbors grant no ownership. Put work with overlapping files into one coherent task or leave it for a later effort. For bugs, the first brief carries the verified reproduction as its failing test and maps it to the Requirement's evidence.
 
 Record tasks as pending and ready. Associate them with the epic without making the epic a blocker: it is their contract container, not a prerequisite that must complete first. State the task state left behind and keep the Decision Log attached to the epic.
+
+Write that same task state into the record's `state.json` before handing off: each task's id, slug, subject, requirement, owned_files, lineage, rung, attempts, status, and gate_paths, with `next_actions` naming what the next reader does first and `never_drop` carrying the acceptance criteria, observed error signatures, and commands still needed.
 
 ## Handoff
 

@@ -1,0 +1,105 @@
+{
+  "repository_id": "sundial-4c8e19a",
+  "epic_slug": "config-loader",
+  "epic_branch": "epic/config-loader",
+  "workspace": "/home/example/sundial/.claude/worktrees/epic-config-loader",
+  "accepted_base": "9d31ba7",
+  "candidate_revision": null,
+  "effort": 2,
+  "tasks": [
+    {
+      "id": 4,
+      "slug": "t2-loader",
+      "subject": "Load configuration from a file and the environment",
+      "requirement": "R2",
+      "owned_files": [
+        "src/sundial/config.py",
+        "tests/test_config.py"
+      ],
+      "lineage": {
+        "parent": null,
+        "descendants": [
+          "t2a-parse-env",
+          "t2b-merge-defaults"
+        ],
+        "split_used": true
+      },
+      "rung": "entry",
+      "attempts": 1,
+      "status": "split",
+      "gate_paths": [
+        "gates/t2-loader-1.md"
+      ]
+    },
+    {
+      "id": 5,
+      "slug": "t2a-parse-env",
+      "subject": "Parse environment overrides into typed values",
+      "requirement": "R2",
+      "owned_files": [
+        "src/sundial/config.py"
+      ],
+      "lineage": {
+        "parent": "t2-loader",
+        "descendants": [],
+        "split_used": false
+      },
+      "rung": "entry",
+      "attempts": 1,
+      "status": "done",
+      "gate_paths": [
+        "gates/t2a-parse-env-1.md"
+      ]
+    },
+    {
+      "id": 6,
+      "slug": "t2b-merge-defaults",
+      "subject": "Merge parsed overrides onto the packaged defaults",
+      "requirement": "R3",
+      "owned_files": [
+        "tests/test_config.py"
+      ],
+      "lineage": {
+        "parent": "t2-loader",
+        "descendants": [],
+        "split_used": false
+      },
+      "rung": "entry",
+      "attempts": 1,
+      "status": "dispatched",
+      "gate_paths": []
+    }
+  ],
+  "review": {
+    "started": false,
+    "candidate": null,
+    "ledger": []
+  },
+  "release": {
+    "actions": [
+      {
+        "action": "git push origin main",
+        "target": "sundial, branch main",
+        "effect": "the reviewed candidate is the published tip",
+        "completed_at": null,
+        "evidence": null
+      },
+      {
+        "action": "python3 -m build && python3 -m twine upload dist/*",
+        "target": "the sundial package index entry",
+        "effect": "version 0.4.0 resolves for a fresh install",
+        "completed_at": null,
+        "evidence": null
+      }
+    ]
+  },
+  "next_actions": [
+    "gate the t2b-merge-defaults return into gates/t2b-merge-defaults-1.md",
+    "integrate t2a-parse-env and t2b-merge-defaults onto 9d31ba7, then run just check"
+  ],
+  "never_drop": [
+    "R2 is satisfied only when SUNDIAL_TIMEOUT=abc exits nonzero with a named field",
+    "error signature: KeyError: 'timeout' from config.py:61 on an empty defaults file",
+    "command still needed: python3 -m pytest tests/test_config.py -q"
+  ]
+}

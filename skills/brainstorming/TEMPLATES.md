@@ -1,6 +1,6 @@
 # Epic and task templates
 
-Use the record-task-state operation. Fill every field from the goal, decisions, and research before creating executable work. The epic body contains exactly the eight sections below. Its Decision Log is attached record context, outside that body. The Design Ledger stays in the design transcript.
+Use the record-task-state operation. Fill every field from the goal, decisions, and research before creating executable work. The epic body contains exactly the eight sections below. Its Decision Log is attached record context, outside that body. The Design Ledger stays in the design transcript. The epic body, its Decision Log, and the task state are also written to the epic's record directory as `skills/executing-plans/references/record.md` specifies.
 
 ### Epic record
 
