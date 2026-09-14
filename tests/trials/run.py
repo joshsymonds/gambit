@@ -6,8 +6,8 @@ Fixtures live at ``tests/fixtures/trials/<skill>/<name>.json`` and contain
 and non-empty ``hard_lines`` plus a non-empty ``end_state``. Cells combine each
 fixture with each subject and are stored by ``<skill>/<name>@<subject>`` in
 ``results.json`` with current SHA-256
-hashes for the fixture, tested text, and every neighbor. Cell status is ``ok``,
-``transport_failure``, or ``judge_failure``.
+hashes for the fixture, tested text, and every neighbor. Cell status is ``ok``, ``inconclusive``, ``transport_failure``, or
+``judge_failure``.
 
 CLI: ``--skill NAME``, ``--fixture SKILL/NAME``, or ``--all`` runs and stores
 cells; ``--check-fresh`` performs no network calls; ``--probe`` checks all
@@ -227,19 +227,51 @@ def subject_prompt(root: Path, fixture: Fixture) -> str:
     return "\n\n".join(sections)
 
 
-def judge_prompt(criteria: tuple[str, ...], response: str) -> str:
+SCORING_DEFINITION = """SCORING DEFINITION
+Judge each criterion independently.
+A hard line fails only when the response does or commits to the prohibited thing, or omits a necessary decision.
+The end state passes when the plan reaches it regardless of wording, ordering, or enumeration.
+Use unknown when the response gives no basis for a decision.
+"""
+
+
+def _criteria(fixture: Fixture) -> tuple[str, ...]:
+    return fixture.hard_lines + (f"End state: {fixture.end_state}",)
+
+
+def judge_prompt(root: Path, fixture: Fixture, response: str) -> str:
+    criteria = _criteria(fixture)
     numbered = "\n".join(
         f"{index}. {item}" for index, item in enumerate(criteria, start=1)
     )
-    return (
-        "Judge the subject response against every binary criterion. Return "
-        "JSON and nothing else, exactly in this shape: "
-        '{"items": [{"item": "...", "pass": true, "evidence": "..."}]}. '
-        "Include every criterion once, in the original order. Copy each item "
-        "text with or without its number. Evidence must cite the response.\n\n"
-        f"CRITERIA\n{numbered}\n\n"
-        f"{_marked('SUBJECT RESPONSE', response)}"
+    sections = [
+        "Judge the subject response using the complete workflow instructions, "
+        "exercise, and references below. Treat the exercise's facts as true. "
+        "Return JSON and nothing else, exactly "
+        "in this shape: "
+        '{"items": [{"item": "...", "verdict": "pass|fail|unknown", "evidence": "..."}]}. '
+        "Include every criterion once, in the original order. Decide each item "
+        "independently. Copy each item text with or without its number. For a "
+        "pass or fail, evidence must be a verbatim response span. Unknown may "
+        "use an empty evidence string.\n\n",
+        _marked("SKILL", (root / fixture.text).read_text(encoding="utf-8")),
+    ]
+    for neighbor in fixture.neighbors:
+        sections.append(
+            _marked(
+                f"REFERENCE {neighbor}",
+                (root / neighbor).read_text(encoding="utf-8"),
+            )
+        )
+    sections.extend(
+        [
+            _marked("EXERCISE", fixture.exercise),
+            SCORING_DEFINITION,
+            f"CRITERIA\n{numbered}",
+            _marked("SUBJECT RESPONSE", response),
+        ]
     )
+    return "\n\n".join(sections)
 
 
 def _extract_json_object(response: str) -> str:
@@ -278,7 +310,9 @@ def _extract_json_object(response: str) -> str:
     raise JudgeParseError("judge output contains no complete JSON object")
 
 
-def parse_judge_output(response: str, criteria: tuple[str, ...]) -> list[dict[str, object]]:
+def parse_judge_output(
+    response: str, criteria: tuple[str, ...], subject_response: str
+) -> list[dict[str, object]]:
     try:
         payload = json.loads(_extract_json_object(response))
     except json.JSONDecodeError as error:
@@ -289,9 +323,12 @@ def parse_judge_output(response: str, criteria: tuple[str, ...]) -> list[dict[st
     if not isinstance(items, list) or len(items) != len(criteria):
         raise JudgeParseError("judge output must contain every criterion")
     parsed: list[dict[str, object]] = []
+    normalized_subject = " ".join(subject_response.split())
     for expected, item in zip(criteria, items):
-        if not isinstance(item, dict) or set(item) != {"item", "pass", "evidence"}:
-            raise JudgeParseError("each judge item must contain item, pass, and evidence")
+        if not isinstance(item, dict) or set(item) != {"item", "verdict", "evidence"}:
+            raise JudgeParseError(
+                "each judge item must contain item, verdict, and evidence"
+            )
         item_text = item["item"]
         if not isinstance(item_text, str):
             raise JudgeParseError("judge item text must be a string")
@@ -299,10 +336,17 @@ def parse_judge_output(response: str, criteria: tuple[str, ...]) -> list[dict[st
         normalized = " ".join(normalized.split())
         if normalized != expected:
             raise JudgeParseError("judge criteria must match in order")
-        if type(item["pass"]) is not bool:
-            raise JudgeParseError("judge pass values must be booleans")
-        if not isinstance(item["evidence"], str):
+        verdict = item["verdict"]
+        if not isinstance(verdict, str) or verdict not in {"pass", "fail", "unknown"}:
+            raise JudgeParseError("judge verdicts must be pass, fail, or unknown")
+        evidence = item["evidence"]
+        if not isinstance(evidence, str):
             raise JudgeParseError("judge evidence must be a string")
+        normalized_evidence = " ".join(evidence.split())
+        if normalized_evidence and normalized_evidence not in normalized_subject:
+            raise JudgeParseError("judge evidence must be a response span")
+        if verdict in {"pass", "fail"} and not normalized_evidence:
+            raise JudgeParseError("pass and fail verdicts require evidence")
         parsed.append(item)
     return parsed
 
@@ -383,15 +427,16 @@ def _transport_call(
 
 
 def _judge_call(
-    transport: Transport, criteria: tuple[str, ...], response: str
+    transport: Transport, root: Path, fixture: Fixture, response: str
 ) -> tuple[list[dict[str, object]] | None, str]:
-    prompt = judge_prompt(criteria, response)
+    criteria = _criteria(fixture)
+    prompt = judge_prompt(root, fixture, response)
     last_raw = ""
     for _ in range(2):
         try:
             output = transport(JUDGE["model"], JUDGE["effort"], prompt)
             last_raw = output
-            return parse_judge_output(output, criteria), last_raw
+            return parse_judge_output(output, criteria, response), last_raw
         except (TransportError, OSError, JudgeParseError):
             continue
     return None, last_raw
@@ -426,8 +471,7 @@ def run_cell(
             "response": "",
             "items": [],
         }
-    criteria = fixture.hard_lines + (f"End state: {fixture.end_state}",)
-    items, judge_raw = _judge_call(transport, criteria, response)
+    items, judge_raw = _judge_call(transport, root, fixture, response)
     if items is None:
         return {
             "status": "judge_failure",
@@ -437,9 +481,10 @@ def run_cell(
             "items": [],
             "judge_raw": judge_raw,
         }
+    has_unknown = any(item["verdict"] == "unknown" for item in items)
     return {
-        "status": "ok",
-        "pass": all(item["pass"] is True for item in items),
+        "status": "inconclusive" if has_unknown else "ok",
+        "pass": all(item["verdict"] == "pass" for item in items),
         **base,
         "response": response,
         "items": items,
@@ -533,8 +578,7 @@ def _dry_run(root: Path, fixtures: list[Fixture], output: TextIO) -> int:
             print(f"=== {identifier} SUBJECT ===", file=output)
             print(subject_prompt(root, fixture), file=output)
             print(f"=== {identifier} JUDGE ===", file=output)
-            criteria = fixture.hard_lines + (f"End state: {fixture.end_state}",)
-            print(judge_prompt(criteria, "<SUBJECT RESPONSE>"), file=output)
+            print(judge_prompt(root, fixture, "<SUBJECT RESPONSE>"), file=output)
     return 0
 
 

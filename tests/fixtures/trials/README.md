@@ -19,7 +19,7 @@ Each fixture produces one cell per fixed subject: `opus-low` is `claude-opus-5` 
 
 ```json
 {
-  "status": "ok|transport_failure|judge_failure",
+  "status": "ok|inconclusive|transport_failure|judge_failure",
   "pass": true,
   "hashes": {
     "fixture": "<sha256>",
@@ -29,10 +29,12 @@ Each fixture produces one cell per fixed subject: `opus-low` is `claude-opus-5` 
   "subject": {"model": "<model>", "effort": "<effort>"},
   "judge": {"model": "<model>", "effort": "xhigh"},
   "response": "<subject response>",
-  "items": [{"item": "<criterion>", "pass": true, "evidence": "<quote>"}],
+  "items": [{"item": "<criterion>", "verdict": "pass|fail|unknown", "evidence": "<verbatim response span>"}],
   "judge_raw": "<last raw judge reply; judge_failure only>",
   "at": "<ISO timestamp>"
 }
 ```
+
+The judge receives the exercise, skill text, path-named neighbor references, scoring definition, and subject response. It decides each criterion independently with `pass`, `fail`, or `unknown`; non-empty evidence must be a whitespace-normalized verbatim response span. Hard lines pass unless the response does or commits to the prohibited thing, or omits a necessary decision. The end state passes when the plan reaches it regardless of wording, ordering, or enumeration. An `unknown` verdict makes the cell `inconclusive` and never passing.
 
 Run `python3 tests/trials/run.py --skill <skill>` to refresh cells, `--all` to refresh every fixture, `--check-fresh` to verify hashes and passing scores without calling any subject, `--probe` to test each subject and the judge, or `--dry-run --skill <skill>` to inspect prompts.

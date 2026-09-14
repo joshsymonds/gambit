@@ -37,14 +37,19 @@ class FakeTransport:
         return outcome
 
 
-def judge_json(criteria: list[str], passes: list[bool] | None = None) -> str:
+def judge_json(
+    criteria: list[str],
+    passes: list[bool] | None = None,
+    *,
+    response: str = "subject answer",
+) -> str:
     if passes is None:
         passes = [True] * len(criteria)
     return json.dumps(
         {
             "items": [
-                {"item": item, "pass": passed, "evidence": f"evidence {index}"}
-                for index, (item, passed) in enumerate(zip(criteria, passes))
+                {"item": item, "verdict": "pass" if passed else "fail", "evidence": response}
+                for item, passed in zip(criteria, passes)
             ]
         }
     )
@@ -183,7 +188,7 @@ class TrialRunnerTest(unittest.TestCase):
         )
         fixture = trials.load_fixture(self.root, fixture_path)
         criteria = fixture.hard_lines + (f"End state: {fixture.end_state}",)
-        prompt = trials.judge_prompt(criteria, "subject answer")
+        prompt = trials.judge_prompt(self.root, fixture, "subject answer")
         self.assertIn("1. states the result", prompt)
         self.assertIn("2. does not invent facts", prompt)
         self.assertIn("3. End state: returns a useful answer", prompt)
@@ -323,26 +328,118 @@ class TrialRunnerTest(unittest.TestCase):
             with self.assertRaises(trials.TransportError):
                 trials.claude_transport("claude-opus-5", "low", "prompt")
 
+    def test_judge_prompt_is_grounded_in_fixture_context_without_subject_model(self) -> None:
+        fixture = self.load_one()
+        prompt = trials.judge_prompt(self.root, fixture, "states the result without inventing facts")
+        self.assertIn("BEGIN SKILL\nDo the demonstrated thing.\nEND SKILL", prompt)
+        self.assertIn(
+            "BEGIN REFERENCE contracts/models.md\nUse the configured role.\nEND REFERENCE contracts/models.md",
+            prompt,
+        )
+        self.assertIn("BEGIN EXERCISE\nAnswer the exercise.\nEND EXERCISE", prompt)
+        self.assertIn("Treat the exercise's facts as true", prompt)
+        self.assertIn("hard line", prompt)
+        self.assertIn("end state", prompt)
+        self.assertIn("independently", prompt)
+        self.assertIn("BEGIN SUBJECT RESPONSE\nstates the result without inventing facts\nEND SUBJECT RESPONSE", prompt)
+        self.assertNotIn("claude-opus-5", prompt)
+
+    def test_judge_evidence_must_be_a_response_span(self) -> None:
+        criteria = ("states the result", "End state: does not invent facts")
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "pass", "evidence": "missing span"},
+                {"item": criteria[1], "verdict": "pass", "evidence": "states the result"},
+            ]
+        })
+        with self.assertRaises(trials.JudgeParseError):
+            trials.parse_judge_output(raw, criteria, "states the result")
+
+        fixture = self.load_one()
+        failed = trials.run_cell(
+            self.root,
+            fixture,
+            "opus-low",
+            FakeTransport("states the result", raw, raw),
+        )
+        self.assertEqual("judge_failure", failed["status"])
+        self.assertEqual([], failed["items"])
+
+    def test_unknown_criterion_is_inconclusive_and_never_passes(self) -> None:
+        fixture = self.load_one()
+        response = "states the result"
+        raw = json.dumps({
+            "items": [
+                {"item": self.criteria[0], "verdict": "pass", "evidence": "states the result"},
+                {"item": self.criteria[1], "verdict": "unknown", "evidence": ""},
+            ]
+        })
+        record = trials.run_cell(self.root, fixture, "opus-low", FakeTransport(response, raw))
+        self.assertEqual("inconclusive", record["status"])
+        self.assertFalse(record["pass"])
+        self.assertEqual("unknown", record["items"][1]["verdict"])
+
+    def test_all_passing_verdicts_make_cell_pass(self) -> None:
+        fixture = self.load_one()
+        response = "states the result; does not invent facts"
+        raw = json.dumps({
+            "items": [
+                {"item": self.criteria[0], "verdict": "pass", "evidence": "states the result"},
+                {"item": self.criteria[1], "verdict": "pass", "evidence": "does not invent facts"},
+            ]
+        })
+        record = trials.run_cell(self.root, fixture, "opus-low", FakeTransport(response, raw))
+        self.assertEqual("ok", record["status"])
+        self.assertTrue(record["pass"])
+        self.assertEqual(["pass", "pass"], [item["verdict"] for item in record["items"]])
+
+    def test_check_fresh_reports_inconclusive_cell_as_failing(self) -> None:
+        fixture = self.load_one()
+        identifier = trials.cell_id(fixture, "opus-low")
+        results = {
+            identifier: {
+                "status": "inconclusive",
+                "pass": False,
+                "hashes": trials.fixture_hashes(self.root, fixture),
+            }
+        }
+        results.update(
+            {
+                trials.cell_id(fixture, subject): {
+                    "status": "ok",
+                    "pass": True,
+                    "hashes": trials.fixture_hashes(self.root, fixture),
+                }
+                for subject in trials.SUBJECTS
+                if subject != "opus-low"
+            }
+        )
+        results_path = self.root / "tests/fixtures/trials/results.json"
+        results_path.write_text(json.dumps(results), encoding="utf-8")
+        output = io.StringIO()
+        self.assertEqual(1, trials.main(["--check-fresh"], root=self.root, transport=FakeTransport(), output=output))
+        self.assertIn(f"failing {identifier}", output.getvalue())
+
     def test_judge_output_matches_numbered_items_by_position(self) -> None:
         criteria = ("first item", "second item", "third item")
         response = json.dumps(
             {
                 "items": [
-                    {"item": "1. first item", "pass": True, "evidence": "one"},
-                    {"item": "2) second item", "pass": True, "evidence": "two"},
+                    {"item": "1. first item", "verdict": "pass", "evidence": "one"},
+                    {"item": "2) second item", "verdict": "pass", "evidence": "two"},
                     {
                         "item": "  third   item  ",
-                        "pass": True,
+                        "verdict": "pass",
                         "evidence": "three",
                     },
                 ]
             }
         )
 
-        parsed = trials.parse_judge_output(response, criteria)
+        parsed = trials.parse_judge_output(response, criteria, "one two three")
 
         self.assertEqual(3, len(parsed))
-        self.assertTrue(all(item["pass"] is True for item in parsed))
+        self.assertTrue(all(item["verdict"] == "pass" for item in parsed))
 
     def test_judge_output_extracts_fenced_or_surrounded_object(self) -> None:
         payload = json.loads(judge_json(self.criteria))
@@ -358,7 +455,7 @@ class TrialRunnerTest(unittest.TestCase):
 
         for response in responses:
             with self.subTest(response=response):
-                parsed = trials.parse_judge_output(response, tuple(self.criteria))
+                parsed = trials.parse_judge_output(response, tuple(self.criteria), "subject answer")
                 self.assertEqual(2, len(parsed))
 
     def test_judge_output_rejects_invalid_item_data(self) -> None:
@@ -368,21 +465,35 @@ class TrialRunnerTest(unittest.TestCase):
                 "items": [
                     {
                         "item": self.criteria[0],
-                        "pass": True,
+                        "verdict": "pass",
                         "evidence": "only one item",
                     }
                 ]
             },
-            "non-boolean pass": {
+            "invalid verdict": {
                 "items": [
                     {
                         "item": self.criteria[0],
-                        "pass": "true",
+                        "verdict": "maybe",
                         "evidence": "first",
                     },
                     {
                         "item": self.criteria[1],
-                        "pass": True,
+                        "verdict": "pass",
+                        "evidence": "second",
+                    },
+                ]
+            },
+            "unhashable verdict": {
+                "items": [
+                    {
+                        "item": self.criteria[0],
+                        "verdict": [],
+                        "evidence": "first",
+                    },
+                    {
+                        "item": self.criteria[1],
+                        "verdict": "pass",
                         "evidence": "second",
                     },
                 ]
@@ -391,12 +502,12 @@ class TrialRunnerTest(unittest.TestCase):
                 "items": [
                     {
                         "item": "1. states the wrong result",
-                        "pass": True,
+                        "verdict": "pass",
                         "evidence": "first",
                     },
                     {
                         "item": self.criteria[1],
-                        "pass": True,
+                        "verdict": "pass",
                         "evidence": "second",
                     },
                 ]
@@ -405,12 +516,12 @@ class TrialRunnerTest(unittest.TestCase):
                 "items": [
                     {
                         "item": self.criteria[0],
-                        "pass": True,
+                        "verdict": "pass",
                         "evidence": ["first"],
                     },
                     {
                         "item": self.criteria[1],
-                        "pass": True,
+                        "verdict": "pass",
                         "evidence": "second",
                     },
                 ]
@@ -421,7 +532,7 @@ class TrialRunnerTest(unittest.TestCase):
             with self.subTest(name=name):
                 with self.assertRaises(trials.JudgeParseError):
                     trials.parse_judge_output(
-                        json.dumps(payload), tuple(self.criteria)
+                        json.dumps(payload), tuple(self.criteria), "subject answer"
                     )
 
     def test_judge_scores_every_item(self) -> None:
@@ -435,7 +546,8 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertEqual(self.criteria, [item["item"] for item in record["items"]])
 
     def test_judge_prompt_allows_numbered_or_unnumbered_item_text(self) -> None:
-        prompt = trials.judge_prompt(tuple(self.criteria), "subject answer")
+        fixture = self.load_one()
+        prompt = trials.judge_prompt(self.root, fixture, "subject answer")
         self.assertIn("with or without its number", prompt)
 
     def test_judge_parse_failure_retries_once_then_records_failure(self) -> None:
@@ -584,11 +696,11 @@ class TrialRunnerTest(unittest.TestCase):
         self.write_fixture()
         passing = FakeTransport(
             "answer opus",
-            judge_json(self.criteria),
+            judge_json(self.criteria, response="answer opus"),
             "answer fable",
-            judge_json(self.criteria),
+            judge_json(self.criteria, response="answer fable"),
             "answer luna",
-            judge_json(self.criteria),
+            judge_json(self.criteria, response="answer luna"),
         )
         output = io.StringIO()
         self.assertEqual(
@@ -647,11 +759,11 @@ class TrialRunnerTest(unittest.TestCase):
         )
         failing = FakeTransport(
             "opus",
-            judge_json(["passes", f"End state: {self.end_state}"], [False, True]),
+            judge_json(["passes", f"End state: {self.end_state}"], [False, True], response="opus"),
             "fable",
-            judge_json(["passes", f"End state: {self.end_state}"], [True, True]),
+            judge_json(["passes", f"End state: {self.end_state}"], [True, True], response="fable"),
             "luna",
-            judge_json(["passes", f"End state: {self.end_state}"], [True, True]),
+            judge_json(["passes", f"End state: {self.end_state}"], [True, True], response="luna"),
         )
         self.assertEqual(
             1,
@@ -693,17 +805,17 @@ class TrialRunnerTest(unittest.TestCase):
         )
         fake = FakeTransport(
             "demo opus",
-            judge_json(self.criteria),
+            judge_json(self.criteria, response="demo opus"),
             "demo fable",
-            judge_json(self.criteria),
+            judge_json(self.criteria, response="demo fable"),
             "demo luna",
-            judge_json(self.criteria),
+            judge_json(self.criteria, response="demo luna"),
             "other opus",
-            judge_json(other_criteria),
+            judge_json(other_criteria, response="other opus"),
             "other fable",
-            judge_json(other_criteria),
+            judge_json(other_criteria, response="other fable"),
             "other luna",
-            judge_json(other_criteria),
+            judge_json(other_criteria, response="other luna"),
         )
         self.assertEqual(
             0,
@@ -965,11 +1077,11 @@ class TrialRunnerTest(unittest.TestCase):
         self.write_fixture(name="other", exercise="Other exercise.")
         fake = FakeTransport(
             "opus answer",
-            judge_json(self.criteria),
+            judge_json(self.criteria, response="opus answer"),
             "fable answer",
-            judge_json(self.criteria),
+            judge_json(self.criteria, response="fable answer"),
             "luna answer",
-            judge_json(self.criteria),
+            judge_json(self.criteria, response="luna answer"),
         )
         self.assertEqual(
             0,
