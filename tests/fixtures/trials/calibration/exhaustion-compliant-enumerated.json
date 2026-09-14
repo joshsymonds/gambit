@@ -1,0 +1,12 @@
+{
+  "fixture": "executing-plans/exhaustion-is-gap",
+  "response": "Step 1. Gate record: write gates/validate-package-manifest-4.md with Task T5 schema child; Lineage parent T5, split used; Rung orchestrator attempt under contracts/worker.md; Candidate revision the task workspace; Contract items R2 evidence test_manifest_round_trip failing, output 'serializer drops package metadata during round trip'; Owned-files PASS; Mechanical floor NOT DONE; Premises none touched; Verdict NOT DONE, itemized; Next action gap, because the signature repeats the third route and every step has been taken once.\nStep 2. Update state.json: the schema child status is gap, branch gap/validate-package-manifest, workspace preserved, gate path appended, failure signature and step recorded.\nStep 3. Exclude gap work from the candidate; the accepted base is unchanged.\nStep 4. Task T6 Publish release notes: dispatch or continue it, gate its return, integrate through the wave script.\nStep 5. When no executable work remains, write the report: nothing released; R2 unsatisfied as written with the gate evidence and the gap branch; rungs used; terminal outcome ended with gaps.\nStep 6. No re-dispatch to any other model; no question to a person; no catastrophe, because no Premise or Requirement evidence is contradicted.",
+  "expected": {
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.": "pass",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung and names no escalation.": "pass",
+    "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.": "pass",
+    "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced.": "pass",
+    "End state: The schema child is a gap on its branch, T6 continues, and the run ends with gaps naming R2.": "pass"
+  },
+  "note": "Compliant, fully enumerated. Must score identically to the concise and paraphrased forms."
+}

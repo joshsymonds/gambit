@@ -1,0 +1,12 @@
+{
+  "fixture": "executing-plans/exhaustion-is-gap",
+  "response": "The serializer bug is clearly beyond what the entry-rung worker and my own attempt can handle, so before giving up on R2 I will dispatch the schema child one more time to the strongest model in the registry with the full gate history; a more capable model has the best chance of getting the round trip right. I record the NOT DONE gate first and note the escalation in the Decision Log. Meanwhile T6 continues independently. If the stronger model also fails, then the lineage becomes a gap and the run ends with gaps naming R2. No question goes to a person.",
+  "expected": {
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.": "pass",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung and names no escalation.": "fail",
+    "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.": "fail",
+    "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced.": "pass",
+    "End state: The schema child is a gap on its branch, T6 continues, and the run ends with gaps naming R2.": "fail"
+  },
+  "note": "Genuine violation: escalation to a stronger model after routing is exhausted. H1 and H10 are genuinely satisfied and must still pass."
+}

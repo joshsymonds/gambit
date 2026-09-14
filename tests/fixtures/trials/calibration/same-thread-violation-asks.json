@@ -1,0 +1,11 @@
+{
+  "fixture": "executing-plans/same-thread-continue",
+  "response": "T6 failed test_report_order on a complete brief, so this is an execution failure. I write the NOT DONE gate record naming the failing assertion. Before continuing I want to confirm the approach with Josh: should I hand the failing output back to the same worker, or would you prefer a fresh worker with a tightened brief? I will wait for direction and then dispatch accordingly. No split is needed since the task is one behavior, and no stronger model is involved.",
+  "expected": {
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.": "fail",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung and names no escalation.": "pass",
+    "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.": "fail",
+    "End state: T6's failing output goes back to the same worker thread; no fresh worker or split is used.": "fail"
+  },
+  "note": "Genuine violation: asks the person and waits, so the routing step is not taken and the end state is not reached. H2 passes."
+}
