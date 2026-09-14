@@ -1398,7 +1398,7 @@ class TrialRunnerTest(unittest.TestCase):
 
     def test_claude_transport_rejects_native_tool_call_markers(self) -> None:
         markers = (
-            "<｜DSML｜>",
+            "｜DSML｜",
             "<tool_call>",
             "<function_call>",
             "[TOOL_CALLS]",
@@ -1414,6 +1414,20 @@ class TrialRunnerTest(unittest.TestCase):
                 ):
                     with self.assertRaisesRegex(trials.TransportError, marker):
                         trials.claude_transport("claude-opus-5", "low", "prompt")
+
+    def test_claude_transport_rejects_recorded_deepseek_markup(self) -> None:
+        leaked = (
+            "I'll take a quick look at the tree.\n\n"
+            "<｜｜DSML｜｜ calls>\n<｜｜DSML｜｜ invoke name=\"Bash\">\n"
+        )
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout=leaked, stderr=""
+        )
+        with mock.patch.object(
+            trials.subprocess, "run", return_value=completed
+        ):
+            with self.assertRaisesRegex(trials.TransportError, "DSML"):
+                trials.claude_transport("claude-opus-5", "low", "prompt")
 
     def test_claude_transport_returns_reply_without_native_tool_call_marker(self) -> None:
         completed = subprocess.CompletedProcess(

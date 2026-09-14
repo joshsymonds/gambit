@@ -61,7 +61,7 @@ TRANSPORT_INSTRUCTIONS = (
     "No tools are available in this session, and your entire answer must be text only."
 )
 TOOL_CALL_MARKERS = (
-    "<｜DSML｜>",
+    "｜DSML｜",
     "<tool_call>",
     "<function_call>",
     "[TOOL_CALLS]",
