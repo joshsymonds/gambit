@@ -52,7 +52,17 @@ TASK_KEYS = (
     "attempts",
     "status",
     "gate_paths",
+    "conduct",
 )
+CONDUCT_KEYS = (
+    "brief_defects",
+    "violations_prevented",
+    "violations_escaped",
+    "routing_history",
+    "outcome",
+    "cost",
+)
+ROUTING_HISTORY_KEYS = ("signature", "step", "attempt")
 LINEAGE_KEYS = ("parent", "descendants", "split_used")
 REVIEW_KEYS = ("started", "candidate", "ledger")
 RELEASE_ACTION_KEYS = ("action", "target", "effect", "completed_at", "evidence")
@@ -106,7 +116,14 @@ class RecordReferenceTest(unittest.TestCase):
                 self.assertIn(name, self.text)
 
     def test_state_keys_are_named(self) -> None:
-        for key in STATE_KEYS + TASK_KEYS + REVIEW_KEYS + RELEASE_ACTION_KEYS:
+        for key in (
+            STATE_KEYS
+            + TASK_KEYS
+            + CONDUCT_KEYS
+            + ROUTING_HISTORY_KEYS
+            + REVIEW_KEYS
+            + RELEASE_ACTION_KEYS
+        ):
             with self.subTest(key=key):
                 self.assertIn(key, self.text)
 
@@ -194,6 +211,9 @@ class FixtureRecordTest(unittest.TestCase):
             with self.subTest(task=task.get("slug")):
                 self.assertEqual(tuple(task), TASK_KEYS)
                 self.assertEqual(tuple(task["lineage"]), LINEAGE_KEYS)
+                self.assertEqual(tuple(task["conduct"]), CONDUCT_KEYS)
+                for route in task["conduct"]["routing_history"]:
+                    self.assertEqual(tuple(route), ROUTING_HISTORY_KEYS)
                 self.assertIsInstance(task["owned_files"], list)
                 self.assertTrue(task["owned_files"])
                 self.assertIsInstance(task["gate_paths"], list)

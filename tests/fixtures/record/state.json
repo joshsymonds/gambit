@@ -29,7 +29,24 @@
       "status": "split",
       "gate_paths": [
         "gates/t2-loader-1.md"
-      ]
+      ],
+      "conduct": {
+        "brief_defects": ["loader task exceeded one focused behavior"],
+        "violations_prevented": ["unbounded task scope"],
+        "violations_escaped": [],
+        "routing_history": [
+          {
+            "signature": "scope-overrun",
+            "step": "split",
+            "attempt": 1
+          }
+        ],
+        "outcome": "split",
+        "cost": {
+          "turns": 2,
+          "tokens": 1200
+        }
+      }
     },
     {
       "id": 5,
@@ -49,7 +66,18 @@
       "status": "done",
       "gate_paths": [
         "gates/t2a-parse-env-1.md"
-      ]
+      ],
+      "conduct": {
+        "brief_defects": [],
+        "violations_prevented": [],
+        "violations_escaped": [],
+        "routing_history": [],
+        "outcome": "done",
+        "cost": {
+          "turns": 1,
+          "tokens": 800
+        }
+      }
     },
     {
       "id": 6,
@@ -67,7 +95,18 @@
       "rung": "entry",
       "attempts": 1,
       "status": "dispatched",
-      "gate_paths": []
+      "gate_paths": [],
+      "conduct": {
+        "brief_defects": [],
+        "violations_prevented": [],
+        "violations_escaped": [],
+        "routing_history": [],
+        "outcome": "pending",
+        "cost": {
+          "turns": null,
+          "tokens": null
+        }
+      }
     }
   ],
   "review": {
