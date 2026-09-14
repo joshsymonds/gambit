@@ -7,6 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT = ROOT / "contracts" / "models.md"
+INDEX = ROOT / "contracts" / "README.md"
 EXPECTED_SECTIONS = [
     "Roles",
     "Rungs and ladders",
@@ -15,7 +16,6 @@ EXPECTED_SECTIONS = [
 ]
 ROLES = (
     "worker",
-    "escalation",
     "orchestrator",
     "scout",
     "steelman",
@@ -51,6 +51,7 @@ class ModelsContractTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
         cls.text = CONTRACT.read_text(encoding="utf-8")
+        cls.index_text = INDEX.read_text(encoding="utf-8")
 
     def test_h2_sections_are_complete_and_ordered(self) -> None:
         self.assertEqual(
@@ -65,6 +66,25 @@ class ModelsContractTest(unittest.TestCase):
 
     def test_contract_is_at_most_six_hundred_words(self) -> None:
         self.assertLessEqual(len(self.text.split()), 600)
+
+    def test_escalation_is_not_a_role_token(self) -> None:
+        self.assertNotRegex(self.text, r"`escalation`")
+
+    def test_contract_index_has_seven_roles_and_worker_is_only_writer(self) -> None:
+        roles = re.findall(r"(?m)^\| `([^`]+)` \|", self.index_text)
+        self.assertEqual(roles, list(ROLES))
+        self.assertIn("Only `worker` may change owned files.", self.index_text)
+
+    def test_worker_ladder_has_no_escalation_language(self) -> None:
+        section = re.search(
+            r"(?ms)^## Rungs and ladders\n(.*?)(?=^## |\Z)",
+            self.text,
+        )
+        self.assertIsNotNone(section)
+        body = section.group(1)
+        self.assertIn("entry rung", body)
+        self.assertNotIn("next rung", body)
+        self.assertNotIn("one rung", body)
 
     def test_harness_specific_and_retired_tokens_are_absent(self) -> None:
         folded = self.text.casefold()

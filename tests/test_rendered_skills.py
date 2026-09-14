@@ -19,7 +19,6 @@ class RootSkillsTest(unittest.TestCase):
         catalog = (CONTRACTS / "README.md").read_text(encoding="utf-8")
         for role in (
             "worker",
-            "escalation",
             "scout",
             "steelman",
             "finder",
