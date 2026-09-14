@@ -56,6 +56,11 @@ Write `supersedes: none` when the entry reverses nothing.
       "attempts": 1,
       "status": "<pending, dispatched, gated, done, split, or gap>",
       "gate_paths": ["gates/<task-slug>-1.md"],
+      "dispatch": {
+        "child": null,
+        "workspace": null,
+        "revision": null
+      },
       "conduct": {
         "brief_defects": ["<validator-reported defect>"],
         "violations_prevented": ["<violation prevented by routing>"],
@@ -100,7 +105,7 @@ Write `supersedes: none` when the entry reverses nothing.
 }
 ```
 
-Those top-level keys are the whole head, and every task entry carries exactly the keys shown. Each task's `conduct` object carries exactly `brief_defects`, `violations_prevented`, `violations_escaped`, `routing_history`, `outcome`, and `cost`. The first three are lists of strings from validation and routing; `routing_history` is a list of objects carrying exactly `signature`, `step`, and `attempt`; `outcome` is `pending`, `done`, `gap`, or `split`; and `cost` carries integer or null `turns` and `tokens`. Each effort entry carries exactly `n`, `branch`, `workspace`, `child`, `revision`, `status`, and `report`.
+Those top-level keys are the whole head, and every task entry carries exactly the keys shown. Each task's `dispatch` object carries exactly `child`, `workspace`, and `revision`; `child` and `revision` are strings or null, and `workspace` is an absolute path string or null. Write this object before dispatching the task's worker, and keep all three values null until then. Each task's `conduct` object carries exactly `brief_defects`, `violations_prevented`, `violations_escaped`, `routing_history`, `outcome`, and `cost`. The first three are lists of strings from validation and routing; `routing_history` is a list of objects carrying exactly `signature`, `step`, and `attempt`; `outcome` is `pending`, `done`, `gap`, or `split`; and `cost` carries integer or null `turns` and `tokens`. Each effort entry carries exactly `n`, `branch`, `workspace`, `child`, `revision`, `status`, and `report`.
 
 ## Decomposition
 

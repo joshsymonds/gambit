@@ -30,6 +30,11 @@
       "gate_paths": [
         "gates/t2-loader-1.md"
       ],
+      "dispatch": {
+        "child": null,
+        "workspace": null,
+        "revision": null
+      },
       "conduct": {
         "brief_defects": ["loader task exceeded one focused behavior"],
         "violations_prevented": ["unbounded task scope"],
@@ -67,6 +72,11 @@
       "gate_paths": [
         "gates/t2a-parse-env-1.md"
       ],
+      "dispatch": {
+        "child": null,
+        "workspace": null,
+        "revision": null
+      },
       "conduct": {
         "brief_defects": [],
         "violations_prevented": [],
@@ -96,6 +106,11 @@
       "attempts": 1,
       "status": "dispatched",
       "gate_paths": [],
+      "dispatch": {
+        "child": null,
+        "workspace": null,
+        "revision": null
+      },
       "conduct": {
         "brief_defects": [],
         "violations_prevented": [],

@@ -52,8 +52,10 @@ TASK_KEYS = (
     "attempts",
     "status",
     "gate_paths",
+    "dispatch",
     "conduct",
 )
+DISPATCH_KEYS = ("child", "workspace", "revision")
 CONDUCT_KEYS = (
     "brief_defects",
     "violations_prevented",
@@ -211,6 +213,7 @@ class FixtureRecordTest(unittest.TestCase):
             with self.subTest(task=task.get("slug")):
                 self.assertEqual(tuple(task), TASK_KEYS)
                 self.assertEqual(tuple(task["lineage"]), LINEAGE_KEYS)
+                self.assertEqual(tuple(task["dispatch"]), DISPATCH_KEYS)
                 self.assertEqual(tuple(task["conduct"]), CONDUCT_KEYS)
                 for route in task["conduct"]["routing_history"]:
                     self.assertEqual(tuple(route), ROUTING_HISTORY_KEYS)
