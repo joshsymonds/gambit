@@ -1,0 +1,18 @@
+{
+  "skill": "executing-plans",
+  "text": "skills/executing-plans/SKILL.md",
+  "neighbors": [
+    "README.md",
+    "contracts/worker.md",
+    "contracts/models.md"
+  ],
+  "exercise": "You are resuming the epic “Signed package release” after a prior interruption. Requirements R1–R4 are DONE, each with its named evidence, and the release journal contains two completed substeps with evidence: substep 1 tagged the candidate and substep 2 published it. Substep 3 is a CI check against the exact pushed SHA, and it has not completed. Its failure output has two independent signatures: the test job timed out, and a runner cannot find the toolchain version pinned in the repository’s own workflow file. The candidate, pushed SHA, workflow file, test files, and CI output remain available. The workflow and test files are owned by the failed effort. The release journal contains evidence and postconditions for substeps 1 and 2. No correction effort has yet been opened for substep 3. No Premise or Requirement evidence is contradicted. No person has been contacted, and no Release action after substep 2 has occurred. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "checklist": [
+    "Treats both the test-timeout and missing-toolchain failures as in-scope repository work, not as a gap.",
+    "Opens correction effort by the two failure signatures and gives a worker a brief owning the workflow and test files, with tests first.",
+    "After the corrected checks are green, resumes Release at substep 3 against the pushed SHA.",
+    "Does not repeat Release substeps 1 or 2 because their journaled evidence and postconditions already hold.",
+    "Does not ask a person for approval or direction.",
+    "Reserves a gap only if a failure is outside the repository’s authority."
+  ]
+}

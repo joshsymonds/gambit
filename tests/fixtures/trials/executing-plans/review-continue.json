@@ -1,0 +1,18 @@
+{
+  "skill": "executing-plans",
+  "text": "skills/executing-plans/SKILL.md",
+  "neighbors": [
+    "README.md",
+    "contracts/worker.md",
+    "contracts/models.md"
+  ],
+  "exercise": "You are at Review for epic “Contract-clean export.” The candidate was frozen after all Requirements passed their named checks, and no Premise or Requirement evidence is contradicted. Review discovery found three contract defects: the export omits an identity field, the audit event lacks an immutable timestamp, and a retry path can duplicate a record. One correction effort has completed. Its fresh checks pass for the identity field and timestamp, while Review closure still reports the duplicate-record defect as open. The candidate and correction workspace are preserved. Review discovery ran once and its findings are recorded. The remaining defect has a normalized failure signature in the repository’s owned export and test files. Review closure is open. Release has not started. No person has been contacted. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "checklist": [
+    "Corrects the remaining duplicate-record defect again under failure-signature routing.",
+    "Runs Review closure again after that correction.",
+    "Continues correction and closure cycles until closure passes.",
+    "Does not declare a review gap while executable repository work remains.",
+    "Does not rerun Review discovery finders.",
+    "Does not execute Release before closure passes."
+  ]
+}
