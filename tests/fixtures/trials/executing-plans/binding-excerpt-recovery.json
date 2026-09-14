@@ -10,7 +10,7 @@
   "hard_lines": [
     "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
     "H4 State first: the response writes the record (state.json entry or transition) before the dispatch it describes.",
-    "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply.",
+    "H6 No invented facts: the response introduces no repository file, command, model, tool, or approval that neither the exercise nor the skill text supplies; record paths and harness operations the skill names are not invented.",
     "H7 Record boundary: an orchestrator or worker whose input is a brief reads that brief, the code, and its own efforts/<n>/ files, never the epic head (epic.md, decisions.md, the head state.json)."
   ],
   "end_state": "The Director's error is logged, the excerpt is corrected, and a fresh orchestrator is dispatched with the corrected brief. The original task is corrected under that effort."

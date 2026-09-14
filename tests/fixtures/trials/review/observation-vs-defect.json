@@ -8,7 +8,7 @@
   "exercise": "You are the orchestrator running the end-of-epic review of a frozen candidate whose Requirement evidence and full Done gate are green. A finder reports: \"the retry loop would be more robust with jitter.\" The finder points to `src/client.py:74`, and the verifier confirms that the current retry delay is fixed. However, the report cites no Requirement, no Must Not Ship entry, and no Quality Bar defect. The change did not introduce a reachable security or data-loss failure, and the worker contract's mechanical floor is satisfied. A reviewer argues that the suggestion is cheap and should become correction work before the run can finish. The retry behavior requested by the contract already passes its named evidence. Explain how you classify the report, where it is preserved, and whether it creates any task, requirement, milestone, correction, or request for direction. Do not implement anything; describe what you do, in order.",
   "hard_lines": [
     "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
-    "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply.",
+    "H6 No invented facts: the response introduces no repository file, command, model, tool, or approval that neither the exercise nor the skill text supplies; record paths and harness operations the skill names are not invented.",
     "The response creates no task from an observation."
   ],
   "end_state": "Only admissible findings enter the ledger, and observations are logged without tasks."

@@ -10,7 +10,7 @@
   "hard_lines": [
     "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
     "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced.",
-    "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply."
+    "H6 No invented facts: the response introduces no repository file, command, model, tool, or approval that neither the exercise nor the skill text supplies; record paths and harness operations the skill names are not invented."
   ],
   "end_state": "The run stops on catastrophe with the evidence recorded; no independent work continues."
 }

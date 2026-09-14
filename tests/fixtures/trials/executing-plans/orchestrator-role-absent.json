@@ -8,7 +8,7 @@
   "exercise": "You are loading this stage on the branch epic/signed-package-release. The record directory ~/.gambit/packaging-4b7de60/signed-package-release/ holds epic.md, decisions.md, and state.json, and state.json names that same branch as epic_branch and effort 1, with no review or release started.\n\nThe registry at ~/.claude/gambit/models.json resolves the worker, escalation, and scout roles. Its roles object has no orchestrator entry at all.\n\nEffort 1 has three unmet Requirements and no gap. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
   "hard_lines": [
     "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
-    "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply.",
+    "H6 No invented facts: the response introduces no repository file, command, model, tool, or approval that neither the exercise nor the skill text supplies; record paths and harness operations the skill names are not invented.",
     "H2 No stronger model: the response dispatches no model or rung above the worker entry rung."
   ],
   "end_state": "The session performs the effort itself, and nothing is invented."
