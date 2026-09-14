@@ -44,7 +44,7 @@ from typing import Callable, NamedTuple, TextIO
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIRECTORY = Path("tests/fixtures/trials")
 RESULTS_FILE = FIXTURE_DIRECTORY / "results.json"
-TIMEOUT_SECONDS = 300
+TIMEOUT_SECONDS = 900
 DEFAULT_MAX_CALLS = 200
 SUBJECTS = {
     "sol-high": {"model": "chatgpt/sol", "effort": "high"},

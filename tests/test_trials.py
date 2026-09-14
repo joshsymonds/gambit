@@ -1004,7 +1004,7 @@ class TrialRunnerTest(unittest.TestCase):
         )
         kwargs = captured["kwargs"]
         self.assertEqual("prompt", kwargs["input"])
-        self.assertEqual(300, kwargs["timeout"])
+        self.assertEqual(900, kwargs["timeout"])
         self.assertEqual(
             {
                 "PATH": "/usr/bin",
