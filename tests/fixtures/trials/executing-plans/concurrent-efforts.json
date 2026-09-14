@@ -9,9 +9,9 @@
   "exercise": "You are the Director at the start of effort E4. The accepted contract contains Requirements R1, R2, and R3. Requirement R1 concerns the shared interface in src/protocol.py and tests/test_protocol.py. Requirement R2 concerns parsing in src/parser.py and tests/test_parser.py; it consumes R1's interface. Requirement R3 concerns rendering in src/renderer.py and tests/test_renderer.py; it consumes the same interface. The R1 interface is the only shared prerequisite. The R2 and R3 file sets are disjoint after the interface files are isolated. The accepted base contains none of these changes, and both behavior requirements are unmet. The current effort has no child identity, brief, partition log, or gate record. The designated effort directory is efforts/4/. No Premise or Requirement evidence is contradicted. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
   "checklist": [
     "Freezes the shared interface as the effort that lands first, then partitions the remaining behavior work.",
-    "Creates two concurrent efforts with owned-file lists exclusive between them and logs the partition.",
-    "Writes a brief for every child at efforts/<n>/brief.md carrying the six fields Objective, Partition, Interfaces and order, Binding contract, Base, and Report shape.",
-    "Persists each child's identity, workspace, revision, and lineage before that child's dispatch.",
-    "Merges finished effort branches in completion order, runs the final full Done gate once, and takes no other tree action."
+    "Partitions R2 and R3 into concurrent efforts whose owned-file lists are exclusive between them, and logs the partition.",
+    "Gives each effort a brief at efforts/<n>/brief.md carrying the six fields before that effort is dispatched.",
+    "Persists each effort's child identity, workspace, revision, and lineage before that effort's dispatch.",
+    "Merges effort branches in completion order and runs the final full Done gate once after the last merge."
   ]
 }
