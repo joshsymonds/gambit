@@ -72,12 +72,45 @@ class ExecutingPlansStructureTest(unittest.TestCase):
             self.assertRegex(frontmatter, rf"(?m)^{field}: [^\n]+$")
 
     def test_dispatch_names_roles_and_registry_contract(self) -> None:
-        for role in ("worker", "escalation", "scout"):
+        for role in ("worker", "scout"):
             with self.subTest(role=role):
                 self.assertRegex(self.text, rf"\b{role}\b")
+        self.assertNotIn("`escalation`", self.text)
+        self.assertNotRegex(self.text, r"(?i)\b(?:next|top) rung\b")
         for path in ("contracts/models.md", "contracts/worker.md", "contracts/scout.md"):
             with self.subTest(path=path):
                 self.assertIn(path, self.text)
+
+    def test_decompose_lists_brief_fields_and_word_cap(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        decompose = sections["Decompose the next effort"]
+        fields = (
+            "Goal",
+            "Files owned",
+            "Hidden shared surfaces",
+            "Neighbors",
+            "Anchors",
+            "Acceptance",
+            "Constraints",
+            "Requirements covered",
+            "Test command",
+        )
+        headings = tuple(re.findall(r"\*\*([^*]+):\*\*", decompose))
+        self.assertEqual(headings, fields)
+        self.assertIn("250 words", decompose)
+
+    def test_decompose_states_sizing_and_split_rule(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        decompose = sections["Decompose the next effort"].lower()
+        for phrase in ("one behavior", "three files", "before dispatch"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, decompose)
+
+    def test_build_routes_by_failure_signature(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        build = sections["Build each task until good"].lower()
+        self.assertIn("failure signature", build)
+        self.assertIn("same worker", build)
 
     def test_unresolvable_role_becomes_per_task_gaps(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
@@ -108,6 +141,8 @@ class ExecutingPlansStructureTest(unittest.TestCase):
         for outcome in ("released", "ended with gaps", "stopped on catastrophe"):
             with self.subTest(outcome=outcome):
                 self.assertIn(outcome, self.text)
+        self.assertIn("ends with gaps", self.text)
+        self.assertNotIn("unsatisfiable", self.text)
 
     def test_skill_names_no_harness_specific_end_run_tools(self) -> None:
         for tool in ("goal_complete", "goal_end"):

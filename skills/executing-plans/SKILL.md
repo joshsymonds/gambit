@@ -17,7 +17,7 @@ Write every transition to `state.json`, each gate record to `gates/<task-slug>-<
 
 Use five harness operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. Run Git, Done checks, and Release actions through the harness's shell. On a fresh run, isolate the epic with `git worktree add -b <epic-branch> <epic-workspace> <base>`. Resume in that workspace. Never execute on the main branch.
 
-Read `contracts/models.md` and resolve every dispatched role through the registry at `~/.claude/gambit/models.json`. Look up the role, select its entry or gate-required next rung, and select the rung's dispatch target, using the read-only variant for a read-only role. Use the dispatch operation with the role's contract by absolute path and its complete brief as text. Resolve contract paths from the current installation. The `worker` and `escalation` roles use `contracts/worker.md`; `scout` uses `contracts/scout.md`. There is no fallback dispatch target. If the registry is absent or a role cannot be resolved, record the unresolved role in the Decision Log. Every task requiring it becomes a gap that cites the role. Independent work continues, and the run ends with gaps only when no executable work remains.
+Read `contracts/models.md` and resolve every dispatched role through the registry at `~/.claude/gambit/models.json`. Look up the role, select its entry or gate-directed rung, and select the rung's dispatch target, using the read-only variant for a read-only role. Use the dispatch operation with the role's contract by absolute path and its complete brief as text. Resolve contract paths from the current installation. The `worker` role uses `contracts/worker.md`; `scout` uses `contracts/scout.md`. There is no fallback dispatch target. If the registry is absent or a role cannot be resolved, record the unresolved role in the Decision Log. Every task requiring it becomes a gap that cites the role. Independent work continues, and the run ends with gaps only when no executable work remains.
 
 Dispatch the `orchestrator` role once per effort, once for review, and once for release. Its brief is the record directory and the effort number; it reads the record for everything else and writes its result back there. Read only the report that dispatch returns. When the registry resolves no `orchestrator` role, the session that loaded this stage performs the effort, review, or release itself under these same rules, inventing no dispatch target and owning the record writes: `state.json` before every dispatch, `gates/<task-slug>-<attempt>.md` for each return, and `efforts/<n>.md` at the effort's end.
 
@@ -31,9 +31,13 @@ Each brief carries these sections in order:
 - **Files owned:** every exact repository-relative writable path, including additions and deletions. No directory or glob allowlists.
 - **Hidden shared surfaces:** implicit writes such as lockfiles, generated indexes, registries, or snapshots; state none when absent. These grant no ownership.
 - **Neighbors:** concurrent tasks and their complete owned-file lists, all off-limits.
-- **Implementation:** steps grounded in the current tree and verified interfaces, under the worker contract.
+- **Anchors:** exact current-tree file and line locations, interfaces, and evidence that ground the task.
+- **Acceptance:** the named observable evidence that establishes the covered Requirements.
+- **Constraints:** applicable contract limits and Must Not Ship entries. Goal plus Acceptance plus Constraints stay under 250 words and contain no implementation steps, code, or diffs.
 - **Requirements covered:** contract identifiers and their named evidence.
 - **Test command:** the task's exact fast check from Done.
+
+A task is one behavior with one failing test, at most three files including the test, every edit location known at brief time, and no change to an interface consumed by unowned files. Repetitive mechanical multi-file changes lift only the file cap. An atomic interface task may exceed three files when its interface and consumers must change together to stay green, and the exception is logged. Oversize splits before dispatch. Interface tasks land first. A worker that reports a separable second behavior triggers a split.
 
 Give the brief its workspace and base revision, the applicable contract clauses, and evidence needed to implement without session history. Keep simultaneous tasks' owned-file lists disjoint, including hidden surfaces. Do not manufacture parallelism by separating parts that require one another's unfinished output.
 
@@ -66,17 +70,14 @@ Apply a touched Premise's clause before further building. If false and the Inten
 
 Worker returns DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, and BLOCKED are evidence for this gate, not terminal outcomes. Supply missing context from the tree or contract. A concern counts only if evidence establishes a contract defect. An unsatisfied task receives NOT DONE regardless of the worker's return label.
 
-Every NOT DONE record names its cause, and the cause decides the next action. An **exact fix** is one the gate can state completely: an owned path the brief omitted, a value or decision the brief left out, or one named check with its failing output. **Too large** means the return shows the task does not fit one pass. Everything else is a failure the gate cannot reduce to a fix; an unchanged re-dispatch is never the answer to one.
+Every NOT DONE record names its cause. Normalize the failure signature as the normalized failing check name plus its first failing assertion or error line. Persist that failure signature in the task's `state.json` with the step reached. Route by failure signature, taking each step once per distinct signature. A repeated signature at any step advances to the following step. Catastrophe applies only when gate evidence contradicts a Premise or Requirement.
 
-Write the task's status to `state.json`, then route each gate deterministically:
+1. **Execution failure against a complete brief:** hand the failing output back to the same worker thread.
+2. **Gate finding the brief wrong:** re-brief a fresh worker and log an orchestrator error.
+3. **Separable behaviors:** split them once per lineage, preserving the same unmet Requirements across complete descendants.
+4. **The orchestrator's own attempt:** make the attempt in the task's workspace under `contracts/worker.md`, with the complete history of gate records. If it fails, the lineage is a gap on `gap/<task-slug>`, independent work continues, and the run ends with gaps naming the Requirement as unsatisfied as written.
 
-1. **DONE:** retain the complete accepted change set for integration.
-2. **NOT DONE with an exact fix, on this rung's first attempt:** dispatch the same rung again with the corrected brief, the gate record, the contract path, and the current work. A rung gets two attempts at a task and never a third; a second NOT DONE at that rung routes by its cause below.
-3. **NOT DONE, too large:** split the task now into complete smaller tasks covering the same unmet Requirements, whatever its rung. Record the parentage and the consumed split. Each descendant starts at the entry rung under these same rules; descendants never split, and a lineage splits once.
-4. **NOT DONE otherwise, below the top rung:** resolve `escalation` for exactly the next rung on this task's ladder. Carry the gate record, complete brief, contract path, and current work into that dispatch. Never move down, skip a rung, or let an agent choose its rung.
-5. **NOT DONE at the top rung:** make one final attempt yourself in the task's workspace under `contracts/worker.md`, with the complete history of gate records, and gate that work like any return. If it is NOT DONE, or the lineage has already used this attempt, mark the lineage as a gap: commit its workspace to `gap/<task-slug>`, retain its final gate record, exclude the lineage's work from integration, and continue every independent task. A gap does not end executable work elsewhere.
-
-This step has no separate review dispatch or corrective loop outside the ladder.
+This routing sequence has no separate review dispatch or corrective loop outside it.
 
 ## Integrate and repeat
 
@@ -86,7 +87,7 @@ For a multi-task effort, read `references/wave-dispatch.md` and run `scripts/int
 
 For a failure appearing only after combination, record the complete routing decision before further investigation: itemized NOT DONE, the responsible lineage and ladder action, the rejected revision retained on `candidate/<effort>` with its failing output, the last accepted base unchanged until the combined candidate passes the full Done gate, and the independent tasks continuing during correction. Assign the failure to its contributing lineage, or create one integration lineage for this effort. An existing contributing lineage continues from the rung it used and the attempts it has spent there; a new integration lineage starts at the entry rung. Keep this ownership for subsequent failures rather than creating fresh lineages to reset the ladder.
 
-Use the build step's second-attempt, split, escalation, final-attempt, and gap rules for that failure. The corrective workspace must contain the failing combination so its tests reproduce the integration defect. Continue independent executable tasks meanwhile. A task's passing fast check cannot substitute for a fresh full Done gate on the corrected combined candidate.
+Use the build step's failure-signature routing for that failure. The corrective workspace must contain the failing combination so its tests reproduce the integration defect. Continue independent executable tasks meanwhile. A task's passing fast check cannot substitute for a fresh full Done gate on the corrected combined candidate.
 
 If an integration lineage exhausts, preserve its work and gate as a gap and retain the rejected candidate. Build any remaining candidate from the last accepted base and independent DONE changes, excluding work dependent on the gap, then run its full Done gate. Never advance the accepted base to a rejected revision.
 
@@ -128,4 +129,4 @@ Catastrophe ends the run immediately when either condition holds:
 
 Cease building and external actions, record the condition and evidence, report **stopped on catastrophe**, and end the run. Do not continue independent work after catastrophe.
 
-Take no other external action the contract does not name either. A task needing one receives NOT DONE and becomes a gap; independent work continues. Every other decision, approach adjustment, decomposition, escalation, context resolution, validation, or gap is decided and logged. No mid-run question goes to a person.
+Take no other external action the contract does not name either. A task needing one receives NOT DONE and becomes a gap; independent work continues. Every other decision, approach adjustment, decomposition, context resolution, validation, or gap is decided and logged. No mid-run question goes to a person.
