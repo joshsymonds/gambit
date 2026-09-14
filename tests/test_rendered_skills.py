@@ -44,5 +44,25 @@ class RootSkillsTest(unittest.TestCase):
                     f"concrete provider model ID leaked into {path}",
                 )
 
+    def test_readme_describes_entry_rung_and_failure_signature_routing(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertNotIn("`escalation`", readme)
+        self.assertNotIn("| escalation |", readme)
+
+        roles_section = readme.split("## Roles and the Ladder\n", 1)[1]
+        roles_table = roles_section.split("\n\n", 1)[0]
+        roles = [
+            line.split("|")[1].strip()
+            for line in roles_table.splitlines()
+            if line.startswith("|")
+            and not line.startswith("|---")
+            and line.split("|")[1].strip() != "Role"
+        ]
+        self.assertEqual(
+            ["worker", "scout", "steelman", "finder", "verifier", "test-runner"],
+            roles,
+        )
+        self.assertIn("failure signature", readme)
+
 if __name__ == "__main__":
     unittest.main()

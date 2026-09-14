@@ -14,7 +14,7 @@ A person is present at exactly three moments: writing the contract, reading the 
 
 1. **The contract is the only input.** Every task, gate, review, and release action traces to a line in the contract. Nothing else authorizes work.
 2. **Done is binary and judged only against the contract.** A task is DONE or NOT DONE, itemized against the Requirements, Must Not Ship, owned files, the mechanical floor, and minimal change. There is no score, no "mostly", and no opinion of what would be better.
-3. **Cheapest capable model first.** Work starts on the entry rung of its role. A rung gets a second attempt only when the gate can name the exact fix; the task moves one rung up only when it cannot, and splits at once when it is too large. No agent chooses its own rung.
+3. **Cheapest capable model first.** Work starts on its role's entry rung, and routing between attempts is by failure signature: same-thread continuation with the failing output, a re-brief when the brief was wrong, a split when behaviors are separable, then the orchestrator's own attempt, then a gap, never a stronger model.
 4. **Minimal change.** Nothing the contract did not ask for. A change the contract did not ask for is a defect, and so is hardening against a failure mode it does not name. The one exception is the mechanical floor of the change itself: an error, security, or data-loss path that the change opens is the worker's to close.
 5. **No human mid-run except catastrophe.** The loop never asks for approval, confirmation, or direction between the contract and the report.
 6. **Record, don't ask.** A decision, a compromise, a changed assessment, or a gap goes to the Decision Log and the report. It never becomes a question.
@@ -43,7 +43,7 @@ The Quality Bar, verbatim in every contract:
 
 1. **Contract.** `brainstorming` turns the idea into the epic record: research, questions in prose, approaches, a design, one steelman discovery pass and at most one closure, then the contract and the first effort. The only conversational stage.
 2. **Decompose the next effort.** An effort is one round of steps 2 to 4. From the unmet Requirements the orchestrator creates every task writable from the tree now, with disjoint owned-file lists, until each unmet Requirement not blocked by a gap has one. Never a full tree.
-3. **Build each task until good.** A worker on the entry rung works in an isolated workspace under the worker contract and a brief. The orchestrator writes the gate record, binary and itemized against the contract, noting any Premise the work bears on; a false Premise triggers its clause. A NOT DONE that names the exact fix gets one more attempt on the same rung; one that finds the task too large splits it at once; any other sends the task one rung up. When the top rung fails, the orchestrator makes one final attempt itself; if that fails, the lineage is a **gap**: its work is not integrated; everything not depending on it continues.
+3. **Build each task until good.** A worker on the entry rung works in an isolated workspace under the worker contract and a brief. Routing between attempts is by failure signature: same-thread continuation with the failing output, a re-brief when the brief was wrong, a split when behaviors are separable, then the orchestrator's own attempt, then a gap, never a stronger model. The orchestrator writes the gate record, binary and itemized against the contract, noting any Premise the work bears on; a false Premise triggers its clause. When the orchestrator's own attempt fails, the lineage is a **gap**: its work is not integrated; everything not depending on it continues.
 4. **Integrate and repeat.** The full Done gate runs on the combined candidate. A failure found only after combination is a NOT DONE record owned by the contributing lineage, or by one integration lineage per effort, under the same rules; the rejected candidate stays on `candidate/<effort>` over the last accepted base. Repeat from step 2 until every Requirement is DONE or a gap; when no executable work remains, a Requirement depending on a gap becomes one citing it.
 5. **Review once.** `review` inspects one frozen candidate. One correction round goes through step 3, then closure and fresh Done checks; a finding still open is a review gap. Review never releases.
 6. **Release.** Only when every Requirement is DONE and review is clean. The actions run in order, each recorded when complete; one that fails or cannot be confirmed stops the sequence as a release gap. Reported only when every postcondition holds.
@@ -66,21 +66,20 @@ Artifacts: the epic record with its Decision Log, briefs, gate records, the bran
 
 No other external action the contract does not name is taken either: a task that needs one is NOT DONE and becomes a gap. Only the irreversible case stops the run.
 
-Everything else needs no approval: repairs, approach changes within the Approach, scope-preserving decomposition, escalation up the ladder, validation runs, recording a gap, a worker's BLOCKED or NEEDS_CONTEXT return (which is gate evidence, never a question), and every Release action the contract names. A skill that asks for permission for any of these is defective.
+Everything else needs no approval: repairs, approach changes within the Approach, scope-preserving decomposition, routing between attempts, validation runs, recording a gap, a worker's BLOCKED or NEEDS_CONTEXT return (which is gate evidence, never a question), and every Release action the contract names. A skill that asks for permission for any of these is defective.
 
 ## Roles and the Ladder
 
 | Role | Does | Writes? |
 |---|---|---|
 | worker | implements one task under the worker contract (`contracts/worker.md`) and a brief, test first | yes, owned files only |
-| escalation | the next rung up for a task whose gate said NOT DONE | yes, owned files only |
 | scout | finds facts in the tree, `file:line` or NOT FOUND | no |
 | steelman | one discovery pass and at most one closure pass on an agreed design | no |
 | finder | one review dimension on the frozen candidate | no |
 | verifier | adversarially confirms or drops each finding | no |
 | test-runner | executes a command that needs writable scratch state, in an isolated workspace | scratch only |
 
-Each role has an entry rung and, for worker and escalation, a ladder. The rule is fixed: start at the entry rung; at most two attempts on a rung, the second only for a named exact fix; up one rung when the gate cannot name one; split at once when the task is too large; never down; never on an agent's own judgment. After the top rung, one final attempt by the orchestrator, then a gap. A rung is a model at an effort level, in a writing variant and a read-only variant.
+The worker has its entry rung only. Routing between attempts is by failure signature: same-thread continuation with the failing output, a re-brief when the brief was wrong, a split when behaviors are separable, then the orchestrator's own attempt, then a gap, never a stronger model. A rung is a model at an effort level, in a writing variant and a read-only variant.
 
 The worker contract is the fixed text every worker works under: test first, owned files only, the mechanical floor, minimal change, and the four returns DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, BLOCKED. A brief carries Goal, Files owned, Hidden shared surfaces, Neighbors, Implementation, and Requirements covered. A gate record carries the task and its lineage, the rung, the candidate revision, every contract item checked with its command and result, the owned-files and mechanical-floor results, any Premise touched, the verdict, and the next action.
 
