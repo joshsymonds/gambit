@@ -134,7 +134,13 @@ class ExecutingPlansStructureTest(unittest.TestCase):
     def test_decompose_states_sizing_and_split_rule(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
         decompose = sections["Decompose the next effort"].lower()
-        for phrase in ("one behavior", "three files", "before dispatch"):
+        for phrase in (
+            "one behavior",
+            "three files",
+            "before dispatch",
+            "after dispatch",
+            "next routing decision",
+        ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, decompose)
 
