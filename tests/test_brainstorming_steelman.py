@@ -15,6 +15,10 @@ BRIEF_SECTIONS = (
     "Goal", "Files owned", "Hidden shared surfaces", "Neighbors", "Anchors",
     "Acceptance", "Constraints", "Requirements covered", "Test command",
 )
+EFFORT_BRIEF_SECTIONS = (
+    "Objective", "Partition", "Interfaces", "Binding contract", "Base",
+    "Report shape",
+)
 
 
 class BrainstormingStructureTest(unittest.TestCase):
@@ -59,7 +63,7 @@ class BrainstormingStructureTest(unittest.TestCase):
 
     def test_templates_contain_exact_contract_and_brief_sections(self) -> None:
         blocks = re.findall(r"```[^\n]*\n(.*?)\n```", self.templates, re.DOTALL)
-        self.assertEqual(len(blocks), 2)
+        self.assertEqual(len(blocks), 3)
         self.assertEqual(
             tuple(re.findall(r"^## (.+)$", blocks[0], re.MULTILINE)),
             CONTRACT_SECTIONS,
@@ -67,6 +71,10 @@ class BrainstormingStructureTest(unittest.TestCase):
         self.assertEqual(
             tuple(re.findall(r"^## (.+)$", blocks[1], re.MULTILINE)),
             BRIEF_SECTIONS,
+        )
+        self.assertEqual(
+            tuple(re.findall(r"^## (.+)$", blocks[2], re.MULTILINE)),
+            EFFORT_BRIEF_SECTIONS,
         )
 
     def test_brief_code_block_has_no_implementation_heading(self) -> None:
@@ -78,6 +86,7 @@ class BrainstormingStructureTest(unittest.TestCase):
 
     def test_brief_template_states_word_cap(self) -> None:
         self.assertIn("250 words", self.templates)
+        self.assertIn("400 words", self.templates)
 
     def test_quality_bar_matches_readme_verbatim(self) -> None:
         expected = self.readme.split("> Failing,", 1)[1].split("\n\n", 1)[0]

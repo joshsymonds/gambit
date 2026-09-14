@@ -69,4 +69,28 @@ Supply the task's workspace, base revision, and applicable contract clauses alon
 Test command: [exact task fast check from Done].
 ```
 
+### Effort brief
+
+The Director writes one effort brief per effort. Objective plus Interfaces plus Binding contract stay under 250 words excluding lists.
+
+```markdown
+## Objective
+[Quote each covered Requirement with its named evidence.]
+
+## Partition
+[List owned files and name concurrent efforts' files as off-limits.]
+
+## Interfaces
+[List interfaces published or consumed, in their order.]
+
+## Binding contract
+[List applicable Must Not Ship entries, Premise clauses, the Quality Bar, and Decision Log entries touching these files.]
+
+## Base
+[Give the accepted base, branch `effort/<epic-slug>-<n>`, and check commands.]
+
+## Report shape
+[Cap the report at 400 words.]
+```
+
 Tasks are pending executable children of the epic, never blocked by it. Owned-file lists are disjoint within the effort. Leave tasks requiring unfinished interfaces for execution to author when those interfaces exist.
