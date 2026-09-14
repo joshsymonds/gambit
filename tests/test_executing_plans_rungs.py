@@ -182,6 +182,17 @@ class ExecutingPlansStructureTest(unittest.TestCase):
                 with self.subTest(section=section, token=token):
                     self.assertIn(token, sections.get(section, ""))
 
+    def test_trial_gaps_name_effort_paths_and_recovery_rules(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        build = sections["Build each task until good"]
+        gate_offset = build.index("gates/<task-slug>-<attempt>.md")
+        nearby_gate_text = build[max(0, gate_offset - 160) : gate_offset + 160]
+        self.assertIn("efforts/<n>/", nearby_gate_text)
+        director = sections["Director"]
+        self.assertIn("defect in the effort brief", director)
+        self.assertIn("fresh orchestrator", director)
+        self.assertIn("postcondition no longer holds", sections["Release"])
+
     def test_start_dispatches_the_orchestrator_role(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
         self.assertIn("orchestrator", sections.get("Start", ""))

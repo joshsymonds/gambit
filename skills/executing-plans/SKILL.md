@@ -36,7 +36,7 @@ Create one effort brief per partition. Store it at `efforts/<n>/brief.md` with e
 - **Base:** accepted revision, branch `effort/<epic-slug>-<n>`, workspace, and exact check commands.
 - **Report shape:** required report lines and the `efforts/<n>/report.md` destination.
 
-Dispatch every dependency-ready effort concurrently to a fresh `orchestrator` in its own worktree. Before each dispatch, persist the child identity, workspace, revision, and lineage in the head's efforts entry. Accept a return only when its child and revision match the recorded entry. Merge finished effort branches in completion order, run the final full Done gate once, fold report lines into the head, and take no other tree action. When the registry resolves no `orchestrator` role, the Director performs each effort itself under the orchestrator rules above, inventing no dispatch target, and owning the effort's record writes.
+Dispatch every dependency-ready effort concurrently to a fresh orchestrator in its own worktree; when an effort report reveals a defect in the effort brief, the Director logs its own error, corrects the brief, and dispatches a fresh orchestrator with the corrected brief. Before each dispatch, persist the child identity, workspace, revision, and lineage in the head's efforts entry. Accept a return only when its child and revision match the recorded entry. Merge finished effort branches in completion order, run the final full Done gate once, fold report lines into the head, and take no other tree action. When the registry resolves no `orchestrator` role, the Director performs each effort itself under the orchestrator rules above, inventing no dispatch target, and owning the effort's record writes.
 
 For an effort dispatch, the orchestrator input is the effort brief and code only, never the record. It decomposes into as many disjoint-file tasks as the behaviors allow, dispatches independent tasks concurrently, and holds at most six tasks per effort. It gates each return by full change-set inspection plus the named check. It writes tasks, gates, and effort-local decisions under `efforts/<n>/` and returns `efforts/<n>/report.md` in under 400 words.
 
@@ -68,7 +68,7 @@ Isolate each worker in its own workspace from the effort's base, including a sin
 
 For every return, inspect the complete change set, including staged, unstaged, untracked, deleted, binary, symlink, and mode changes. Read the actual artifacts and fresh RED/GREEN evidence, not just a diff summary or a worker's verdict. Run any missing named check. For a Requirement whose evidence is a rendered result, build or capture that result and look at it yourself; record the observed result against that Requirement. Source inspection is not rendered evidence.
 
-Write this gate record to `gates/<task-slug>-<attempt>.md`, with exactly these fields:
+Write this gate record relative to the run's record directory, which for an effort is `efforts/<n>/`: `gates/<task-slug>-<attempt>.md`, with exactly these fields:
 
 | Field | Value |
 |---|---|
@@ -124,7 +124,7 @@ Release is eligible only when every Requirement is DONE, review is clean, and th
 
 For an eligible candidate, execute the Release section's exact actions in order through the shell, against their named targets and intended effects. Record each completed action and evidence immediately. On resume, use that record and inspect postconditions instead of repeating completed external actions.
 
-An action that fails within the repository's own authority, including its tests, CI configuration, or build, opens a correction effort under the build step's failure-signature routing. Correct the failure, run its check, and Release resumes at that action once its check is green; do not repeat completed actions. An action that fails or cannot be confirmed outside that authority is a release gap. Record the failure and all actions already completed; execute no later action. Report release only when every Release postcondition holds. Before any external action, apply Human boundaries.
+An action that fails within the repository's own authority, including its tests, CI configuration, or build, opens a correction effort under the build step's failure-signature routing. Correct the failure, run its check, and Release resumes at the first action whose postcondition no longer holds; when every earlier postcondition still holds, that is the failed action, and no action whose postcondition holds is repeated. An action that fails or cannot be confirmed outside that authority is a release gap. Record the failure and all actions already completed; execute no later action. Report release only when every Release postcondition holds. Before any external action, apply Human boundaries.
 
 ## Report and end
 
