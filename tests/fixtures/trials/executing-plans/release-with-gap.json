@@ -10,7 +10,7 @@
   "hard_lines": [
     "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
     "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced.",
-    "H6 No invented facts: the response introduces no repository file, command, model, tool, or approval that neither the exercise nor the skill text supplies; record paths and harness operations the skill names are not invented."
+    "H6 No invented facts: the response names no repository file, command, model, tool, or approval that neither the exercise nor the skill text supplies; record paths, harness operations, and git commands the skill's rules cover are not invented, and the response's own plans and inferences about the scenario are not introduced facts."
   ],
   "end_state": "No Release action starts; the report records R4 as a gap on its branch with the gate evidence, and the run ends with gaps."
 }

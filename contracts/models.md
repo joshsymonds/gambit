@@ -16,7 +16,7 @@
 
 A rung is a model at an effort level, with a writing and a read-only variant. Every role has an entry rung. The `worker` role has no rung above its entry.
 
-Every dispatch starts at the role's entry rung. A rung gets at most two attempts at a task; the second only when the gate record names the exact fix the first lacked: an owned path the brief omitted, a value or decision it left out, or one named check with its failing output. That attempt carries the corrected brief, the gate record, and the current work. Routing between attempts is owned by `skills/executing-plans/SKILL.md`.
+Every dispatch starts at the role's entry rung. A rung gets at most two attempts at a task; the second only when the gate record names what the first lacked: an owned path the brief omitted, a value or decision it left out, or the named check and its failing output handed back to the same thread. That attempt carries the corrected brief, the gate record, and the current work. Routing between attempts is owned by `skills/executing-plans/SKILL.md`.
 
 A task never moves to another rung. A gate finding the task too large splits it at once, at any rung; a lineage splits once, and descendants never split. A task never moves down, and an agent never selects or changes its own rung. No role enters above its entry rung.
 
