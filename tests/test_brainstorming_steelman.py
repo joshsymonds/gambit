@@ -31,6 +31,12 @@ class BrainstormingStructureTest(unittest.TestCase):
              "Steelman", "The contract", "The first effort", "Handoff"],
         )
 
+    def test_first_effort_brief_fields_acceptance_and_constraints(self) -> None:
+        section = self.text.split("## The first effort\n", 1)[1].split("\n## ", 1)[0]
+        self.assertIn(", ".join(BRIEF_SECTIONS), section)
+        self.assertIn("250 words", section)
+        self.assertNotIn("Implementation,", section)
+
     def test_frontmatter_has_name_and_routing_fields(self) -> None:
         self.assertTrue(self.text.startswith("---\n"))
         frontmatter = self.text.split("\n---\n", 1)[0]
