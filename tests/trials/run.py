@@ -5,14 +5,15 @@ Fixtures live at ``tests/fixtures/trials/<skill>/<name>.json`` and contain
 ``skill``, repo-relative ``text``, repo-relative ``neighbors``, ``exercise``,
 and non-empty ``hard_lines`` plus a non-empty ``end_state``. Cells combine each
 fixture with each subject and are stored by ``<skill>/<name>@<subject>`` in
-``results.json`` with current SHA-256
-hashes for the fixture, tested text, and every neighbor. Cell status is ``ok``, ``inconclusive``, ``transport_failure``, or
-``judge_failure``.
+``results.json``. Each cell retains every run as an attempted sample, with a
+summary derived from the newest sample. Cell status is ``ok``, ``inconclusive``,
+``transport_failure``, or ``judge_failure``.
 
 CLI: ``--skill NAME``, ``--fixture SKILL/NAME``, or ``--all`` runs and stores
 cells; ``--check-fresh`` performs no network calls; ``--probe`` checks all
 subjects and the judge; and ``--dry-run`` with ``--skill`` or ``--fixture``
-prints subject and judge prompts without sending.
+prints subject and judge prompts without sending. Refresh commands accept
+``--max-calls`` (default 200) for the subject and judge call budget.
 
 Transport runs ``claude -p --model <model> --effort <effort> --output-format
 text`` with the prompt on stdin, no tools, a permission mode that cannot
@@ -44,12 +45,28 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIRECTORY = Path("tests/fixtures/trials")
 RESULTS_FILE = FIXTURE_DIRECTORY / "results.json"
 TIMEOUT_SECONDS = 300
+DEFAULT_MAX_CALLS = 200
 SUBJECTS = {
+    "sol-high": {"model": "chatgpt/sol", "effort": "high"},
     "opus-low": {"model": "claude-opus-5", "effort": "low"},
-    "fable-high": {"model": "claude-fable-5-1", "effort": "high"},
-    "luna-low": {"model": "chatgpt/luna", "effort": "low"},
 }
 JUDGE = {"model": "chatgpt/sol", "effort": "xhigh"}
+SUBJECT_PROMPT_TEMPLATE = (
+    "The text between the BEGIN/END SKILL markers is your complete workflow "
+    "instructions; follow it exactly. Then answer the exercise between the "
+    "BEGIN/END EXERCISE markers. Treat the exercise's facts as true."
+)
+JUDGE_PROMPT_TEMPLATE = (
+    "Judge the subject response using the complete workflow instructions, "
+    "exercise, and references below. Treat the exercise's facts as true. "
+    "Return JSON and nothing else, exactly "
+    "in this shape: "
+    '{"items": [{"item": "...", "verdict": "pass|fail|unknown", "evidence": "..."}]}. '
+    "Include every criterion once, in the original order. Decide each item "
+    "independently. Copy each item text with or without its number. For a "
+    "pass or fail, evidence must be a verbatim response span. Unknown may "
+    "use an empty evidence string."
+)
 SKILL_NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 Transport = Callable[[str, str, str], str]
 
@@ -79,6 +96,25 @@ class TransportError(RuntimeError):
     def __init__(self, message: str, status: int | None = None) -> None:
         super().__init__(message)
         self.status = status
+
+
+class CallBudgetExceeded(RuntimeError):
+    """The configured subject and judge call budget has been exhausted."""
+
+
+class CallBudget:
+    def __init__(self, transport: Transport, max_calls: int) -> None:
+        self.transport = transport
+        self.max_calls = max_calls
+        self.calls = 0
+
+    def __call__(self, model: str, effort: str, prompt: str) -> str:
+        if self.calls >= self.max_calls:
+            raise CallBudgetExceeded(
+                f"maximum call budget of {self.max_calls} reached"
+            )
+        self.calls += 1
+        return self.transport(model, effort, prompt)
 
 
 def _repo_path(root: Path, value: object, field: str) -> tuple[str, Path]:
@@ -190,6 +226,15 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _sha256_json(value: object) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    return _sha256_text(encoded)
+
+
 def fixture_hashes(root: Path, fixture: Fixture) -> dict[str, object]:
     return {
         "fixture": _sha256(fixture.path),
@@ -197,6 +242,11 @@ def fixture_hashes(root: Path, fixture: Fixture) -> dict[str, object]:
         "neighbors": {
             neighbor: _sha256(root / neighbor) for neighbor in fixture.neighbors
         },
+        "judge_instructions": _sha256_text(
+            f"{JUDGE_PROMPT_TEMPLATE}\n{SCORING_DEFINITION}"
+        ),
+        "subjects": _sha256_json(SUBJECTS),
+        "judge": _sha256_json(JUDGE),
     }
 
 
@@ -211,9 +261,7 @@ def _marked(marker: str, content: str) -> str:
 
 def subject_prompt(root: Path, fixture: Fixture) -> str:
     sections = [
-        "The text between the BEGIN/END SKILL markers is your complete workflow "
-        "instructions; follow it exactly. Then answer the exercise between the "
-        "BEGIN/END EXERCISE markers. Treat the exercise's facts as true.",
+        SUBJECT_PROMPT_TEMPLATE,
         _marked("SKILL", (root / fixture.text).read_text(encoding="utf-8")),
     ]
     for neighbor in fixture.neighbors:
@@ -245,15 +293,7 @@ def judge_prompt(root: Path, fixture: Fixture, response: str) -> str:
         f"{index}. {item}" for index, item in enumerate(criteria, start=1)
     )
     sections = [
-        "Judge the subject response using the complete workflow instructions, "
-        "exercise, and references below. Treat the exercise's facts as true. "
-        "Return JSON and nothing else, exactly "
-        "in this shape: "
-        '{"items": [{"item": "...", "verdict": "pass|fail|unknown", "evidence": "..."}]}. '
-        "Include every criterion once, in the original order. Decide each item "
-        "independently. Copy each item text with or without its number. For a "
-        "pass or fail, evidence must be a verbatim response span. Unknown may "
-        "use an empty evidence string.\n\n",
+        f"{JUDGE_PROMPT_TEMPLATE}\n\n",
         _marked("SKILL", (root / fixture.text).read_text(encoding="utf-8")),
     ]
     for neighbor in fixture.neighbors:
@@ -504,6 +544,35 @@ def load_results(root: Path) -> dict[str, object]:
     return payload
 
 
+def _retained_cell(
+    existing: object, record: dict[str, object]
+) -> dict[str, object]:
+    samples: list[dict[str, object]] = []
+    if isinstance(existing, dict) and isinstance(existing.get("samples"), list):
+        samples = [
+            dict(sample) for sample in existing["samples"] if isinstance(sample, dict)
+        ]
+    attempts = [
+        sample["attempt"]
+        for sample in samples
+        if isinstance(sample.get("attempt"), int)
+        and not isinstance(sample.get("attempt"), bool)
+    ]
+    sample = dict(record)
+    sample["attempt"] = max(attempts, default=0) + 1
+    samples.append(sample)
+    summary = {
+        "hashes": sample.get("hashes"),
+        "subject": sample.get("subject"),
+        "judge": sample.get("judge"),
+        "pass": sample.get("pass"),
+        "status": sample.get("status"),
+        "latest": sample.get("at"),
+        "samples": samples,
+    }
+    return summary
+
+
 def store_result(root: Path, identifier: str, record: dict[str, object]) -> None:
     path = root / RESULTS_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -512,7 +581,7 @@ def store_result(root: Path, identifier: str, record: dict[str, object]) -> None
         fcntl.flock(directory_descriptor, fcntl.LOCK_EX)
         try:
             results = load_results(root)
-            results[identifier] = record
+            results[identifier] = _retained_cell(results.get(identifier), record)
             temporary_descriptor, temporary_name = tempfile.mkstemp(
                 prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
             )
@@ -535,6 +604,24 @@ def store_result(root: Path, identifier: str, record: dict[str, object]) -> None
         os.close(directory_descriptor)
 
 
+def _newest_sample(record: object) -> dict[str, object] | None:
+    if not isinstance(record, dict) or not isinstance(record.get("samples"), list):
+        return None
+    samples = [sample for sample in record["samples"] if isinstance(sample, dict)]
+    if not samples:
+        return None
+    return max(
+        samples,
+        key=lambda sample: (
+            sample.get("attempt")
+            if isinstance(sample.get("attempt"), int)
+            and not isinstance(sample.get("attempt"), bool)
+            else -1,
+            str(sample.get("at", "")),
+        ),
+    )
+
+
 def check_fresh(
     root: Path, fixtures: list[Fixture], results: dict[str, object]
 ) -> list[str]:
@@ -543,12 +630,12 @@ def check_fresh(
         hashes = fixture_hashes(root, fixture)
         for subject_name in SUBJECTS:
             identifier = cell_id(fixture, subject_name)
-            record = results.get(identifier)
-            if not isinstance(record, dict):
+            sample = _newest_sample(results.get(identifier))
+            if sample is None:
                 problems.append(f"missing {identifier}")
-            elif record.get("hashes") != hashes:
+            elif sample.get("hashes") != hashes:
                 problems.append(f"stale {identifier}")
-            elif record.get("status") != "ok" or record.get("pass") is not True:
+            elif sample.get("status") != "ok" or sample.get("pass") is not True:
                 problems.append(f"failing {identifier}")
     return problems
 
@@ -558,16 +645,34 @@ def _run(
     fixtures: list[Fixture],
     transport: Transport,
     output: TextIO,
+    max_calls: int = DEFAULT_MAX_CALLS,
 ) -> int:
     failed = False
-    for fixture in fixtures:
-        for subject_name in SUBJECTS:
-            identifier = cell_id(fixture, subject_name)
-            record = run_cell(root, fixture, subject_name, transport)
-            store_result(root, identifier, record)
-            passed = record["status"] == "ok" and record["pass"] is True
-            print(f"{identifier}: {'PASS' if passed else 'FAIL'}", file=output)
-            failed = failed or not passed
+    budget = CallBudget(transport, max_calls)
+    cells = [
+        (fixture, subject_name)
+        for fixture in fixtures
+        for subject_name in SUBJECTS
+    ]
+    for index, (fixture, subject_name) in enumerate(cells):
+        identifier = cell_id(fixture, subject_name)
+        try:
+            record = run_cell(root, fixture, subject_name, budget)
+        except CallBudgetExceeded:
+            unrefreshed = [
+                cell_id(pending_fixture, pending_subject)
+                for pending_fixture, pending_subject in cells[index:]
+            ]
+            print(
+                f"max-calls {max_calls} reached; unrefreshed cells: "
+                + ", ".join(unrefreshed),
+                file=output,
+            )
+            return 1
+        store_result(root, identifier, record)
+        passed = record["status"] == "ok" and record["pass"] is True
+        print(f"{identifier}: {'PASS' if passed else 'FAIL'}", file=output)
+        failed = failed or not passed
     return 1 if failed else 0
 
 
@@ -613,6 +718,7 @@ def _parser() -> argparse.ArgumentParser:
     action.add_argument("--check-fresh", action="store_true")
     action.add_argument("--probe", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--max-calls", type=int, default=DEFAULT_MAX_CALLS)
     return parser
 
 
@@ -632,6 +738,8 @@ def main(
         and arguments.fixture is None
     ):
         parser.error("--dry-run requires --skill")
+    if arguments.max_calls < 0:
+        parser.error("--max-calls must be non-negative")
     active_transport = transport or claude_transport
     try:
         if arguments.probe:
@@ -647,7 +755,9 @@ def main(
             return 1 if problems else 0
         if arguments.dry_run:
             return _dry_run(root, fixtures, output)
-        return _run(root, fixtures, active_transport, output)
+        return _run(
+            root, fixtures, active_transport, output, arguments.max_calls
+        )
     except FixtureError as fixture_error:
         print(str(fixture_error), file=error)
         return 2
