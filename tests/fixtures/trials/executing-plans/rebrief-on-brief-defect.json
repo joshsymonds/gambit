@@ -7,11 +7,11 @@
     "contracts/models.md"
   ],
   "exercise": "You are executing the epic “Signed configuration archive” during effort E2. Requirement R2 says key metadata is exposed through the archive API, evidenced by test_metadata_export. Task T3, “Expose key metadata,” owns src/metadata.py and tests/test_metadata.py and was dispatched with a complete-looking brief.\n\nThe worker returns exactly: “NEEDS_CONTEXT. tests/test_metadata.py imports the public symbol from src/archive/__init__.py, but that path is not in Files owned. RED: test_metadata_export fails with ImportError. The metadata implementation and its unit checks are green. Changed paths: src/metadata.py, tests/test_metadata.py. No edit was made outside the owned files.”\n\nThe gate confirms that src/archive/__init__.py is the named test’s import path, that the brief omitted it, and that no concurrent task owns it. No Premise is shown false. Task T4, “Render archive index,” is independent and executable.\n\nWhat do you do next, exactly? Do not implement anything; describe your next actions in order.",
-  "checklist": [
-    "Writes an itemized NOT DONE gate record for T3 whose cause is the brief's omitted owned path.",
-    "Corrects T3’s Files owned to include src/archive/__init__.py.",
-    "Re-briefs T3 to a fresh worker with the corrected Files owned and the gate history, rather than continuing the same worker thread.",
-    "Logs an orchestrator error in the Decision Log for the omitted owned path.",
-    "Does not route T3 to a stronger model."
-  ]
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung and names no escalation.",
+    "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.",
+    "H3 Ownership: the response gives no worker a file outside that worker's owned list and does not itself edit files owned by a worker."
+  ],
+  "end_state": "T3 is re-briefed to a fresh worker with the corrected files; the orchestrator error is logged."
 }
