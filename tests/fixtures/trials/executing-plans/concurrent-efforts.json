@@ -1,0 +1,18 @@
+{
+  "skill": "executing-plans",
+  "text": "skills/executing-plans/SKILL.md",
+  "neighbors": [
+    "README.md",
+    "contracts/worker.md",
+    "contracts/models.md"
+  ],
+  "exercise": "You are the Director at the start of effort E4. The accepted contract contains Requirements R1, R2, and R3. Requirement R1 concerns the shared interface in src/protocol.py and tests/test_protocol.py. Requirement R2 concerns parsing in src/parser.py and tests/test_parser.py; it consumes R1's interface. Requirement R3 concerns rendering in src/renderer.py and tests/test_renderer.py; it consumes the same interface. The R1 interface is the only shared prerequisite. The R2 and R3 file sets are disjoint after the interface files are isolated. The accepted base contains none of these changes, and both behavior requirements are unmet. The current effort has no child identity, brief, partition log, or gate record. The designated effort directory is efforts/4/. No Premise or Requirement evidence is contradicted. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "checklist": [
+    "Freezes the shared interface as the effort that lands first, then partitions the remaining behavior work.",
+    "Creates two concurrent efforts with owned-file lists exclusive between them and logs the partition.",
+    "Writes a six-field brief for each child at efforts/<n>/brief.md.",
+    "Persists each child identity before its dispatch and takes no other tree action.",
+    "Merges accepted work in completion order and runs the final gate exactly once.",
+    "States that no Premise or Requirement evidence is contradicted."
+  ]
+}
