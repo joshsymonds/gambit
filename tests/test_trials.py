@@ -348,12 +348,20 @@ class TrialRunnerTest(unittest.TestCase):
         criteria = ("states the result", "End state: does not invent facts")
         raw = json.dumps({
             "items": [
-                {"item": criteria[0], "verdict": "pass", "evidence": "missing span"},
+                {"item": criteria[0], "verdict": "fail", "evidence": "missing span"},
                 {"item": criteria[1], "verdict": "pass", "evidence": "states the result"},
             ]
         })
         with self.assertRaises(trials.JudgeParseError):
             trials.parse_judge_output(raw, criteria, "states the result")
+        paraphrased_pass = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "pass", "evidence": "no question is asked"},
+                {"item": criteria[1], "verdict": "pass", "evidence": ""},
+            ]
+        })
+        parsed = trials.parse_judge_output(paraphrased_pass, criteria, "states the result")
+        self.assertEqual(["pass", "pass"], [item["verdict"] for item in parsed])
 
         fixture = self.load_one()
         failed = trials.run_cell(

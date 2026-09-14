@@ -383,10 +383,10 @@ def parse_judge_output(
         if not isinstance(evidence, str):
             raise JudgeParseError("judge evidence must be a string")
         normalized_evidence = " ".join(evidence.split())
-        if normalized_evidence and normalized_evidence not in normalized_subject:
-            raise JudgeParseError("judge evidence must be a response span")
-        if verdict in {"pass", "fail"} and not normalized_evidence:
-            raise JudgeParseError("pass and fail verdicts require evidence")
+        if verdict == "fail" and not normalized_evidence:
+            raise JudgeParseError("fail verdicts require evidence")
+        if verdict == "fail" and normalized_evidence not in normalized_subject:
+            raise JudgeParseError("fail evidence must be a response span")
         parsed.append(item)
     return parsed
 
