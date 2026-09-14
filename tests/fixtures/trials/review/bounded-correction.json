@@ -6,12 +6,11 @@
     "contracts/models.md"
   ],
   "exercise": "You are the orchestrator running the end-of-epic review on a frozen integrated candidate. The finders returned three findings. The verifier dropped F3, but confirmed F1 against Requirement R2 at `src/export.py:41` and F2 against Requirement R4 at `tests/test_export.py:88`. You sent both confirmed defects through the loop's build step in one correction round. Fresh evidence now shows F1 closed. The closure pass still confirms F2 at the same location, and the full Done checks have been rerun after the correction round. A teammate proposes another quick repair round, while an integration workflow and a finishing workflow are both available to receive a handoff. No catastrophe condition exists, and there is no new information that changes a Premise. Explain how you classify the still-open item, what you record, whether any further correction or handoff occurs, and which terminal outcome the run reaches. Do not implement anything; describe what you do, in order.",
-  "checklist": [
-    "States that the completed correction round is the only correction round and that no second correction round is started.",
-    "States that closure and fresh full Done checks occur after the correction round.",
-    "Records F2, still open after closure, as a review gap.",
-    "Ends the run with the exact terminal outcome `ended with gaps`.",
-    "Does not release, invoke release actions, or hand off to any integration or finishing step.",
-    "Does not ask a person any question or request approval."
-  ]
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung and names no escalation.",
+    "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.",
+    "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced."
+  ],
+  "end_state": "Findings are corrected under routing until closure passes or a lineage exhausts into a review gap, and no release occurs."
 }

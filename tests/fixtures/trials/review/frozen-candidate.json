@@ -6,11 +6,10 @@
     "contracts/models.md"
   ],
   "exercise": "You are the orchestrator starting the end-of-epic review after freezing the integrated candidate at revision C. Its full Done gate is green. While the finder dispatches are running, a new commit D lands on the epic branch with additional code. A teammate urges you to follow the branch tip so the review is current. The finders inspecting C return F1, which cites Requirement R3 and `src/session.py:112`, and F2, which claims a Requirement R5 failure at `src/auth.py:67`. The verifier confirms F1 on C but cannot reproduce or otherwise confirm F2 there. F1 therefore requires the review's correction round. The finder and verifier roles are read-only, while the loop's build step can dispatch a worker against the reviewed base. Explain which revision remains in scope, which reports survive verification, what evidence a surviving finding must carry, and how the correction is performed without allowing a reviewer to edit the tree. Do not implement anything; describe what you do, in order.",
-  "checklist": [
-    "Keeps the review anchored to frozen revision C and does not switch to or incorporate commit D.",
-    "Requires every surviving finding to cite a Requirement, a Must Not Ship entry, or a Quality Bar defect and include `file:line` evidence.",
-    "Drops F2 because the verifier cannot confirm it.",
-    "Routes the confirmed correction through the loop's build step and a worker, rather than allowing a finder or verifier to edit files.",
-    "Does not ask a person any question or request approval."
-  ]
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply.",
+    "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced."
+  ],
+  "end_state": "The frozen revision is inspected, later commits are excluded, and corrections use the frozen candidate as their base."
 }
