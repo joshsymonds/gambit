@@ -41,6 +41,19 @@ class BrainstormingStructureTest(unittest.TestCase):
         self.assertIn("250 words", section)
         self.assertNotIn("Implementation,", section)
 
+    def test_goal_file_rules_close_all_assumptions_and_findings(self) -> None:
+        goal_file_rules = "\n".join(
+            line for line in self.text.splitlines()
+            if "goal file" in line.lower() or "goal-file" in line.lower()
+        )
+        self.assertIn("every Premise", goal_file_rules)
+        self.assertIn("NOT FOUND", goal_file_rules)
+        self.assertRegex(goal_file_rules, r"(?i)no finding stays `OPEN` in a goal-file run")
+
+    def test_bug_evidence_requires_exact_reproduction_command(self) -> None:
+        self.assertIn("exact reproduction command", self.text)
+        self.assertNotIn("or smallest sequence", self.text)
+
     def test_frontmatter_has_name_and_routing_fields(self) -> None:
         self.assertTrue(self.text.startswith("---\n"))
         frontmatter = self.text.split("\n---\n", 1)[0]
