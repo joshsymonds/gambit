@@ -64,5 +64,13 @@ class RootSkillsTest(unittest.TestCase):
         )
         self.assertIn("failure signature", readme)
 
+    def test_readme_describes_brief_fields_and_review_closure(self) -> None:
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("Anchors, Acceptance, Constraints", readme)
+        self.assertIn("completion order", readme)
+        self.assertIn("until closure", readme)
+        self.assertNotIn("One correction round", readme)
+        self.assertNotIn("Implementation, and Requirements covered", readme)
+
 if __name__ == "__main__":
     unittest.main()
