@@ -5,12 +5,12 @@
     "contracts/models.md",
     "skills/executing-plans/references/record.md"
   ],
-  "exercise": "You are loading this stage on the branch epic/deterministic-policy-compiler. The record directory ~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/ holds epic.md, decisions.md, and state.json, and state.json names that same branch as epic_branch, effort 2, and no review or release started. No other record names the branch.\n\nThe registry at ~/.claude/gambit/models.json resolves every role the run needs, including an orchestrator role with an entry rung.\n\nEffort 2 has two unmet Requirements and no gap. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "exercise": "You are loading this stage on the branch epic/deterministic-policy-compiler. The record directory ~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/ holds epic.md, decisions.md, and state.json, and state.json names that same branch as epic_branch, effort 2, and no review or release started. No other record names the branch.\n\nThe registry at ~/.claude/gambit/models.json resolves every role the run needs, including an orchestrator role with an entry rung.\n\nThe record holds efforts/2/brief.md, written by the Director, and efforts/2/state.json.\n\nEffort 2 has two unmet Requirements and no gap. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
   "checklist": [
     "Resumes the record whose state.json names epic/deterministic-policy-compiler, rather than searching session history or asking where the record is.",
-    "Dispatches the orchestrator role for effort 2, passing the record directory and the effort number as its brief.",
-    "Reads only the report that dispatch returns, and does not run effort 2's decomposition, building, or integration in this session.",
-    "Writes the effort-2 dispatch transition to state.json in the record directory before dispatching the orchestrator, and expects gates/ and efforts/2.md to arrive with the orchestrator's report rather than writing them in this session.",
-    "Does not ask a person for direction, and names no model, agent, or rung of its own."
+    "Dispatches a fresh orchestrator for effort 2 with the effort brief and a workspace as its input, and persists the child identity, workspace, revision, and lineage in state.json before that dispatch.",
+    "Reads only efforts/2/report.md from that dispatch and does not run effort 2's decomposition or task building in this session.",
+    "Expects the effort's gates and efforts/2/report.md to be written by the orchestrator under efforts/2/ rather than writing them in this session.",
+    "Does not ask a person for direction and names no model or rung."
   ]
 }
