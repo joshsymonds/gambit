@@ -54,6 +54,13 @@ class ReviewStructureTests(unittest.TestCase):
         self.assertNotIn("second correction round", text)
         self.assertNotIn("round as consumed", text)
 
+    def test_correction_uses_failure_signature_routing(self) -> None:
+        text = self.text.lower()
+        correction = text.split("## correction\n", 1)[1].split("\n## closure\n", 1)[0]
+        self.assertNotIn("escalation", text)
+        self.assertNotIn("top rung", text)
+        self.assertIn("failure signature", correction)
+
     def test_role_and_contract_references_are_present(self) -> None:
         for role in ("finder", "verifier"):
             with self.subTest(role=role):
