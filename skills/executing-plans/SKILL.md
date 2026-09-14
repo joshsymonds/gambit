@@ -13,13 +13,30 @@ Find the record directory by the rule in `references/record.md` and read its `ep
 
 Resume the record whose `state.json` names the current epic branch, and only that one. When no record names it, refuse to resume: the run is fresh. A terminal run only shows its stored report; it dispatches nothing and repeats no external action. For an active run, recover from `state.json` the accepted base, candidate revision, tasks and lineages, rung positions and attempts used, split history, gate records, review state, and completed Release actions.
 
-Write every transition to `state.json`, each gate record to `gates/<task-slug>-<attempt>.md`, and each effort report to `efforts/<n>.md`, all before the next dispatch. Mirror each transition through the harness's record-task-state operation so resumption preserves the ladder and review bounds and needs nothing but the record.
+Write every transition to `state.json` and each gate record to `gates/<task-slug>-<attempt>.md` before the next dispatch. Mirror each transition through the harness's record-task-state operation so resumption preserves the ladder and review bounds and needs nothing but the record.
 
 Use five harness operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. Run Git, Done checks, and Release actions through the harness's shell. On a fresh run, isolate the epic with `git worktree add -b <epic-branch> <epic-workspace> <base>`. Resume in that workspace. Never execute on the main branch.
 
 Read `contracts/models.md` and resolve every dispatched role through the registry at `~/.claude/gambit/models.json`. Look up the role, select its entry or gate-directed rung, and select the rung's dispatch target, using the read-only variant for a read-only role. Use the dispatch operation with the role's contract by absolute path and its complete brief as text. Resolve contract paths from the current installation. The `worker` role uses `contracts/worker.md`; `scout` uses `contracts/scout.md`. There is no fallback dispatch target. If the registry is absent or a role cannot be resolved, record the unresolved role in the Decision Log. Every task requiring it becomes a gap that cites the role. Independent work continues, and the run ends with gaps only when no executable work remains.
 
-Dispatch the `orchestrator` role once per effort, once for review, and once for release. Its brief is the record directory and the effort number; it reads the record for everything else and writes its result back there. Read only the report that dispatch returns. When the registry resolves no `orchestrator` role, the session that loaded this stage performs the effort, review, or release itself under these same rules, inventing no dispatch target and owning the record writes: `state.json` before every dispatch, `gates/<task-slug>-<attempt>.md` for each return, and `efforts/<n>.md` at the effort's end.
+Dispatch the `orchestrator` role once for review and once for release. Its brief is the record directory and the effort number; it reads the record for everything else and writes its result back there. Read only the report that dispatch returns. When the registry resolves no `orchestrator` role, the session that loaded this stage performs the review or release itself under these same rules, inventing no dispatch target and owning the record writes: `state.json` before every dispatch and `gates/<task-slug>-<attempt>.md` for each return.
+
+## Director
+
+The session that loaded this stage is the Director. From the accepted Requirements, build the change's dependency graph. Freeze shared interfaces as efforts that land first. Partition the remaining work into dependency-cohesive efforts with ownership exclusive among concurrent efforts, as many as the graph allows, and log the partition in the Director Decision Log.
+
+Create one effort brief per partition. Store it at `efforts/<n>/brief.md` with effort state at `efforts/<n>/state.json`. Each brief carries these fields in order:
+
+- **Objective:** Requirements quoted with their named evidence.
+- **Partition:** exact owned files; concurrent efforts' files are off-limits.
+- **Interfaces and order:** frozen shared interfaces, dependencies, and landing order.
+- **Binding contract:** applicable Must Not Ship entries, Premise clauses, Quality Bar, and Decision Log entries touching its files.
+- **Base:** accepted revision, branch `effort/<epic-slug>-<n>`, workspace, and exact check commands.
+- **Report shape:** required report lines and the `efforts/<n>/report.md` destination.
+
+Dispatch every dependency-ready effort concurrently to a fresh `orchestrator` in its own worktree. Before each dispatch, persist the child identity, workspace, revision, and lineage in the head's efforts entry. Accept a return only when its child and revision match the recorded entry. Merge finished effort branches in completion order, run the final full Done gate once, fold report lines into the head, and take no other tree action. When the registry resolves no `orchestrator` role, the Director performs each effort itself under the orchestrator rules above, inventing no dispatch target, and owning the effort's record writes.
+
+For an effort dispatch, the orchestrator input is the effort brief and code only, never the record. It decomposes into as many disjoint-file tasks as the behaviors allow, dispatches independent tasks concurrently, and holds at most six tasks per effort. It gates each return by full change-set inspection plus the named check. It writes tasks, gates, and effort-local decisions under `efforts/<n>/` and returns `efforts/<n>/report.md` in under 400 words.
 
 ## Decompose the next effort
 
@@ -91,7 +108,7 @@ Use the build step's failure-signature routing for that failure. The corrective 
 
 If an integration lineage exhausts, preserve its work and gate as a gap and retain the rejected candidate. Build any remaining candidate from the last accepted base and independent DONE changes, excluding work dependent on the gap, then run its full Done gate. Never advance the accepted base to a rejected revision.
 
-Write the effort's report to `efforts/<n>.md` when the effort ends. Repeat from decomposition until every Requirement is DONE with its named evidence or is a gap. When no executable work remains, a Requirement depending on a gap becomes a gap citing that dependency. Task completion alone does not establish Requirement completion.
+Write the effort's report to `efforts/<n>/report.md` when the effort ends. Repeat from decomposition until every Requirement is DONE with its named evidence or is a gap. When no executable work remains, a Requirement depending on a gap becomes a gap citing that dependency. Task completion alone does not establish Requirement completion.
 
 ## Review once
 

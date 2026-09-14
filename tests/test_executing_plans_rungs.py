@@ -11,6 +11,7 @@ ROOT = Path(__file__).resolve().parents[1]
 SKILL_ROOT = ROOT / "skills" / "executing-plans"
 SECTIONS = (
     "Start",
+    "Director",
     "Decompose the next effort",
     "Build each task until good",
     "Integrate and repeat",
@@ -20,9 +21,10 @@ SECTIONS = (
     "Human boundaries",
 )
 RECORD_PATHS_BY_SECTION = {
-    "Start": ("state.json", "gates/", "efforts/", "orchestrator"),
+    "Start": ("state.json", "gates/", "orchestrator"),
+    "Director": ("efforts/<n>/brief.md", "efforts/<n>/state.json", "efforts/<n>/report.md"),
     "Build each task until good": ("gates/<task-slug>-<attempt>.md", "state.json"),
-    "Integrate and repeat": ("state.json", "efforts/<n>.md"),
+    "Integrate and repeat": ("state.json", "efforts/<n>/report.md"),
 }
 GATE_FIELDS = (
     "Task",
@@ -80,6 +82,36 @@ class ExecutingPlansStructureTest(unittest.TestCase):
         for path in ("contracts/models.md", "contracts/worker.md", "contracts/scout.md"):
             with self.subTest(path=path):
                 self.assertIn(path, self.text)
+
+    def test_director_partitions_briefs_dispatch_and_merges_efforts(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        director = sections["Director"]
+        for phrase in (
+            "dependency",
+            "exclusive among concurrent efforts",
+            "Objective",
+            "Partition",
+            "Interfaces",
+            "Binding contract",
+            "Base",
+            "Report shape",
+            "effort/<epic-slug>-<n>",
+            "completion order",
+            "child",
+            "no `orchestrator` role",
+            "performs each effort itself",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, director)
+        for phrase in (
+            "never the record",
+            "six tasks",
+            "400 words",
+            "efforts/<n>/report.md",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.text)
+        self.assertNotIn("efforts/<n>.md", self.text)
 
     def test_decompose_lists_brief_fields_and_word_cap(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
