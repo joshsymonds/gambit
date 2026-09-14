@@ -38,7 +38,7 @@ Acceptance freezes Intent, Premises and their survival clauses, and Requirements
 
 ### Task brief
 
-Supply the task's workspace, base revision, and applicable contract clauses alongside this body. Create only work grounded in the tree now.
+Supply the task's workspace, base revision, and applicable contract clauses alongside this body. Keep Goal plus Acceptance plus Constraints under 250 words total. This brief carries no implementation steps, code, or diffs. Create only work grounded in the tree now.
 
 ```markdown
 ## Goal
@@ -53,10 +53,14 @@ Supply the task's workspace, base revision, and applicable contract clauses alon
 ## Neighbors
 [Every concurrent task and its complete owned-file list, all off-limits. State None for a single task.]
 
-## Implementation
-1. Inspect [verified source and test anchors as file:line].
-2. Write [specific failing test tied to a Requirement] and record its failure.
-3. Implement [required behavior using the verified interfaces] under contracts/worker.md, then run the named check. Leave changes uncommitted.
+## Anchors
+[Verified source and test anchors at the base revision, written as path:symbol:line.]
+
+## Acceptance
+[Name an existing test or reproduction with its expected result, or state behavioral criteria for the failing test written first.]
+
+## Constraints
+[State the applicable contract, scope, and safety limits.]
 
 ## Requirements covered
 - R1: [Requirement text and its named satisfying evidence.]

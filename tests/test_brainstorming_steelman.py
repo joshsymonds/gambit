@@ -12,8 +12,8 @@ CONTRACT_SECTIONS = (
     "Approach and Rejected Approaches", "Done", "Release",
 )
 BRIEF_SECTIONS = (
-    "Goal", "Files owned", "Hidden shared surfaces", "Neighbors",
-    "Implementation", "Requirements covered", "Test command",
+    "Goal", "Files owned", "Hidden shared surfaces", "Neighbors", "Anchors",
+    "Acceptance", "Constraints", "Requirements covered", "Test command",
 )
 
 
@@ -62,6 +62,16 @@ class BrainstormingStructureTest(unittest.TestCase):
             tuple(re.findall(r"^## (.+)$", blocks[1], re.MULTILINE)),
             BRIEF_SECTIONS,
         )
+
+    def test_brief_code_block_has_no_implementation_heading(self) -> None:
+        blocks = re.findall(r"```[^\n]*\n(.*?)\n```", self.templates, re.DOTALL)
+        self.assertTrue(blocks)
+        for block in blocks:
+            with self.subTest(block=block[:40]):
+                self.assertNotRegex(block, r"^## Implementation$", re.MULTILINE)
+
+    def test_brief_template_states_word_cap(self) -> None:
+        self.assertIn("250 words", self.templates)
 
     def test_quality_bar_matches_readme_verbatim(self) -> None:
         expected = self.readme.split("> Failing,", 1)[1].split("\n\n", 1)[0]
