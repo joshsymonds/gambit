@@ -3,8 +3,9 @@
 
 Fixtures live at ``tests/fixtures/trials/<skill>/<name>.json`` and contain
 ``skill``, repo-relative ``text``, repo-relative ``neighbors``, ``exercise``,
-and a non-empty binary ``checklist``. Cells are fixture x subject and are
-stored by ``<skill>/<name>@<subject>`` in ``results.json`` with current SHA-256
+and non-empty ``hard_lines`` plus a non-empty ``end_state``. Cells combine each
+fixture with each subject and are stored by ``<skill>/<name>@<subject>`` in
+``results.json`` with current SHA-256
 hashes for the fixture, tested text, and every neighbor. Cell status is ``ok``,
 ``transport_failure``, or ``judge_failure``.
 
@@ -60,7 +61,8 @@ class Fixture(NamedTuple):
     text: str
     neighbors: tuple[str, ...]
     exercise: str
-    checklist: tuple[str, ...]
+    hard_lines: tuple[str, ...]
+    end_state: str
 
 
 class FixtureError(ValueError):
@@ -102,7 +104,7 @@ def load_fixture(root: Path, path: Path) -> Fixture:
         raise FixtureError(f"invalid fixture {path}: {error}") from error
     if not isinstance(payload, dict):
         raise FixtureError(f"fixture {path} must be a JSON object")
-    required = {"skill", "text", "neighbors", "exercise", "checklist"}
+    required = {"skill", "text", "neighbors", "exercise", "hard_lines", "end_state"}
     if set(payload) != required:
         missing = sorted(required - set(payload))
         extra = sorted(set(payload) - required)
@@ -133,15 +135,18 @@ def load_fixture(root: Path, path: Path) -> Fixture:
     exercise = payload["exercise"]
     if not isinstance(exercise, str) or not exercise.strip():
         raise FixtureError(f"fixture {path} exercise must be a non-empty string")
-    checklist_value = payload["checklist"]
+    hard_lines_value = payload["hard_lines"]
     if (
-        not isinstance(checklist_value, list)
-        or not checklist_value
-        or any(not isinstance(item, str) or not item.strip() for item in checklist_value)
+        not isinstance(hard_lines_value, list)
+        or not hard_lines_value
+        or any(not isinstance(item, str) or not item.strip() for item in hard_lines_value)
     ):
         raise FixtureError(
-            f"fixture {path} checklist must be a non-empty list of strings"
+            f"fixture {path} hard_lines must be a non-empty list of strings"
         )
+    end_state = payload["end_state"]
+    if not isinstance(end_state, str) or not end_state.strip():
+        raise FixtureError(f"fixture {path} end_state must be a non-empty string")
 
     return Fixture(
         skill=skill,
@@ -150,7 +155,8 @@ def load_fixture(root: Path, path: Path) -> Fixture:
         text=text,
         neighbors=tuple(neighbors),
         exercise=exercise,
-        checklist=tuple(checklist_value),
+        hard_lines=tuple(hard_lines_value),
+        end_state=end_state,
     )
 
 
@@ -221,17 +227,17 @@ def subject_prompt(root: Path, fixture: Fixture) -> str:
     return "\n\n".join(sections)
 
 
-def judge_prompt(checklist: tuple[str, ...], response: str) -> str:
+def judge_prompt(criteria: tuple[str, ...], response: str) -> str:
     numbered = "\n".join(
-        f"{index}. {item}" for index, item in enumerate(checklist, start=1)
+        f"{index}. {item}" for index, item in enumerate(criteria, start=1)
     )
     return (
-        "Judge the subject response against every binary checklist item. Return "
+        "Judge the subject response against every binary criterion. Return "
         "JSON and nothing else, exactly in this shape: "
         '{"items": [{"item": "...", "pass": true, "evidence": "..."}]}. '
-        "Include every checklist item once, in the original order. Copy each item "
+        "Include every criterion once, in the original order. Copy each item "
         "text with or without its number. Evidence must cite the response.\n\n"
-        f"CHECKLIST\n{numbered}\n\n"
+        f"CRITERIA\n{numbered}\n\n"
         f"{_marked('SUBJECT RESPONSE', response)}"
     )
 
@@ -272,7 +278,7 @@ def _extract_json_object(response: str) -> str:
     raise JudgeParseError("judge output contains no complete JSON object")
 
 
-def parse_judge_output(response: str, checklist: tuple[str, ...]) -> list[dict[str, object]]:
+def parse_judge_output(response: str, criteria: tuple[str, ...]) -> list[dict[str, object]]:
     try:
         payload = json.loads(_extract_json_object(response))
     except json.JSONDecodeError as error:
@@ -280,10 +286,10 @@ def parse_judge_output(response: str, checklist: tuple[str, ...]) -> list[dict[s
     if not isinstance(payload, dict) or "items" not in payload:
         raise JudgeParseError("judge output must contain items")
     items = payload["items"]
-    if not isinstance(items, list) or len(items) != len(checklist):
-        raise JudgeParseError("judge output must contain every checklist item")
+    if not isinstance(items, list) or len(items) != len(criteria):
+        raise JudgeParseError("judge output must contain every criterion")
     parsed: list[dict[str, object]] = []
-    for expected, item in zip(checklist, items):
+    for expected, item in zip(criteria, items):
         if not isinstance(item, dict) or set(item) != {"item", "pass", "evidence"}:
             raise JudgeParseError("each judge item must contain item, pass, and evidence")
         item_text = item["item"]
@@ -292,7 +298,7 @@ def parse_judge_output(response: str, checklist: tuple[str, ...]) -> list[dict[s
         normalized = re.sub(r"^\s*\d+[.)]\s*", "", item_text)
         normalized = " ".join(normalized.split())
         if normalized != expected:
-            raise JudgeParseError("judge checklist items must match in order")
+            raise JudgeParseError("judge criteria must match in order")
         if type(item["pass"]) is not bool:
             raise JudgeParseError("judge pass values must be booleans")
         if not isinstance(item["evidence"], str):
@@ -377,15 +383,15 @@ def _transport_call(
 
 
 def _judge_call(
-    transport: Transport, checklist: tuple[str, ...], response: str
+    transport: Transport, criteria: tuple[str, ...], response: str
 ) -> tuple[list[dict[str, object]] | None, str]:
-    prompt = judge_prompt(checklist, response)
+    prompt = judge_prompt(criteria, response)
     last_raw = ""
     for _ in range(2):
         try:
             output = transport(JUDGE["model"], JUDGE["effort"], prompt)
             last_raw = output
-            return parse_judge_output(output, checklist), last_raw
+            return parse_judge_output(output, criteria), last_raw
         except (TransportError, OSError, JudgeParseError):
             continue
     return None, last_raw
@@ -420,7 +426,8 @@ def run_cell(
             "response": "",
             "items": [],
         }
-    items, judge_raw = _judge_call(transport, fixture.checklist, response)
+    criteria = fixture.hard_lines + (f"End state: {fixture.end_state}",)
+    items, judge_raw = _judge_call(transport, criteria, response)
     if items is None:
         return {
             "status": "judge_failure",
@@ -526,7 +533,8 @@ def _dry_run(root: Path, fixtures: list[Fixture], output: TextIO) -> int:
             print(f"=== {identifier} SUBJECT ===", file=output)
             print(subject_prompt(root, fixture), file=output)
             print(f"=== {identifier} JUDGE ===", file=output)
-            print(judge_prompt(fixture.checklist, "<SUBJECT RESPONSE>"), file=output)
+            criteria = fixture.hard_lines + (f"End state: {fixture.end_state}",)
+            print(judge_prompt(criteria, "<SUBJECT RESPONSE>"), file=output)
     return 0
 
 

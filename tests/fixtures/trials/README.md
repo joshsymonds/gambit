@@ -8,7 +8,8 @@ Place fixtures at `tests/fixtures/trials/<skill>/<name>.json`:
   "text": "<repo-relative tested text>",
   "neighbors": ["<repo-relative reference text>"],
   "exercise": "<facts and requested response>",
-  "checklist": ["<binary scoring item>"]
+  "hard_lines": ["<prohibited action or necessary decision>"],
+  "end_state": "<required outcome>"
 }
 ```
 
@@ -28,7 +29,7 @@ Each fixture produces one cell per fixed subject: `opus-low` is `claude-opus-5` 
   "subject": {"model": "<model>", "effort": "<effort>"},
   "judge": {"model": "<model>", "effort": "xhigh"},
   "response": "<subject response>",
-  "items": [{"item": "<checklist item>", "pass": true, "evidence": "<quote>"}],
+  "items": [{"item": "<criterion>", "pass": true, "evidence": "<quote>"}],
   "judge_raw": "<last raw judge reply; judge_failure only>",
   "at": "<ISO timestamp>"
 }

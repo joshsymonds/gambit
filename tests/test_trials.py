@@ -37,14 +37,14 @@ class FakeTransport:
         return outcome
 
 
-def judge_json(checklist: list[str], passes: list[bool] | None = None) -> str:
+def judge_json(criteria: list[str], passes: list[bool] | None = None) -> str:
     if passes is None:
-        passes = [True] * len(checklist)
+        passes = [True] * len(criteria)
     return json.dumps(
         {
             "items": [
                 {"item": item, "pass": passed, "evidence": f"evidence {index}"}
-                for index, (item, passed) in enumerate(zip(checklist, passes))
+                for index, (item, passed) in enumerate(zip(criteria, passes))
             ]
         }
     )
@@ -65,7 +65,9 @@ class TrialRunnerTest(unittest.TestCase):
         (self.root / "contracts" / "models.md").write_text(
             "Use the configured role.\n", encoding="utf-8"
         )
-        self.checklist = ["states the result", "does not invent facts"]
+        self.hard_lines = ["states the result"]
+        self.end_state = "does not invent facts"
+        self.criteria = [*self.hard_lines, f"End state: {self.end_state}"]
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
@@ -78,19 +80,23 @@ class TrialRunnerTest(unittest.TestCase):
         text: str = "skills/demo/SKILL.md",
         neighbors: list[str] | None = None,
         exercise: str = "Answer the exercise.",
-        checklist: list[str] | None = None,
+        hard_lines: list[str] | None = None,
+        end_state: str | None = None,
         payload_override: dict[str, object] | None = None,
     ) -> Path:
         if neighbors is None:
             neighbors = ["contracts/models.md"]
-        if checklist is None:
-            checklist = self.checklist
+        if hard_lines is None:
+            hard_lines = self.hard_lines
+        if end_state is None:
+            end_state = self.end_state
         payload: dict[str, object] = {
             "skill": skill,
             "text": text,
             "neighbors": neighbors,
             "exercise": exercise,
-            "checklist": checklist,
+            "hard_lines": hard_lines,
+            "end_state": end_state,
         }
         if payload_override is not None:
             payload = payload_override
@@ -118,7 +124,8 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertEqual("basic", fixture.name)
         self.assertEqual("skills/demo/SKILL.md", fixture.text)
         self.assertEqual(("contracts/models.md",), fixture.neighbors)
-        self.assertEqual(tuple(self.checklist), fixture.checklist)
+        self.assertEqual(tuple(self.hard_lines), fixture.hard_lines)
+        self.assertEqual(self.end_state, fixture.end_state)
 
         bad = self.write_fixture(
             name="bad",
@@ -129,7 +136,7 @@ class TrialRunnerTest(unittest.TestCase):
                 "exercise": "exercise",
             },
         )
-        with self.assertRaisesRegex(trials.FixtureError, "checklist"):
+        with self.assertRaisesRegex(trials.FixtureError, "hard_lines"):
             trials.load_fixture(self.root, bad)
 
         bad.write_text(
@@ -139,13 +146,71 @@ class TrialRunnerTest(unittest.TestCase):
                     "text": "/absolute/SKILL.md",
                     "neighbors": [],
                     "exercise": "exercise",
-                    "checklist": ["binary item"],
+                    "hard_lines": ["binary item"],
+                    "end_state": "required outcome",
                 }
             ),
             encoding="utf-8",
         )
         with self.assertRaisesRegex(trials.FixtureError, "repo-relative"):
             trials.load_fixture(self.root, bad)
+
+    def test_legacy_checklist_fixture_is_rejected(self) -> None:
+        legacy = self.write_fixture(
+            name="legacy",
+            payload_override={
+                "skill": "demo",
+                "text": "skills/demo/SKILL.md",
+                "neighbors": ["contracts/models.md"],
+                "exercise": "exercise",
+                "checklist": ["binary item"],
+            },
+        )
+        with self.assertRaisesRegex(trials.FixtureError, "checklist"):
+            trials.load_fixture(self.root, legacy)
+
+    def test_hard_lines_and_end_state_feed_judge_criteria(self) -> None:
+        fixture_path = self.write_fixture(
+            name="criteria",
+            payload_override={
+                "skill": "demo",
+                "text": "skills/demo/SKILL.md",
+                "neighbors": ["contracts/models.md"],
+                "exercise": "exercise",
+                "hard_lines": ["states the result", "does not invent facts"],
+                "end_state": "returns a useful answer",
+            },
+        )
+        fixture = trials.load_fixture(self.root, fixture_path)
+        criteria = fixture.hard_lines + (f"End state: {fixture.end_state}",)
+        prompt = trials.judge_prompt(criteria, "subject answer")
+        self.assertIn("1. states the result", prompt)
+        self.assertIn("2. does not invent facts", prompt)
+        self.assertIn("3. End state: returns a useful answer", prompt)
+
+    def test_stored_items_include_each_criterion(self) -> None:
+        fixture_path = self.write_fixture(
+            name="criteria",
+            payload_override={
+                "skill": "demo",
+                "text": "skills/demo/SKILL.md",
+                "neighbors": ["contracts/models.md"],
+                "exercise": "exercise",
+                "hard_lines": ["states the result", "does not invent facts"],
+                "end_state": "returns a useful answer",
+            },
+        )
+        fixture = trials.load_fixture(self.root, fixture_path)
+        criteria = fixture.hard_lines + (f"End state: {fixture.end_state}",)
+        record = trials.run_cell(
+            self.root,
+            fixture,
+            "opus-low",
+            FakeTransport("subject answer", judge_json(list(criteria))),
+        )
+        self.assertEqual("ok", record["status"])
+        self.assertEqual(list(criteria), [item["item"] for item in record["items"]])
+        self.assertEqual(len(criteria), len(record["items"]))
 
     def test_cell_id_and_hashes_cover_exact_file_bytes(self) -> None:
         fixture = self.load_one()
@@ -188,7 +253,7 @@ class TrialRunnerTest(unittest.TestCase):
         fake = FakeTransport(
             OSError("disconnected"),
             "subject answer",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
         )
         record = trials.run_cell(self.root, fixture, "opus-low", fake)
         self.assertEqual("ok", record["status"])
@@ -259,7 +324,7 @@ class TrialRunnerTest(unittest.TestCase):
                 trials.claude_transport("claude-opus-5", "low", "prompt")
 
     def test_judge_output_matches_numbered_items_by_position(self) -> None:
-        checklist = ("first item", "second item", "third item")
+        criteria = ("first item", "second item", "third item")
         response = json.dumps(
             {
                 "items": [
@@ -274,13 +339,13 @@ class TrialRunnerTest(unittest.TestCase):
             }
         )
 
-        parsed = trials.parse_judge_output(response, checklist)
+        parsed = trials.parse_judge_output(response, criteria)
 
         self.assertEqual(3, len(parsed))
         self.assertTrue(all(item["pass"] is True for item in parsed))
 
     def test_judge_output_extracts_fenced_or_surrounded_object(self) -> None:
-        payload = json.loads(judge_json(self.checklist))
+        payload = json.loads(judge_json(self.criteria))
         payload["summary"] = "extra top-level keys are ignored"
         raw = json.dumps(payload)
         responses = [
@@ -293,7 +358,7 @@ class TrialRunnerTest(unittest.TestCase):
 
         for response in responses:
             with self.subTest(response=response):
-                parsed = trials.parse_judge_output(response, tuple(self.checklist))
+                parsed = trials.parse_judge_output(response, tuple(self.criteria))
                 self.assertEqual(2, len(parsed))
 
     def test_judge_output_rejects_invalid_item_data(self) -> None:
@@ -302,7 +367,7 @@ class TrialRunnerTest(unittest.TestCase):
             "wrong item count": {
                 "items": [
                     {
-                        "item": self.checklist[0],
+                        "item": self.criteria[0],
                         "pass": True,
                         "evidence": "only one item",
                     }
@@ -311,12 +376,12 @@ class TrialRunnerTest(unittest.TestCase):
             "non-boolean pass": {
                 "items": [
                     {
-                        "item": self.checklist[0],
+                        "item": self.criteria[0],
                         "pass": "true",
                         "evidence": "first",
                     },
                     {
-                        "item": self.checklist[1],
+                        "item": self.criteria[1],
                         "pass": True,
                         "evidence": "second",
                     },
@@ -330,7 +395,7 @@ class TrialRunnerTest(unittest.TestCase):
                         "evidence": "first",
                     },
                     {
-                        "item": self.checklist[1],
+                        "item": self.criteria[1],
                         "pass": True,
                         "evidence": "second",
                     },
@@ -339,12 +404,12 @@ class TrialRunnerTest(unittest.TestCase):
             "non-string evidence": {
                 "items": [
                     {
-                        "item": self.checklist[0],
+                        "item": self.criteria[0],
                         "pass": True,
                         "evidence": ["first"],
                     },
                     {
-                        "item": self.checklist[1],
+                        "item": self.criteria[1],
                         "pass": True,
                         "evidence": "second",
                     },
@@ -356,27 +421,27 @@ class TrialRunnerTest(unittest.TestCase):
             with self.subTest(name=name):
                 with self.assertRaises(trials.JudgeParseError):
                     trials.parse_judge_output(
-                        json.dumps(payload), tuple(self.checklist)
+                        json.dumps(payload), tuple(self.criteria)
                     )
 
     def test_judge_scores_every_item(self) -> None:
         fixture = self.load_one()
         fake = FakeTransport(
-            "subject answer", judge_json(self.checklist, [True, False])
+            "subject answer", judge_json(self.criteria, [True, False])
         )
         record = trials.run_cell(self.root, fixture, "opus-low", fake)
         self.assertEqual("ok", record["status"])
         self.assertFalse(record["pass"])
-        self.assertEqual(self.checklist, [item["item"] for item in record["items"]])
+        self.assertEqual(self.criteria, [item["item"] for item in record["items"]])
 
     def test_judge_prompt_allows_numbered_or_unnumbered_item_text(self) -> None:
-        prompt = trials.judge_prompt(tuple(self.checklist), "subject answer")
+        prompt = trials.judge_prompt(tuple(self.criteria), "subject answer")
         self.assertIn("with or without its number", prompt)
 
     def test_judge_parse_failure_retries_once_then_records_failure(self) -> None:
         fixture = self.load_one()
         recovered = FakeTransport(
-            "subject answer", "not json", judge_json(self.checklist)
+            "subject answer", "not json", judge_json(self.criteria)
         )
         record = trials.run_cell(self.root, fixture, "opus-low", recovered)
         self.assertEqual("ok", record["status"])
@@ -519,11 +584,11 @@ class TrialRunnerTest(unittest.TestCase):
         self.write_fixture()
         passing = FakeTransport(
             "answer opus",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
             "answer fable",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
             "answer luna",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
         )
         output = io.StringIO()
         self.assertEqual(
@@ -574,18 +639,19 @@ class TrialRunnerTest(unittest.TestCase):
             "text": "skills/demo/SKILL.md",
             "neighbors": [],
             "exercise": "exercise",
-            "checklist": ["passes"],
+            "hard_lines": ["passes"],
+            "end_state": self.end_state,
         }
         (failing_root / "tests/fixtures/trials/demo/basic.json").write_text(
             json.dumps(payload), encoding="utf-8"
         )
         failing = FakeTransport(
             "opus",
-            judge_json(["passes"], [False]),
+            judge_json(["passes", f"End state: {self.end_state}"], [False, True]),
             "fable",
-            judge_json(["passes"], [True]),
+            judge_json(["passes", f"End state: {self.end_state}"], [True, True]),
             "luna",
-            judge_json(["passes"], [True]),
+            judge_json(["passes", f"End state: {self.end_state}"], [True, True]),
         )
         self.assertEqual(
             1,
@@ -616,27 +682,28 @@ class TrialRunnerTest(unittest.TestCase):
         (self.root / "skills/other/SKILL.md").write_text(
             "Other instructions.\n", encoding="utf-8"
         )
-        other_checklist = ["other item"]
+        other_hard_lines = ["other item"]
+        other_criteria = [*other_hard_lines, f"End state: {self.end_state}"]
         self.write_fixture(
             name="second",
             skill="other",
             text="skills/other/SKILL.md",
             neighbors=[],
-            checklist=other_checklist,
+            hard_lines=other_hard_lines,
         )
         fake = FakeTransport(
             "demo opus",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
             "demo fable",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
             "demo luna",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
             "other opus",
-            judge_json(other_checklist),
+            judge_json(other_criteria),
             "other fable",
-            judge_json(other_checklist),
+            judge_json(other_criteria),
             "other luna",
-            judge_json(other_checklist),
+            judge_json(other_criteria),
         )
         self.assertEqual(
             0,
@@ -898,11 +965,11 @@ class TrialRunnerTest(unittest.TestCase):
         self.write_fixture(name="other", exercise="Other exercise.")
         fake = FakeTransport(
             "opus answer",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
             "fable answer",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
             "luna answer",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
         )
         self.assertEqual(
             0,
