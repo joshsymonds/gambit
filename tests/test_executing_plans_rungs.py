@@ -151,6 +151,23 @@ class ExecutingPlansStructureTest(unittest.TestCase):
             r"(?is)\bevery task\b.*\bgap\b.*\bindependent\b.*\bno executable work remains\b",
         )
 
+    def test_start_recovery_preserves_identity_and_transition_state(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        start = sections.get("Start", "")
+        for phrase in (
+            "compaction",
+            "epic.md",
+            "decisions.md",
+            "efforts/<n>/report.md",
+            "efforts/<n>/state.json",
+            "before each dispatch",
+            "after each return",
+            "confirmed termination",
+            "orphan",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, start)
+
     def test_record_paths_are_named_in_the_section_that_writes_them(self) -> None:
         self.assertIn("references/record.md", self.text)
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))

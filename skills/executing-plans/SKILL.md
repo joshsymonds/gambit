@@ -13,7 +13,9 @@ Find the record directory by the rule in `references/record.md` and read its `ep
 
 Resume the record whose `state.json` names the current epic branch, and only that one. When no record names it, refuse to resume: the run is fresh. A terminal run only shows its stored report; it dispatches nothing and repeats no external action. For an active run, recover from `state.json` the accepted base, candidate revision, tasks and lineages, rung positions and attempts used, split history, gate records, review state, and completed Release actions.
 
-Write every transition to `state.json` and each gate record to `gates/<task-slug>-<attempt>.md` before the next dispatch. Mirror each transition through the harness's record-task-state operation so resumption preserves the ladder and review bounds and needs nothing but the record.
+After compaction or resume, reload by role: the Director reloads `epic.md`, `decisions.md` by pointer, `state.json`, and the latest `efforts/<n>/report.md`; the Orchestrator reloads its effort brief and `efforts/<n>/state.json`; a worker reloads its brief. A lost child is replaced only after confirmed termination, with attempts and budgets unchanged. Reject an orphan return when its child identity or revision does not match the recorded entry.
+
+Write `state.json` before each dispatch and after each return, recording every transition; write each gate record to `gates/<task-slug>-<attempt>.md` before the next dispatch. Mirror each transition through the harness's record-task-state operation so resumption preserves the ladder and review bounds and needs nothing but the record.
 
 Use five harness operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. Run Git, Done checks, and Release actions through the harness's shell. On a fresh run, isolate the epic with `git worktree add -b <epic-branch> <epic-workspace> <base>`. Resume in that workspace. Never execute on the main branch.
 
