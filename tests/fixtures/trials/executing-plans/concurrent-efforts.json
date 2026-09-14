@@ -14,5 +14,5 @@
     "H6 No invented facts: the response names no repository file, command, model, tool, or approval that neither the exercise nor the skill text supplies; record paths, harness operations, and git commands the skill's rules cover are not invented, and the response's own plans and inferences about the scenario are not introduced facts.",
     "H9 Sizing: the response dispatches no task owning more than three files without a declared exception, and splits an oversize task before any further dispatch."
   ],
-  "end_state": "The interface effort lands first. R2 and R3 run as concurrent efforts with disjoint files, and branches merge in completion order with one final gate."
+  "end_state": "The interface effort lands first; then R2 and R3 run as concurrent efforts with disjoint files, and their branches merge in completion order."
 }
