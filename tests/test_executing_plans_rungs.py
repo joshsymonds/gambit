@@ -248,6 +248,20 @@ class ExecutingPlansStructureTest(unittest.TestCase):
         self.assertTrue(build)
         self.assertNotRegex(build, r"(?i)\b(?:reviewer|judge|finder|verifier)\b")
 
+    def test_dispatch_integration_and_conduct_metrics_are_explicit(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        build = sections["Build each task until good"]
+        integrate = sections["Integrate and repeat"]
+        report = sections["Report and end"]
+        for phrase in ("validate_dispatch.py", "Brief:", "Workspace:"):
+            with self.subTest(section="Build each task until good", phrase=phrase):
+                self.assertIn(phrase, build)
+        self.assertIn("including a single task", integrate)
+        self.assertNotIn("create the candidate commit separately", integrate)
+        for phrase in ("report_metrics.py", "violations"):
+            with self.subTest(section="Report and end", phrase=phrase):
+                self.assertIn(phrase, report)
+
     def test_word_caps(self) -> None:
         self.assertLessEqual(len(self.text.split()), 3000)
         reference = SKILL_ROOT / "references" / "wave-dispatch.md"

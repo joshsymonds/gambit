@@ -64,7 +64,7 @@ When a brief needs facts, dispatch a read-only `scout` with the bounded question
 
 ## Build each task until good
 
-Isolate each worker in its own workspace from the effort's base, including a single-task effort. Dispatch independent tasks concurrently. A new task starts at the `worker` entry rung, under its contract and brief, test first. Workers change only their owned files and leave every change uncommitted. Only the orchestrator commits. Workers implement; the orchestrator implements only the final attempt the routing below names.
+Isolate each worker in its own workspace from the effort's base, including a single-task effort. Before every worker dispatch, run `scripts/validate_dispatch.py` by absolute path against brief and record; dispatch only on exit 0, append defects to `conduct.brief_defects`, and include `Brief: <absolute path>` and `Workspace: <absolute path>` in prompt. A new task starts at the `worker` entry rung, under its contract and brief, test first. Workers change only their owned files and leave every change uncommitted. Only the orchestrator commits. Workers implement; the orchestrator implements only the final attempt the routing below names.
 
 For every return, inspect the complete change set, including staged, unstaged, untracked, deleted, binary, symlink, and mode changes. Read the actual artifacts and fresh RED/GREEN evidence, not just a diff summary or a worker's verdict. Run any missing named check. For a Requirement whose evidence is a rendered result, build or capture that result and look at it yourself; record the observed result against that Requirement. Source inspection is not rendered evidence.
 
@@ -78,7 +78,7 @@ Write this gate record relative to the run's record directory, which for an effo
 | Candidate revision | Inspected base and complete change-set evidence; replace with the committed candidate revision after integration |
 | Contract items checked | Every applicable Requirement, Must Not Ship entry, and minimal-change obligation, each with its command or inspection, result, and cited evidence |
 | Owned-files result | Complete changed-path list checked against the exact allowlist |
-| Mechanical-floor result | Evidence for checks, test quality, live code, error handling, and introduced security or data-loss paths |
+| Mechanical-floor result | Evidence for checks, test quality, live code, error handling, and introduced security or data-loss paths, plus a conduct assessment from actual events: files touched against the allowlist, dispatch inputs, whether state was written before dispatch, with prevented and escaped violations appended to the task's conduct |
 | Premises touched | Each relevant Premise, evidence, assessment, and consequence of its clause |
 | Verdict | DONE or NOT DONE, itemized against the contract |
 | Next action | Integration, the next dispatch, decomposition, gap, or catastrophe, with its reason |
@@ -102,7 +102,7 @@ This routing sequence has no separate review dispatch or corrective loop outside
 
 Gate each complete worker change set before combining it. Commit accepted work onto the effort's candidate, one commit per task, and record the committed revision in its gate record and `state.json`. Workers never commit. A gap's work is not candidate material.
 
-For a multi-task effort, read `references/wave-dispatch.md` and run `scripts/integrate_wave.py` by absolute path with its manifest. Use the full Done gate as the manifest gate. The script combines complete worker trees as ordered commits in an isolated candidate and advances the epic only to the exact revision passing that gate. For a single task, create the candidate commit separately from the accepted base, run the same full Done gate, and advance only on green. Preserve the last accepted base until the combined candidate passes.
+For a multi-task effort, read `references/wave-dispatch.md` and run `scripts/integrate_wave.py` by absolute path with its manifest. Use the full Done gate as the manifest gate. The script combines complete worker trees as ordered commits in an isolated candidate and advances the epic only to the exact revision passing that gate. Every accepted worker change set, including a single task, runs `scripts/integrate_wave.py` by absolute path with manifest; advance only on green. Preserve the last accepted base until the combined candidate passes.
 
 For a failure appearing only after combination, record the complete routing decision before further investigation: itemized NOT DONE, the responsible lineage, the routing step reached, and the attempts spent there; the rejected revision retained on `candidate/<effort>` with its failing output, the last accepted base unchanged until the combined candidate passes the full Done gate, and the independent tasks continuing during correction. Assign the failure to its contributing lineage, or create one integration lineage for this effort. An existing contributing lineage continues from the routing step reached and the attempts it has spent there; a new integration lineage starts at the entry rung. Keep this ownership for subsequent failures rather than creating fresh lineages to reset the ladder.
 
@@ -136,7 +136,7 @@ Always write the report, including after catastrophe. It contains:
 - Every gap, its gate evidence, and its `gap/<task-slug>` branch where work exists; identify retained `candidate/<effort>` branches too.
 - Completed external actions and their observed effects.
 - For each task, whether it was DONE on its first attempt at the `worker` entry rung, every routing step it used, and its lineage.
-- The epic's entry-rung first-pass rate, calculated as entry-attempt DONE tasks divided by all tasks. If it is below 80%, flag the decomposition for reconsideration.
+- Entry-rung first-pass rate divides entry-attempt DONE tasks by all tasks beside per-task-family conduct metrics from `scripts/report_metrics.py`: brief defects, violations prevented and escaped, routing steps, outcomes, cost, with raw numerators and denominators. If below 80%, flag decomposition.
 
 Record exactly one terminal outcome: **released**, **ended with gaps**, or **stopped on catastrophe**. Store the report with that outcome, then use the harness's end-a-run operation. For each harness, use the end-a-run realization mapped in `README.md`'s Install section. A terminal resume only shows the report.
 
