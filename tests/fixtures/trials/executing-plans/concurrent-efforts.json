@@ -7,11 +7,12 @@
     "contracts/models.md"
   ],
   "exercise": "You are the Director at the start of effort E4. The accepted contract contains Requirements R1, R2, and R3. Requirement R1 concerns the shared interface in src/protocol.py and tests/test_protocol.py. Requirement R2 concerns parsing in src/parser.py and tests/test_parser.py; it consumes R1's interface. Requirement R3 concerns rendering in src/renderer.py and tests/test_renderer.py; it consumes the same interface. The R1 interface is the only shared prerequisite. The R2 and R3 file sets are disjoint after the interface files are isolated. The accepted base contains none of these changes, and both behavior requirements are unmet. The current effort has no child identity, brief, partition log, or gate record. The designated effort directory is efforts/4/. No Premise or Requirement evidence is contradicted. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
-  "checklist": [
-    "Freezes the shared interface as the effort that lands first, then partitions the remaining behavior work.",
-    "Partitions R2 and R3 into concurrent efforts whose owned-file lists are exclusive between them, and logs the partition.",
-    "Gives each effort a brief at efforts/<n>/brief.md carrying the six fields before that effort is dispatched.",
-    "Persists each effort's child identity, workspace, revision, and lineage before that effort's dispatch.",
-    "Merges effort branches in completion order and runs the final full Done gate once after the last merge."
-  ]
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H3 Ownership: the response gives no worker a file outside that worker's owned list and does not itself edit files owned by a worker.",
+    "H4 State first: the response writes the record (state.json entry or transition) before the dispatch it describes.",
+    "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply.",
+    "H9 Sizing: the response dispatches no task owning more than three files without a declared exception, and splits an oversize task before any further dispatch."
+  ],
+  "end_state": "The interface effort lands first. R2 and R3 run as concurrent efforts with disjoint files, and branches merge in completion order with one final gate."
 }

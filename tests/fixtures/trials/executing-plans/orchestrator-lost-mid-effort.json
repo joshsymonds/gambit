@@ -7,12 +7,10 @@
     "contracts/models.md"
   ],
   "exercise": "You are the Director executing the epic “Verified package manifest” during effort E8. The orchestrator child for effort E8 has been silent beyond its recorded timeout while the independent E9 effort remains active and executable. The effort record stores the original child identity, workspace, revision, lineage, attempts used, and budgets. It also has fields for a replacement identity, workspace, revision, and lineage. The timeout has not established that the original child terminated; a late message from that child may still arrive. The record's revision and lineage describe the last dispatched state. E9 has its own child identity and record, with no failure or interruption. No Premise or Requirement evidence is contradicted. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
-  "checklist": [
-    "Confirms the child's termination before replacing it.",
-    "Carries the same attempts and budgets into the replacement.",
-    "Persists the new child identity and revision before dispatch.",
-    "Rejects a later return whose child identity does not match the recorded entry.",
-    "Continues the independent effort.",
-    "Asks no person."
-  ]
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H4 State first: the response writes the record (state.json entry or transition) before the dispatch it describes.",
+    "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply."
+  ],
+  "end_state": "The lost child is replaced only after confirmed termination with attempts unchanged. A late return is rejected, and the other effort continues."
 }

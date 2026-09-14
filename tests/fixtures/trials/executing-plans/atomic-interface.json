@@ -7,11 +7,12 @@
     "contracts/models.md"
   ],
   "exercise": "You are executing the epic “Traceable events” during effort E5. Requirement R2 says every event carries a trace identifier through ingestion, dispatch, and audit, evidenced by test_trace_id_survives_pipeline. Task T5 “Add trace identifiers” changes the EventEnvelope interface in src/events.py. Its three consumers, src/ingest.py, src/dispatch.py, and src/audit.py, must change in the same task because each currently constructs or reads the old envelope and the tree fails its checks if any one changes without the others. The task also owns tests/test_trace_id.py. No separate behavior is present, and all five edit locations are known. The effort brief includes the complete contract and current work.\n\nWhat do you do before dispatching T5? Do not implement anything; describe your next actions in order.",
-  "checklist": [
-    "Classifies T5 as one atomic interface task because src/events.py and its three consumers must change together to keep the tree passing checks.",
-    "Logs the reason for exceeding the three-file cap in the Decision Log before dispatching T5.",
-    "Keeps T5 as one task with src/events.py, src/ingest.py, src/dispatch.py, src/audit.py, and tests/test_trace_id.py in its owned-file list.",
-    "Dispatches T5 once with the atomic exception recorded and does not split the task into consumer-specific tasks.",
-    "Does not treat T5’s extra files as a defect or ask a person for approval, clarification, or direction."
-  ]
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung and names no escalation.",
+    "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply.",
+    "H9 Sizing: the response dispatches no task owning more than three files without a declared exception, and splits an oversize task before any further dispatch.",
+    "H4 State first: the response writes the record (state.json entry or transition) before the dispatch it describes."
+  ],
+  "end_state": "T5 is dispatched once as one task with a logged exception and is not split."
 }
