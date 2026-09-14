@@ -65,7 +65,7 @@ After a non-`READY` closure, finish by revising the packet without another steel
 Create the epic record through the record-task-state operation from the finalized design and decisions. Read `TEMPLATES.md` and `skills/executing-plans/references/record.md`. Emit the full contract, with exactly these sections in this order:
 
 1. **Intent:** one paragraph stating the desired end state and reason, never a solution.
-2. **Premises:** falsifiable facts. Every one states whether the Intent survives if false and the consequence of that clause.
+2. **Premises:** falsifiable facts. Every one states whether the Intent survives if false and the consequence of that clause; in a goal-file run, every one also cites its Decision Log entry by id.
 3. **Requirements:** immutable, atomic, testable outcomes. Every one names the specific evidence and check that satisfies it.
 4. **Must Not Ship:** forbidden outcomes and non-goals, each with its reason.
 5. **Quality Bar:** copy the complete paragraph from README verbatim. Output the paragraph itself, not a summary, reference, or promise to copy it. Never customize it.
