@@ -104,7 +104,7 @@ Gate each complete worker change set before combining it. Commit accepted work o
 
 For a multi-task effort, read `references/wave-dispatch.md` and run `scripts/integrate_wave.py` by absolute path with its manifest. Use the full Done gate as the manifest gate. The script combines complete worker trees as ordered commits in an isolated candidate and advances the epic only to the exact revision passing that gate. For a single task, create the candidate commit separately from the accepted base, run the same full Done gate, and advance only on green. Preserve the last accepted base until the combined candidate passes.
 
-For a failure appearing only after combination, record the complete routing decision before further investigation: itemized NOT DONE, the responsible lineage and ladder action, the rejected revision retained on `candidate/<effort>` with its failing output, the last accepted base unchanged until the combined candidate passes the full Done gate, and the independent tasks continuing during correction. Assign the failure to its contributing lineage, or create one integration lineage for this effort. An existing contributing lineage continues from the rung it used and the attempts it has spent there; a new integration lineage starts at the entry rung. Keep this ownership for subsequent failures rather than creating fresh lineages to reset the ladder.
+For a failure appearing only after combination, record the complete routing decision before further investigation: itemized NOT DONE, the responsible lineage, the routing step reached, and the attempts spent there; the rejected revision retained on `candidate/<effort>` with its failing output, the last accepted base unchanged until the combined candidate passes the full Done gate, and the independent tasks continuing during correction. Assign the failure to its contributing lineage, or create one integration lineage for this effort. An existing contributing lineage continues from the routing step reached and the attempts it has spent there; a new integration lineage starts at the entry rung. Keep this ownership for subsequent failures rather than creating fresh lineages to reset the ladder.
 
 Use the build step's failure-signature routing for that failure. The corrective workspace must contain the failing combination so its tests reproduce the integration defect. Continue independent executable tasks meanwhile. A task's passing fast check cannot substitute for a fresh full Done gate on the corrected combined candidate.
 
@@ -135,7 +135,8 @@ Always write the report, including after catastrophe. It contains:
 - Changed Premise assessments and their evidence.
 - Every gap, its gate evidence, and its `gap/<task-slug>` branch where work exists; identify retained `candidate/<effort>` branches too.
 - Completed external actions and their observed effects.
-- Rungs used by task and lineage.
+- For each task, whether it was DONE on its first attempt at the `worker` entry rung, every routing step it used, and its lineage.
+- The epic's entry-rung first-pass rate, calculated as entry-attempt DONE tasks divided by all tasks. If it is below 80%, flag the decomposition for reconsideration.
 
 Record exactly one terminal outcome: **released**, **ended with gaps**, or **stopped on catastrophe**. Store the report with that outcome, then use the harness's end-a-run operation. For each harness, use the end-a-run realization mapped in `README.md`'s Install section. A terminal resume only shows the report.
 

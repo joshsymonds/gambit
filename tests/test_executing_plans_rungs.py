@@ -193,6 +193,14 @@ class ExecutingPlansStructureTest(unittest.TestCase):
         self.assertIn("ends with gaps", self.text)
         self.assertNotIn("unsatisfiable", self.text)
 
+    def test_report_measures_entry_rung_first_pass_and_routing(self) -> None:
+        report = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))["Report and end"]
+        for phrase in ("first-pass", "entry rung", "80%"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, report)
+        self.assertNotIn("ladder action", self.text)
+        self.assertNotIn("rung it used", self.text)
+
     def test_review_and_release_route_failures_and_resume(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
         review = sections["Review once"]
