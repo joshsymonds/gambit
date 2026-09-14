@@ -1025,6 +1025,8 @@ class TrialRunnerTest(unittest.TestCase):
                 "--strict-mcp-config",
                 "--tools",
                 "",
+                "--append-system-prompt",
+                trials.TRANSPORT_INSTRUCTIONS,
             ],
             captured["argv"],
         )
@@ -1341,6 +1343,89 @@ class TrialRunnerTest(unittest.TestCase):
         )
         self.assertIn("demo/other@sol-high", output.getvalue())
         self.assertIn("demo/other@opus-low", output.getvalue())
+
+    def test_claude_transport_appends_system_level_toolless_note(self) -> None:
+        captured: dict[str, object] = {}
+
+        def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+            captured["argv"] = argv
+            return subprocess.CompletedProcess(
+                args=argv, returncode=0, stdout="transport reply\n", stderr=""
+            )
+
+        with mock.patch.object(trials.subprocess, "run", side_effect=run):
+            trials.claude_transport("claude-opus-5", "low", "prompt")
+
+        argv = captured["argv"]
+        assert isinstance(argv, list)
+        index = argv.index("--append-system-prompt")
+        self.assertEqual(trials.TRANSPORT_INSTRUCTIONS, argv[index + 1])
+
+    def test_fixture_hashes_fingerprint_transport_instructions(self) -> None:
+        fixture = self.load_one()
+        hashes = trials.fixture_hashes(self.root, fixture)
+        expected = hashlib.sha256(
+            trials.TRANSPORT_INSTRUCTIONS.encode("utf-8")
+        ).hexdigest()
+        self.assertEqual(expected, hashes["transport_instructions"])
+
+    def test_transport_instruction_change_stales_fresh_cells(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport(
+            "answer sol", judge_json(self.criteria, response="answer sol"),
+            "answer opus", judge_json(self.criteria, response="answer opus"),
+        )
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--fixture", "demo/basic"],
+                root=self.root,
+                transport=fake,
+                output=io.StringIO(),
+            ),
+        )
+        original_transport_instructions = trials.TRANSPORT_INSTRUCTIONS
+        try:
+            trials.TRANSPORT_INSTRUCTIONS += " Changed transport instruction."
+            problems = trials.check_fresh(
+                self.root, [fixture], trials.load_results(self.root)
+            )
+        finally:
+            trials.TRANSPORT_INSTRUCTIONS = original_transport_instructions
+        self.assertEqual(
+            ["stale demo/basic@sol-high", "stale demo/basic@opus-low"], problems
+        )
+
+    def test_claude_transport_rejects_native_tool_call_markers(self) -> None:
+        markers = (
+            "<｜DSML｜>",
+            "<tool_call>",
+            "<function_call>",
+            "[TOOL_CALLS]",
+            "<|tool_call|>",
+        )
+        for marker in markers:
+            with self.subTest(marker=marker):
+                completed = subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout=f"before {marker} after", stderr=""
+                )
+                with mock.patch.object(
+                    trials.subprocess, "run", return_value=completed
+                ):
+                    with self.assertRaisesRegex(trials.TransportError, marker):
+                        trials.claude_transport("claude-opus-5", "low", "prompt")
+
+    def test_claude_transport_returns_reply_without_native_tool_call_marker(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="plain transport reply\n", stderr=""
+        )
+        with mock.patch.object(
+            trials.subprocess, "run", return_value=completed
+        ):
+            self.assertEqual(
+                "plain transport reply",
+                trials.claude_transport("claude-opus-5", "low", "prompt"),
+            )
 
 if __name__ == "__main__":
     unittest.main()

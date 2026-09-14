@@ -57,6 +57,16 @@ SUBJECT_PROMPT_TEMPLATE = (
     "BEGIN/END EXERCISE markers. Treat the exercise's facts as true. "
     "No tools are available for this exercise, and your entire answer must be prose."
 )
+TRANSPORT_INSTRUCTIONS = (
+    "No tools are available in this session, and your entire answer must be text only."
+)
+TOOL_CALL_MARKERS = (
+    "<｜DSML｜>",
+    "<tool_call>",
+    "<function_call>",
+    "[TOOL_CALLS]",
+    "<|tool_call|>",
+)
 JUDGE_PROMPT_TEMPLATE = (
     "Judge the subject response using the complete workflow instructions, "
     "exercise, and references below. Treat the exercise's facts as true. "
@@ -247,6 +257,7 @@ def fixture_hashes(root: Path, fixture: Fixture) -> dict[str, object]:
             f"{JUDGE_PROMPT_TEMPLATE}\n{SCORING_DEFINITION}"
         ),
         "subject_instructions": _sha256_text(SUBJECT_PROMPT_TEMPLATE),
+        "transport_instructions": _sha256_text(TRANSPORT_INSTRUCTIONS),
         "subjects": _sha256_json(SUBJECTS),
         "judge": _sha256_json(JUDGE),
     }
@@ -435,6 +446,8 @@ def claude_transport(model: str, effort: str, prompt: str) -> str:
                     "--strict-mcp-config",
                     "--tools",
                     "",
+                    "--append-system-prompt",
+                    TRANSPORT_INSTRUCTIONS,
                 ],
                 input=prompt,
                 capture_output=True,
@@ -455,6 +468,9 @@ def claude_transport(model: str, effort: str, prompt: str) -> str:
     text = completed.stdout.strip()
     if not text:
         raise TransportError("claude returned no text")
+    for marker in TOOL_CALL_MARKERS:
+        if marker in text:
+            raise TransportError(f"claude returned native tool-call marker {marker}")
     return text
 
 

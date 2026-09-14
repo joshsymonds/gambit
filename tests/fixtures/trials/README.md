@@ -28,6 +28,7 @@ Each fixture produces one cell per fixed subject: `sol-high` is `chatgpt/sol` at
     "neighbors": {"<path>": "<sha256>"},
     "judge_instructions": "<sha256>",
     "subject_instructions": "<sha256>",
+    "transport_instructions": "<sha256>",
     "subjects": "<sha256>",
     "judge": "<sha256>"
   },
