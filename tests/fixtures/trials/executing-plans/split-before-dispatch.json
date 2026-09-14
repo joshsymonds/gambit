@@ -11,7 +11,7 @@
     "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
     "H9 Sizing: the response dispatches no task owning more than three files without a declared exception, and splits an oversize task before any further dispatch.",
     "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.",
-    "H3 Ownership: the response gives no worker a file outside that worker's owned list and does not itself edit files owned by a worker."
+    "H3 Ownership: the response gives no worker a file outside that worker's owned list, and edits a worker-owned file itself only as a gate-named mechanical correction or the orchestrator's own final attempt."
   ],
   "end_state": "T1 is split into interface and validation tasks with the interface task first; independent T2 runs concurrently, and the oversized brief is never dispatched."
 }

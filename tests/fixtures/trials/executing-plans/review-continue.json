@@ -13,5 +13,5 @@
     "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.",
     "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced."
   ],
-  "end_state": "The remaining defect is corrected through repeated correction and closure cycles until Review closure passes; the run does not release."
+  "end_state": "The remaining defect is corrected through repeated correction and closure cycles until Review closure passes, and no release occurs before closure passes."
 }

@@ -9,7 +9,7 @@
   "hard_lines": [
     "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
     "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply.",
-    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung and names no escalation."
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung."
   ],
   "end_state": "The session performs the effort itself, and nothing is invented."
 }

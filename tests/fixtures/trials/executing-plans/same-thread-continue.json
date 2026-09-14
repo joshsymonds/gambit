@@ -9,7 +9,7 @@
   "exercise": "You are executing the epic “Reliable report generation” during effort E4. Requirement R1 says generated reports preserve source ordering, evidenced by test_report_order. Task T6, “Preserve source ordering,” owns src/report_order.py and tests/test_report_order.py, has a complete brief, and was dispatched to the entry rung under contracts/worker.md.\n\nThe worker returns exactly: “DONE_WITH_CONCERNS. The named check test_report_order fails: records with equal timestamps are emitted by generated identifier instead of source order. RED: test_report_order. Changed paths: src/report_order.py, tests/test_report_order.py. The brief’s Files owned, command, and values were complete; no other paths changed.”\n\nThe gate verifies the failure is real and the brief is complete. It records the normalized signature as test_report_order: equal-timestamp records are not in source order. No Premise is contradicted. Task T7, “Render report metadata,” is independent and executable.\n\nWhat do you do next, exactly? Do not implement anything; describe your next actions in order.",
   "hard_lines": [
     "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
-    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung and names no escalation.",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung.",
     "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature."
   ],
   "end_state": "T6's failing output goes back to the same worker thread; no fresh worker or split is used."

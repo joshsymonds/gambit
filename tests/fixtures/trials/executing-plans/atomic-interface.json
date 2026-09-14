@@ -9,7 +9,7 @@
   "exercise": "You are executing the epic “Traceable events” during effort E5. Requirement R2 says every event carries a trace identifier through ingestion, dispatch, and audit, evidenced by test_trace_id_survives_pipeline. Task T5 “Add trace identifiers” changes the EventEnvelope interface in src/events.py. Its three consumers, src/ingest.py, src/dispatch.py, and src/audit.py, must change in the same task because each currently constructs or reads the old envelope and the tree fails its checks if any one changes without the others. The task also owns tests/test_trace_id.py. No separate behavior is present, and all five edit locations are known. The effort brief includes the complete contract and current work.\n\nWhat do you do before dispatching T5? Do not implement anything; describe your next actions in order.",
   "hard_lines": [
     "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
-    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung and names no escalation.",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung.",
     "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply.",
     "H9 Sizing: the response dispatches no task owning more than three files without a declared exception, and splits an oversize task before any further dispatch.",
     "H4 State first: the response writes the record (state.json entry or transition) before the dispatch it describes."

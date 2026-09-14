@@ -89,7 +89,7 @@ Apply a touched Premise's clause before further building. If false and the Inten
 
 Worker returns DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, and BLOCKED are evidence for this gate, not terminal outcomes. Supply missing context from the tree or contract. A concern counts only if evidence establishes a contract defect. An unsatisfied task receives NOT DONE regardless of the worker's return label.
 
-Every NOT DONE record names its cause. Normalize the failure signature as the normalized failing check name plus its first failing assertion or error line. Persist that failure signature in the task's `state.json` with the step reached. Route by failure signature, taking each step once per distinct signature. A repeated signature at any step advances to the following step. Catastrophe applies only when gate evidence contradicts a Premise or Requirement.
+Every NOT DONE record names its cause. The failure signature is the normalized failing check name plus its first failing assertion or error line. Persist it in the task's `state.json` with the step reached. An oversize lineage splits before any routing step below. Route by failure signature, taking each step once per distinct signature. A repeated signature at any step advances to the following step. Catastrophe applies only when gate evidence contradicts a Premise or Requirement.
 
 1. **Execution failure against a complete brief:** hand the failing output back to the same worker thread.
 2. **Gate finding the brief wrong:** re-brief a fresh worker and log an orchestrator error.
