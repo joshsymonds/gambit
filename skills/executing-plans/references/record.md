@@ -6,13 +6,18 @@ One directory per epic, outside every repository and every workspace: `~/.gambit
 
 Derive repository-id from the tree: the basename of the parent of `git rev-parse --path-format=absolute --git-common-dir`, a hyphen, then the first seven characters of the root commit from `git rev-list --max-parents=0 HEAD | tail -1`. Ask for the absolute path format. The bare form prints a relative `.git` at a repository toplevel, whose parent is `.`, so the same repository would resolve one identifier from its toplevel and another from a linked workspace. epic-slug is the epic's kebab-case name, fixed at acceptance.
 
-The directory holds five files:
+The directory holds the epic-level files and one directory per effort:
 
 - `epic.md` — the eight contract sections, frozen at acceptance.
-- `decisions.md` — the Decision Log, append-only.
+- `decisions.md` — the Director-level Decision Log, append-only.
 - `state.json` — the head: where this epic stands now.
 - `gates/<task-slug>-<attempt>.md` — one gate record per attempt.
-- `efforts/<n>.md` — one summary per finished effort.
+- `efforts/<n>/` — one directory per effort. Each effort directory contains:
+  - `efforts/<n>/brief.md` — the accepted brief for that effort.
+  - `efforts/<n>/state.json` — that effort's tasks, dispatched child identity, workspace, revision, and lineage.
+  - `efforts/<n>/gates/<task-slug>-<attempt>.md` — one gate record per attempt in that effort.
+  - `efforts/<n>/decisions.md` — the effort-local Decision Log, append-only.
+  - `efforts/<n>/report.md` — what the effort built, integrated, and left open.
 
 ## The three carriers
 
@@ -20,7 +25,7 @@ The directory holds five files:
 
 `state.json` is the head and is rewritten in place. Task status fields flip as work moves, and `next_actions` is rewritten every effort to name what the next reader does first. Keep it under 200 lines; it is the head, not the archive. Detail belongs in the gate and effort files it addresses.
 
-`decisions.md` is append-only. A reversal appends a new line naming the entry it supersedes; no existing line is edited or removed. Each entry carries six fields in this order: id, timestamp, decision, reason, evidence, supersedes.
+`decisions.md` is append-only and Director-level only. Every decision made within an effort belongs in that effort's `efforts/<n>/decisions.md`. A reversal appends a new line naming the entry it supersedes; no existing line is edited or removed. Each entry carries six fields in this order: id, timestamp, decision, reason, evidence, supersedes.
 
 ```text
 - DL7 | 2026-02-04T11:20:06+00:00 | <decision> | reason: <why> | evidence: <file:line, finding id, or command> | supersedes: DL3
@@ -65,12 +70,23 @@ Write `supersedes: none` when the entry reverses nothing.
       }
     ]
   },
+  "efforts": [
+    {
+      "n": 2,
+      "branch": "effort/<epic-slug>-<n>",
+      "workspace": "<absolute effort workspace>",
+      "child": "<dispatched child identity or null>",
+      "revision": "<effort revision>",
+      "status": "<effort status>",
+      "report": "efforts/<n>/report.md"
+    }
+  ],
   "next_actions": ["<the first thing the next reader does>"],
   "never_drop": ["<carried fact>"]
 }
 ```
 
-Those top-level keys are the whole head, and every task entry carries exactly the keys shown.
+Those top-level keys are the whole head, and every task entry carries exactly the keys shown. Each effort entry carries exactly `n`, `branch`, `workspace`, `child`, `revision`, `status`, and `report`.
 
 ## Decomposition
 
@@ -80,7 +96,9 @@ A split parent stays in `tasks` with `split_used` set and its descendants named.
 
 ## Gates and efforts
 
-Gate and effort files are addressed by path, never inlined into the head. A gate record is written for every attempt at `gates/<task-slug>-<attempt>.md`, and the task's `gate_paths` lists what exists. Each finished effort writes `efforts/<n>.md`: what was built, what integrated, and what the effort left open.
+Gate records and effort history are addressed by path, never inlined into the head. A gate record is written for every attempt at `gates/<task-slug>-<attempt>.md`, and the task's `gate_paths` lists what exists. Each effort directory has its own `brief.md`, `state.json`, `gates/<task-slug>-<attempt>.md`, `decisions.md`, and `report.md` under `efforts/<n>/`. Its `state.json` carries the effort's tasks, dispatched child identity, workspace, revision, and lineage. Its `report.md` records what was built, what integrated, and what the effort left open.
+
+The top-level `decisions.md` is Director-level only. Effort-local decisions are appended to `efforts/<n>/decisions.md`. Reopen history files by path and read only the needed section; never read a history file whole.
 
 `never_drop` carries the facts that must survive every rewrite of the head: acceptance criteria, error signatures observed, and commands still needed. A fact leaves that list only when the work it guards is complete.
 

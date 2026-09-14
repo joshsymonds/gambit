@@ -24,7 +24,7 @@ RECORD_FILES = (
     "decisions.md",
     "state.json",
     "gates/<task-slug>-<attempt>.md",
-    "efforts/<n>.md",
+    "efforts/<n>/",
 )
 STATE_KEYS = (
     "repository_id",
@@ -37,6 +37,7 @@ STATE_KEYS = (
     "tasks",
     "review",
     "release",
+    "efforts",
     "next_actions",
     "never_drop",
 )
@@ -55,6 +56,7 @@ TASK_KEYS = (
 LINEAGE_KEYS = ("parent", "descendants", "split_used")
 REVIEW_KEYS = ("started", "candidate", "ledger")
 RELEASE_ACTION_KEYS = ("action", "target", "effect", "completed_at", "evidence")
+EFFORT_KEYS = ("n", "branch", "workspace", "child", "revision", "status", "report")
 DECOMPOSITION_KEYS = ("requirement", "owned_files", "lineage", "split_used")
 DECISION_FIELDS = ("id", "timestamp", "decision", "reason", "evidence", "supersedes")
 CONTRACT_SECTIONS = (
@@ -127,6 +129,21 @@ class RecordReferenceTest(unittest.TestCase):
                 self.assertIn(term, self.text)
         self.assertIsNone(re.search(r"\bwave\b", self.text, re.IGNORECASE))
 
+    def test_effort_directories_and_director_decisions_are_named(self) -> None:
+        for path in (
+            "efforts/<n>/",
+            "efforts/<n>/brief.md",
+            "efforts/<n>/state.json",
+            "efforts/<n>/gates/<task-slug>-<attempt>.md",
+            "efforts/<n>/decisions.md",
+            "efforts/<n>/report.md",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(path, self.text)
+        self.assertIn("Director-level", self.text)
+        self.assertIn("Reopen history files by path", self.text)
+        self.assertIn("never read a history file whole", self.text)
+
 
 class BrainstormingWritesTheRecordTest(unittest.TestCase):
     @classmethod
@@ -180,6 +197,14 @@ class FixtureRecordTest(unittest.TestCase):
                 self.assertIsInstance(task["owned_files"], list)
                 self.assertTrue(task["owned_files"])
                 self.assertIsInstance(task["gate_paths"], list)
+
+    def test_every_effort_has_exactly_the_effort_keys(self) -> None:
+        efforts = self.state.get("efforts", [])
+        self.assertTrue(efforts, "fixture records no effort")
+        for effort in efforts:
+            with self.subTest(effort=effort.get("n")):
+                self.assertEqual(tuple(effort), EFFORT_KEYS)
+        self.assertEqual(efforts[0]["branch"], "effort/config-loader-2")
 
     def test_review_and_release_carry_exactly_their_keys(self) -> None:
         self.assertEqual(tuple(self.state.get("review", {})), REVIEW_KEYS)

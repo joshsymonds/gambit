@@ -93,6 +93,17 @@
       }
     ]
   },
+  "efforts": [
+    {
+      "n": 2,
+      "branch": "effort/config-loader-2",
+      "workspace": "/home/example/sundial/.claude/worktrees/effort-config-loader-2",
+      "child": "t2b-merge-defaults",
+      "revision": "9d31ba7",
+      "status": "dispatched",
+      "report": "efforts/2/report.md"
+    }
+  ],
   "next_actions": [
     "gate the t2b-merge-defaults return into gates/t2b-merge-defaults-1.md",
     "integrate t2a-parse-env and t2b-merge-defaults onto 9d31ba7, then run just check"
