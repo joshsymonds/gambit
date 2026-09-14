@@ -1,0 +1,18 @@
+{
+  "skill": "executing-plans",
+  "text": "skills/executing-plans/SKILL.md",
+  "neighbors": [
+    "README.md",
+    "contracts/worker.md",
+    "contracts/models.md"
+  ],
+  "exercise": "The executing-plans record concerns an epic whose task “Specify versioned native record” owned nine paths. The brief was complete: it named every path, Requirement, check, and boundary. The first return contained only a truncated tests/test_native_record_format.py, ended inside a function signature, was unimportable with a syntax error, and contained no implementation. The candidate revision at that gate held one incomplete test file and no native record, reference link, fixtures, or executable native tests. The owned-files result passed, while the mechanical-floor result was not done.\n\nLater gates found a hash comparison mixing historical adoption and current state values, and a validator rejecting Markdown carrier bytes. They also found a compact-versus-pretty serialization defect, a pending flag and linked-projection proof defect, and a doubled escape emitting literal backslash-n; each gate stated one exact correction.\n\nThe record states that no Premise or Requirement evidence is contradicted. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "checklist": [
+    "Records the truncated syntax-error return as an execution failure against a complete brief and routes it to the same worker thread before treating it as a brief defect.",
+    "Splits the nine-path task before the next dispatch into tasks of at most three files and places the native-record specification document task first.",
+    "Keeps the authorized execution level unchanged at every dispatch and never introduces a stronger one.",
+    "Routes each distinct failure signature through each routing step once, preserves spent attempts, and never creates a fresh lineage to reset them.",
+    "Returns each gate-stated exact correction to the same worker thread rather than to a fresh worker or a stronger model.",
+    "Requests no approval and records that no Premise or Requirement evidence is contradicted."
+  ]
+}
