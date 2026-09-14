@@ -893,6 +893,69 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertIn("luna-low: 200 luna reply", output.getvalue())
         self.assertIn("judge: 200 judge reply", output.getvalue())
 
+    def test_cli_fixture_runs_only_named_fixture_and_writes_three_cells(self) -> None:
+        self.write_fixture()
+        self.write_fixture(name="other", exercise="Other exercise.")
+        fake = FakeTransport(
+            "opus answer",
+            judge_json(self.checklist),
+            "fable answer",
+            judge_json(self.checklist),
+            "luna answer",
+            judge_json(self.checklist),
+        )
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--fixture", "demo/basic"],
+                root=self.root,
+                transport=fake,
+                output=io.StringIO(),
+            ),
+        )
+        self.assertEqual(6, len(fake.calls))
+        self.assertEqual(
+            {
+                "demo/basic@opus-low",
+                "demo/basic@fable-high",
+                "demo/basic@luna-low",
+            },
+            set(trials.load_results(self.root)),
+        )
+
+    def test_cli_dry_run_fixture_prints_only_named_fixture(self) -> None:
+        self.write_fixture()
+        self.write_fixture(name="other", exercise="Other exercise.")
+        fake = FakeTransport()
+        output = io.StringIO()
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--dry-run", "--fixture", "demo/basic"],
+                root=self.root,
+                transport=fake,
+                output=output,
+            ),
+        )
+        rendered = output.getvalue()
+        self.assertIn("demo/basic@opus-low", rendered)
+        self.assertIn("Answer the exercise.", rendered)
+        self.assertNotIn("demo/other", rendered)
+        self.assertNotIn("Other exercise.", rendered)
+        self.assertEqual([], fake.calls)
+
+    def test_cli_fixture_unknown_name_exits_nonzero_and_names_it(self) -> None:
+        error = io.StringIO()
+        result = trials.main(
+            ["--fixture", "demo/missing"],
+            root=self.root,
+            transport=FakeTransport(),
+            output=io.StringIO(),
+            error=error,
+        )
+        self.assertNotEqual(0, result)
+        self.assertIn("demo/missing", error.getvalue())
+
 
 if __name__ == "__main__":
     unittest.main()

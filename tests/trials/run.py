@@ -8,9 +8,10 @@ stored by ``<skill>/<name>@<subject>`` in ``results.json`` with current SHA-256
 hashes for the fixture, tested text, and every neighbor. Cell status is ``ok``,
 ``transport_failure``, or ``judge_failure``.
 
-CLI: ``--skill NAME`` or ``--all`` runs and stores cells; ``--check-fresh``
-performs no network calls; ``--probe`` checks all subjects and the judge; and
-``--dry-run --skill NAME`` prints subject and judge prompts without sending.
+CLI: ``--skill NAME``, ``--fixture SKILL/NAME``, or ``--all`` runs and stores
+cells; ``--check-fresh`` performs no network calls; ``--probe`` checks all
+subjects and the judge; and ``--dry-run`` with ``--skill`` or ``--fixture``
+prints subject and judge prompts without sending.
 
 Transport runs ``claude -p --model <model> --effort <effort> --output-format
 text`` with the prompt on stdin, no tools, a permission mode that cannot
@@ -162,6 +163,21 @@ def load_fixtures(root: Path, skill: str | None = None) -> list[Fixture]:
     else:
         paths = sorted(fixture_root.glob("*/*.json"))
     return [load_fixture(root, path) for path in paths]
+
+
+def load_named_fixture(root: Path, identifier: str) -> list[Fixture]:
+    parts = PurePosixPath(identifier).parts
+    if (
+        len(parts) != 2
+        or not SKILL_NAME.fullmatch(parts[0])
+        or not parts[1]
+        or parts[1] in {".", ".."}
+    ):
+        raise FixtureError(f"unknown fixture: {identifier}")
+    path = root / FIXTURE_DIRECTORY / parts[0] / f"{parts[1]}.json"
+    if not path.is_file():
+        raise FixtureError(f"unknown fixture: {identifier}")
+    return [load_fixture(root, path)]
 
 
 def _sha256(path: Path) -> str:
@@ -540,6 +556,7 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--skill")
+    action.add_argument("--fixture")
     action.add_argument("--all", action="store_true")
     action.add_argument("--check-fresh", action="store_true")
     action.add_argument("--probe", action="store_true")
@@ -557,13 +574,20 @@ def main(
 ) -> int:
     parser = _parser()
     arguments = parser.parse_args(argv)
-    if arguments.dry_run and arguments.skill is None:
+    if (
+        arguments.dry_run
+        and arguments.skill is None
+        and arguments.fixture is None
+    ):
         parser.error("--dry-run requires --skill")
     active_transport = transport or claude_transport
     try:
         if arguments.probe:
             return _probe(active_transport, output)
-        fixtures = load_fixtures(root, arguments.skill if arguments.skill else None)
+        if arguments.fixture is not None:
+            fixtures = load_named_fixture(root, arguments.fixture)
+        else:
+            fixtures = load_fixtures(root, arguments.skill if arguments.skill else None)
         if arguments.check_fresh:
             problems = check_fresh(root, fixtures, load_results(root))
             for problem in problems:
