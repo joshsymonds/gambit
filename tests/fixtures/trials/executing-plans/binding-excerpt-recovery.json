@@ -11,8 +11,8 @@
     "Logs the Director's own error in the decision record.",
     "Corrects the Binding contract excerpt to include the omitted Must Not Ship entry.",
     "Re-dispatches a fresh orchestrator with the corrected brief for the correction.",
-    "Gives the orchestrator the corrected brief and workspace but never the record.",
-    "Uses existing artifacts without rereading history files whole.",
-    "Asks no person and does not claim that Premise or Requirement evidence is contradicted."
+    "Gives the fresh orchestrator the corrected brief and a workspace and does not direct it to read the record directory.",
+    "Reads decisions.md by pointer rather than whole.",
+    "Asks no person."
   ]
 }

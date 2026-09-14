@@ -10,9 +10,8 @@
   "checklist": [
     "Freezes the shared interface as the effort that lands first, then partitions the remaining behavior work.",
     "Creates two concurrent efforts with owned-file lists exclusive between them and logs the partition.",
-    "Writes a six-field brief for each child at efforts/<n>/brief.md.",
-    "Persists each child identity before its dispatch and takes no other tree action.",
-    "Merges accepted work in completion order and runs the final gate exactly once.",
-    "States that no Premise or Requirement evidence is contradicted."
+    "Writes a brief for every child at efforts/<n>/brief.md carrying the six fields Objective, Partition, Interfaces and order, Binding contract, Base, and Report shape.",
+    "Persists each child's identity, workspace, revision, and lineage before that child's dispatch.",
+    "Merges finished effort branches in completion order, runs the final full Done gate once, and takes no other tree action."
   ]
 }

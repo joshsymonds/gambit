@@ -8,11 +8,11 @@
   ],
   "exercise": "You are an Orchestrator receiving effort E7's brief and an isolated workspace. The brief describes three separable behaviors. Parsing has candidate files src/parse.py and tests/test_parse.py; validation has src/validate.py and tests/test_validate.py; formatting has src/format.py and tests/test_format.py. The candidate file sets are pairwise disjoint, and the brief identifies no hidden shared surface or dependency among them. Its named check is python3 -m unittest discover -s tests. The effort task budget is six tasks. The designated effort directory is efforts/7/, and its report path is efforts/7/report.md with a 400-word limit. The record directory exists beside the workspace and contains the epic and state history. No Premise or Requirement evidence is contradicted. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
   "checklist": [
-    "Reads the effort brief and code only and never reads the record.",
-    "Creates exactly three tasks for the separable behaviors with disjoint owned files.",
+    "Reads the effort brief and the code and does not read the record directory.",
+    "Creates one task per separable behavior, each owning only its own source and test file.",
     "Dispatches independent tasks concurrently.",
-    "Keeps the total at most six tasks and writes artifacts under efforts/<n>/.",
+    "Holds at most six tasks and writes task, gate, and decision artifacts under efforts/<n>/.",
     "Gates by inspecting the full change set and running the named check.",
-    "Returns efforts/<n>/report.md in fewer than 400 words and notes that no Premise or Requirement evidence is contradicted."
+    "Returns efforts/<n>/report.md in under 400 words."
   ]
 }
