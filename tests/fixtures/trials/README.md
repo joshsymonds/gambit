@@ -12,7 +12,7 @@ Place fixtures at `tests/fixtures/trials/<skill>/<name>.json`:
 }
 ```
 
-Each fixture produces one cell per fixed subject: `opus-low` is `claude-opus-5` at low effort and `fable-high` is `claude-fable-5-1` at high effort, judged by `claude-fable-5-1` at xhigh. Its ID is `<skill>/<name>@<subject>`. Subjects and judge run through `claude -p` on the subscription login, so `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` are removed from the child environment. The tested text is placed between `BEGIN/END SKILL`, neighbors between path-named `BEGIN/END REFERENCE` markers, and the exercise between `BEGIN/END EXERCISE`.
+Each fixture produces one cell per fixed subject: `opus-low` is `claude-opus-5` at low effort, `fable-high` is `claude-fable-5-1` at high effort, and `luna-low` is `chatgpt/luna` at low effort. Every subject is judged by `chatgpt/sol` at xhigh. Its ID is `<skill>/<name>@<subject>`. Subjects and judge run through `claude -p` on the subscription login, so `ANTHROPIC_API_KEY` and `ANTHROPIC_AUTH_TOKEN` are removed from the child environment. The tested text is placed between `BEGIN/END SKILL`, neighbors between path-named `BEGIN/END REFERENCE` markers, and the exercise between `BEGIN/END EXERCISE`.
 
 `results.json` maps each cell ID to:
 

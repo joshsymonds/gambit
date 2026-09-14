@@ -9,15 +9,17 @@ hashes for the fixture, tested text, and every neighbor. Cell status is ``ok``,
 ``transport_failure``, or ``judge_failure``.
 
 CLI: ``--skill NAME`` or ``--all`` runs and stores cells; ``--check-fresh``
-performs no network calls; ``--probe`` checks both subjects and the judge; and
+performs no network calls; ``--probe`` checks all subjects and the judge; and
 ``--dry-run --skill NAME`` prints subject and judge prompts without sending.
 
 Transport runs ``claude -p --model <model> --effort <effort> --output-format
 text`` with the prompt on stdin, no tools, a permission mode that cannot
 bypass, no setting sources, no MCP servers, and a fresh temporary working
-directory outside the repository. It removes ``CLAUDECODE``,
-``CLAUDE_CODE_ENTRYPOINT``, ``ANTHROPIC_API_KEY``, and ``ANTHROPIC_AUTH_TOKEN``
-from the child environment so the subscription login is the only credential.
+directory outside the repository. It supplies the patchbay route through
+``ANTHROPIC_BASE_URL`` and an optional ``ANTHROPIC_CUSTOM_HEADERS`` caller-key
+header. It removes ``CLAUDECODE``, ``CLAUDE_CODE_ENTRYPOINT``,
+``ANTHROPIC_API_KEY``, and ``ANTHROPIC_AUTH_TOKEN`` from the child environment
+so the subscription login is the only credential.
 """
 
 from __future__ import annotations
@@ -43,8 +45,9 @@ TIMEOUT_SECONDS = 300
 SUBJECTS = {
     "opus-low": {"model": "claude-opus-5", "effort": "low"},
     "fable-high": {"model": "claude-fable-5-1", "effort": "high"},
+    "luna-low": {"model": "chatgpt/luna", "effort": "low"},
 }
-JUDGE = {"model": "claude-fable-5-1", "effort": "xhigh"}
+JUDGE = {"model": "chatgpt/sol", "effort": "xhigh"}
 SKILL_NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 Transport = Callable[[str, str, str], str]
 
@@ -291,6 +294,19 @@ def claude_transport(model: str, effort: str, prompt: str) -> str:
         "ANTHROPIC_AUTH_TOKEN",
     ):
         environment.pop(name, None)
+    environment["ANTHROPIC_BASE_URL"] = os.environ.get(
+        "GAMBIT_TRIALS_BASE_URL", "http://127.0.0.1:4100"
+    )
+    environment.pop("ANTHROPIC_CUSTOM_HEADERS", None)
+    key_path = os.environ.get(
+        "PATCHBAY_CALLER_KEY_FILE", "/run/agenix/patchbay-caller-key"
+    )
+    try:
+        key = Path(key_path).read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeError):
+        pass
+    else:
+        environment["ANTHROPIC_CUSTOM_HEADERS"] = f"X-Patchbay-Key: {key}"
     try:
         with tempfile.TemporaryDirectory(prefix="gambit-trials-") as workdir:
             completed = subprocess.run(

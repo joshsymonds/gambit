@@ -518,9 +518,11 @@ class TrialRunnerTest(unittest.TestCase):
     def test_cli_exit_codes_writes_results_and_never_networks_for_checks(self) -> None:
         self.write_fixture()
         passing = FakeTransport(
-            "answer one",
+            "answer opus",
             judge_json(self.checklist),
-            "answer two",
+            "answer fable",
+            judge_json(self.checklist),
+            "answer luna",
             judge_json(self.checklist),
         )
         output = io.StringIO()
@@ -538,7 +540,7 @@ class TrialRunnerTest(unittest.TestCase):
                 encoding="utf-8"
             )
         )
-        self.assertEqual(2, len(results))
+        self.assertEqual(3, len(results))
 
         never = FakeTransport()
         self.assertEqual(
@@ -578,9 +580,11 @@ class TrialRunnerTest(unittest.TestCase):
             json.dumps(payload), encoding="utf-8"
         )
         failing = FakeTransport(
-            "one",
+            "opus",
             judge_json(["passes"], [False]),
-            "two",
+            "fable",
+            judge_json(["passes"], [True]),
+            "luna",
             judge_json(["passes"], [True]),
         )
         self.assertEqual(
@@ -625,9 +629,13 @@ class TrialRunnerTest(unittest.TestCase):
             judge_json(self.checklist),
             "demo fable",
             judge_json(self.checklist),
+            "demo luna",
+            judge_json(self.checklist),
             "other opus",
             judge_json(other_checklist),
             "other fable",
+            judge_json(other_checklist),
+            "other luna",
             judge_json(other_checklist),
         )
         self.assertEqual(
@@ -641,11 +649,81 @@ class TrialRunnerTest(unittest.TestCase):
             {
                 "demo/basic@opus-low",
                 "demo/basic@fable-high",
+                "demo/basic@luna-low",
                 "other/second@opus-low",
                 "other/second@fable-high",
+                "other/second@luna-low",
             },
             set(results),
         )
+
+    def test_trial_routes_include_luna_subject_and_sol_judge(self) -> None:
+        self.assertEqual(
+            {"model": "chatgpt/luna", "effort": "low"},
+            trials.SUBJECTS["luna-low"],
+        )
+        self.assertEqual(
+            {"model": "chatgpt/sol", "effort": "xhigh"},
+            trials.JUDGE,
+        )
+
+    def test_claude_transport_configures_patchbay_route_and_reads_caller_key(
+        self,
+    ) -> None:
+        captured: dict[str, object] = {}
+        key_path = self.root / "caller-key"
+        key = os.urandom(16).hex()
+        key_path.write_text(key + "\n", encoding="utf-8")
+
+        def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+            captured["kwargs"] = kwargs
+            return subprocess.CompletedProcess(
+                args=argv, returncode=0, stdout="transport reply\n", stderr=""
+            )
+
+        with (
+            mock.patch.dict(
+                os.environ,
+                {
+                    "PATH": "/usr/bin",
+                    "GAMBIT_TRIALS_BASE_URL": "http://patchbay.test:4100",
+                    "PATCHBAY_CALLER_KEY_FILE": str(key_path),
+                },
+                clear=True,
+            ),
+            mock.patch.object(trials.subprocess, "run", side_effect=run),
+        ):
+            trials.claude_transport("chatgpt/luna", "low", "prompt")
+
+        environment = captured["kwargs"]["env"]
+        self.assertEqual("http://patchbay.test:4100", environment["ANTHROPIC_BASE_URL"])
+        self.assertEqual(
+            f"X-Patchbay-Key: {key}", environment["ANTHROPIC_CUSTOM_HEADERS"]
+        )
+
+    def test_claude_transport_uses_default_route_without_unreadable_key(self) -> None:
+        captured: dict[str, object] = {}
+        missing_key = self.root / "missing-key"
+
+        def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+            captured["kwargs"] = kwargs
+            return subprocess.CompletedProcess(
+                args=argv, returncode=0, stdout="transport reply\n", stderr=""
+            )
+
+        with (
+            mock.patch.dict(
+                os.environ,
+                {"PATH": "/usr/bin", "PATCHBAY_CALLER_KEY_FILE": str(missing_key)},
+                clear=True,
+            ),
+            mock.patch.object(trials.subprocess, "run", side_effect=run),
+        ):
+            trials.claude_transport("chatgpt/sol", "xhigh", "prompt")
+
+        environment = captured["kwargs"]["env"]
+        self.assertEqual("http://127.0.0.1:4100", environment["ANTHROPIC_BASE_URL"])
+        self.assertNotIn("ANTHROPIC_CUSTOM_HEADERS", environment)
 
     def test_claude_transport_prints_with_model_effort_and_no_api_credentials(
         self,
@@ -665,6 +743,7 @@ class TrialRunnerTest(unittest.TestCase):
             "CLAUDE_CODE_ENTRYPOINT": "cli",
             "ANTHROPIC_API_KEY": "key-secret",
             "ANTHROPIC_AUTH_TOKEN": "token-secret",
+            "PATCHBAY_CALLER_KEY_FILE": str(self.root / "missing-key"),
         }
         with (
             mock.patch.dict(os.environ, environment, clear=True),
@@ -696,7 +775,14 @@ class TrialRunnerTest(unittest.TestCase):
         kwargs = captured["kwargs"]
         self.assertEqual("prompt", kwargs["input"])
         self.assertEqual(300, kwargs["timeout"])
-        self.assertEqual({"PATH": "/usr/bin"}, kwargs["env"])
+        self.assertEqual(
+            {
+                "PATH": "/usr/bin",
+                "PATCHBAY_CALLER_KEY_FILE": str(self.root / "missing-key"),
+                "ANTHROPIC_BASE_URL": "http://127.0.0.1:4100",
+            },
+            kwargs["env"],
+        )
         self.assertIs(True, kwargs["capture_output"])
         self.assertIs(True, kwargs["text"])
 
@@ -783,7 +869,9 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertEqual([], fake.calls)
 
     def test_cli_probe_calls_each_subject_and_judge(self) -> None:
-        fake = FakeTransport("opus reply", "fable reply", "judge reply")
+        fake = FakeTransport(
+            "opus reply", "fable reply", "luna reply", "judge reply"
+        )
         output = io.StringIO()
         self.assertEqual(
             0,
@@ -795,12 +883,14 @@ class TrialRunnerTest(unittest.TestCase):
             [
                 ("claude-opus-5", "low"),
                 ("claude-fable-5-1", "high"),
-                ("claude-fable-5-1", "xhigh"),
+                ("chatgpt/luna", "low"),
+                ("chatgpt/sol", "xhigh"),
             ],
             [(model, effort) for model, effort, _ in fake.calls],
         )
         self.assertIn("opus-low: 200 opus reply", output.getvalue())
         self.assertIn("fable-high: 200 fable reply", output.getvalue())
+        self.assertIn("luna-low: 200 luna reply", output.getvalue())
         self.assertIn("judge: 200 judge reply", output.getvalue())
 
 
