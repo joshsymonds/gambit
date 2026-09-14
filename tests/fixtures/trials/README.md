@@ -37,6 +37,7 @@ Each fixture produces one cell per fixed subject: `sol-high` is `chatgpt/sol` at
       "attempt": 1,
       "at": "<ISO timestamp>",
       "status": "ok|inconclusive|transport_failure|judge_failure",
+      "error": "<last transport or parse error; failed samples only>",
       "pass": true,
       "response": "<subject response>",
       "items": [{"item": "<criterion>", "verdict": "pass|fail|unknown", "evidence": "<verbatim response span>"}],

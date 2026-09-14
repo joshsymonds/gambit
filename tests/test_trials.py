@@ -278,6 +278,35 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertEqual([], record["items"])
         self.assertEqual(2, len(fake.calls))
 
+    def test_subject_transport_failure_records_last_error(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport(OSError("first"), OSError("second"))
+
+        record = trials.run_cell(self.root, fixture, "sol-high", fake)
+
+        self.assertEqual("transport_failure", record["status"])
+        self.assertEqual("second", record["error"])
+
+    def test_judge_failure_records_last_error(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport(
+            "subject answer", json.dumps({"items": []}), "not json"
+        )
+
+        record = trials.run_cell(self.root, fixture, "opus-low", fake)
+
+        self.assertEqual("judge_failure", record["status"])
+        self.assertEqual("judge output contains no JSON object", record["error"])
+
+    def test_ok_sample_omits_error(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport("subject answer", judge_json(self.criteria))
+
+        record = trials.run_cell(self.root, fixture, "opus-low", fake)
+
+        self.assertEqual("ok", record["status"])
+        self.assertNotIn("error", record)
+
     def test_claude_failures_retry_once_and_record_transport_failure(self) -> None:
         fixture = self.load_one()
         cases = {

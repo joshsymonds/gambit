@@ -456,18 +456,28 @@ def claude_transport(model: str, effort: str, prompt: str) -> str:
 
 
 def _transport_call(
-    transport: Transport, model: str, effort: str, prompt: str
+    transport: Transport,
+    model: str,
+    effort: str,
+    prompt: str,
+    last_error: list[str] | None = None,
 ) -> str | None:
     for _ in range(2):
         try:
             return transport(model, effort, prompt)
-        except (TransportError, OSError):
+        except (TransportError, OSError) as error:
+            if last_error is not None:
+                last_error[:] = [str(error)]
             continue
     return None
 
 
 def _judge_call(
-    transport: Transport, root: Path, fixture: Fixture, response: str
+    transport: Transport,
+    root: Path,
+    fixture: Fixture,
+    response: str,
+    last_error: list[str] | None = None,
 ) -> tuple[list[dict[str, object]] | None, str]:
     criteria = _criteria(fixture)
     prompt = judge_prompt(root, fixture, response)
@@ -477,7 +487,9 @@ def _judge_call(
             output = transport(JUDGE["model"], JUDGE["effort"], prompt)
             last_raw = output
             return parse_judge_output(output, criteria, response), last_raw
-        except (TransportError, OSError, JudgeParseError):
+        except (TransportError, OSError, JudgeParseError) as error:
+            if last_error is not None:
+                last_error[:] = [str(error)]
             continue
     return None, last_raw
 
@@ -496,11 +508,13 @@ def run_cell(
     root: Path, fixture: Fixture, subject_name: str, transport: Transport
 ) -> dict[str, object]:
     subject = SUBJECTS[subject_name]
+    transport_error: list[str] = []
     response = _transport_call(
         transport,
         subject["model"],
         subject["effort"],
         subject_prompt(root, fixture),
+        transport_error,
     )
     base = _record_base(root, fixture, subject_name)
     if response is None:
@@ -510,8 +524,12 @@ def run_cell(
             **base,
             "response": "",
             "items": [],
+            "error": transport_error[-1],
         }
-    items, judge_raw = _judge_call(transport, root, fixture, response)
+    judge_error: list[str] = []
+    items, judge_raw = _judge_call(
+        transport, root, fixture, response, judge_error
+    )
     if items is None:
         return {
             "status": "judge_failure",
@@ -520,6 +538,7 @@ def run_cell(
             "response": response,
             "items": [],
             "judge_raw": judge_raw,
+            "error": judge_error[-1],
         }
     has_unknown = any(item["verdict"] == "unknown" for item in items)
     return {
