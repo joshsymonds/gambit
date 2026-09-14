@@ -7,12 +7,10 @@
     "contracts/models.md"
   ],
   "exercise": "You are the Director executing the epic “Verified package manifest” during effort E7. The Director's session was compacted mid-effort after two orchestrators had been dispatched for independent efforts. One child had already written the latest efforts/4/report.md; the other child remains running. The record contains epic.md, state.json, child identities, workspaces, revisions, task lineages, attempts used, and budgets. A pointer in state.json identifies the needed entries in the large append-only decisions.md history. The history contains more entries than this effort needs. The returned effort's report records its completed work and remaining state. The running child has not returned a second report, and no external action has been repeated after compaction. The independent effort remains executable. No Premise or Requirement evidence is contradicted. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
-  "checklist": [
-    "Reloads exactly epic.md, the needed decisions.md entries by pointer, state.json, and the latest efforts/<n>/report.md.",
-    "Reads only the needed decisions.md entries by pointer and does not read a history file whole.",
-    "Continues with attempts and budgets unchanged.",
-    "Does not re-dispatch a running child.",
-    "Repeats no external action.",
-    "Asks no person and continues the independent effort."
-  ]
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H4 State first: the response writes the record (state.json entry or transition) before the dispatch it describes.",
+    "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply."
+  ],
+  "end_state": "The Director continues the independent effort from the reloaded record with attempts and budgets unchanged; the running child is not re-dispatched, and no external action repeats."
 }
