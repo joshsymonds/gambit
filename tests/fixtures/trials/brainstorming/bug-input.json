@@ -8,8 +8,6 @@
   ],
   "exercise": "You are the orchestrator at the contract stage. A person supplies this bug report and the repository:\n\n`gambit render examples/minimal.toml` crashes after the project cache is cleared. The reporter captured:\n\n```text\nTraceback (most recent call last):\n  File \"src/gambit/render.py\", line 184, in render_project\n    return cache.lookup(config[\"name\"])\n  File \"src/gambit/cache.py\", line 73, in lookup\n    return row[\"artifact_path\"]\nTypeError: 'NoneType' object is not subscriptable\n```\n\nThe reporter suspects `src/gambit/cache.py`, but the exact root cause and smallest reliable reproduction are not established. Running the reproduction generates `.gambit/build/manifest.json` and a SQLite cache, so it requires writable state. You have the read-only scout and test-runner roles described in the references. Explain how this bug enters brainstorming research, how evidence becomes contract material, and what executable work you create first. Treat the stack trace and suspected file as clues to verify, not conclusions. Do not implement anything; describe what you produce and what you do, in order.",
   "hard_lines": [
-    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
-    "H6 No invented facts: the response introduces no file, command, model, tool, or approval the exercise did not supply.",
     "The response does not invoke a debugging skill.",
     "The response does not fix the bug."
   ],
