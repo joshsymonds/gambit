@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
 from pathlib import Path, PurePosixPath
@@ -139,22 +140,103 @@ def validate(text: str, workspace: Path, done_commands: Sequence[str]) -> list[s
     return defects
 
 
+def validate_record(record_path: Path, task_selector: str, entry_rung: str) -> list[str]:
+    try:
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError) as error:
+        return [f"record: could not read {record_path}: {error}"]
+    except json.JSONDecodeError as error:
+        return [f"record: could not parse {record_path}: {error}"]
+
+    tasks = record.get("tasks", []) if isinstance(record, dict) else []
+    task = next(
+        (
+            candidate
+            for candidate in tasks
+            if isinstance(candidate, dict)
+            and (
+                str(candidate.get("id")) == task_selector
+                or candidate.get("slug") == task_selector
+            )
+        ),
+        None,
+    ) if isinstance(tasks, list) else None
+    if task is None:
+        return [f"task: no entry matches id or slug {task_selector!r}"]
+
+    defects: list[str] = []
+    dispatch = task.get("dispatch")
+    if not isinstance(dispatch, dict):
+        dispatch = {}
+    for field in ("child", "workspace", "revision"):
+        if field not in dispatch or dispatch[field] is None:
+            defects.append(f"task.dispatch.{field}: missing or null")
+
+    if task.get("rung") != entry_rung:
+        defects.append(
+            f"task.rung: {task.get('rung')!r} differs from entry rung {entry_rung!r}"
+        )
+
+    attempts = task.get("attempts")
+    if isinstance(attempts, (int, float)) and attempts < 1:
+        defects.append(f"task.attempts: {attempts!r} is below 1")
+
+    lineage = task.get("lineage")
+    if not isinstance(lineage, dict):
+        lineage = {}
+    for field in ("parent", "descendants", "split_used"):
+        if field not in lineage:
+            defects.append(f"task.lineage.{field}: missing")
+
+    conduct = task.get("conduct")
+    history = conduct.get("routing_history", []) if isinstance(conduct, dict) else []
+    seen: set[tuple[object, object]] = set()
+    repeated: tuple[object, object] | None = None
+    if isinstance(history, list):
+        for route in history:
+            if not isinstance(route, dict) or "signature" not in route or "step" not in route:
+                continue
+            key = (route["signature"], route["step"])
+            if key in seen:
+                repeated = key
+                break
+            seen.add(key)
+    if repeated is not None:
+        defects.append(
+            "task.conduct.routing_history: repeated signature and step "
+            f"{repeated[0]!r}, {repeated[1]!r}"
+        )
+
+    return defects
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--brief", required=True, type=Path)
     parser.add_argument("--workspace", required=True, type=Path)
     parser.add_argument("--done", action="append", default=[], dest="done_commands")
+    parser.add_argument("--record", type=Path)
+    parser.add_argument("--task")
+    parser.add_argument("--entry-rung")
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    record_flags = (args.record, args.task, args.entry_rung)
+    if any(value is not None for value in record_flags) and not all(
+        value is not None for value in record_flags
+    ):
+        parser.error("--record, --task, and --entry-rung must be provided together")
     try:
         text = args.brief.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as error:
         print(f"brief: could not read {args.brief}: {error}")
         return 1
     defects = validate(text, args.workspace, args.done_commands)
+    if args.record is not None:
+        defects.extend(validate_record(args.record, args.task, args.entry_rung))
     for defect in defects:
         print(defect)
     return 1 if defects else 0

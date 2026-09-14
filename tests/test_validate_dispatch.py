@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import subprocess
 import sys
 import tempfile
@@ -17,16 +18,48 @@ class ValidateDispatchTest(unittest.TestCase):
         brief: str,
         workspace: Path,
         *done: str,
+        record: dict[str, object] | None = None,
+        task: str | int | None = None,
+        entry_rung: str | None = None,
     ) -> subprocess.CompletedProcess[str]:
         brief_path = workspace / "brief.md"
         brief_path.write_text(brief, encoding="utf-8")
         command = [sys.executable, str(SCRIPT), "--brief", str(brief_path), "--workspace", str(workspace)]
         for item in done:
             command.extend(["--done", item])
+        if record is not None:
+            record_path = workspace / "state.json"
+            record_path.write_text(json.dumps(record), encoding="utf-8")
+            command.extend(["--record", str(record_path)])
+        if task is not None:
+            command.extend(["--task", str(task)])
+        if entry_rung is not None:
+            command.extend(["--entry-rung", entry_rung])
         return subprocess.run(command, text=True, capture_output=True)
 
     def make_workspace(self) -> tempfile.TemporaryDirectory[str]:
         return tempfile.TemporaryDirectory(prefix="validate-dispatch-")
+
+    def valid_record(self, **updates: object) -> dict[str, object]:
+        task: dict[str, object] = {
+            "id": 7,
+            "slug": "validate-record",
+            "rung": "luna-low",
+            "attempts": 1,
+            "lineage": {"parent": None, "descendants": [], "split_used": False},
+            "dispatch": {
+                "child": "worker-7",
+                "workspace": "/workspace/7",
+                "revision": "abc123",
+            },
+            "conduct": {
+                "routing_history": [
+                    {"signature": "luna-low:worker", "step": "dispatch", "attempt": 1}
+                ]
+            },
+        }
+        task.update(updates)
+        return {"tasks": [task]}
 
     def valid_brief(self, *, files: str = "- src/main.py", anchors: str = "- brief.md:1", test_command: str = "python3 -m unittest") -> str:
         return f"""## Goal
@@ -154,6 +187,91 @@ Test command: {test_command}
             self.assertEqual(result.returncode, 1)
             self.assertIn("Test command", result.stdout)
             self.assertIn("match", result.stdout.lower())
+
+    def test_record_missing_task_is_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            result = self.run_validator(
+                self.valid_brief(), workspace,
+                record=self.valid_record(), task="missing", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("task", result.stdout)
+
+    def test_record_null_dispatch_fields_are_rejected(self) -> None:
+        for field in ("child", "workspace", "revision"):
+            with self.subTest(field=field), self.make_workspace() as temporary:
+                workspace = Path(temporary)
+                record = self.valid_record(dispatch={field: None})
+                result = self.run_validator(
+                    self.valid_brief(), workspace,
+                    record=record, task="validate-record", entry_rung="luna-low",
+                )
+                self.assertEqual(result.returncode, 1)
+                self.assertIn(f"dispatch.{field}", result.stdout)
+
+    def test_record_wrong_rung_is_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            result = self.run_validator(
+                self.valid_brief(), workspace,
+                record=self.valid_record(), task="validate-record", entry_rung="sol-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("rung", result.stdout)
+
+    def test_record_zero_attempts_are_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            result = self.run_validator(
+                self.valid_brief(), workspace,
+                record=self.valid_record(attempts=0), task="validate-record", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("attempts", result.stdout)
+
+    def test_record_missing_lineage_key_is_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            result = self.run_validator(
+                self.valid_brief(), workspace,
+                record=self.valid_record(lineage={"parent": None, "descendants": []}),
+                task="validate-record", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("lineage.split_used", result.stdout)
+
+    def test_record_repeated_routing_signature_and_step_are_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            conduct = {
+                "routing_history": [
+                    {"signature": "same", "step": "dispatch", "attempt": 1},
+                    {"signature": "same", "step": "dispatch", "attempt": 2},
+                ]
+            }
+            result = self.run_validator(
+                self.valid_brief(), workspace,
+                record=self.valid_record(conduct=conduct), task="validate-record", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("routing_history", result.stdout)
+
+    def test_valid_record_passes(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            result = self.run_validator(
+                self.valid_brief(), workspace,
+                record=self.valid_record(), task="validate-record", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            self.assertEqual(result.stdout, "")
+
+    def test_omitting_record_flags_keeps_brief_only_behavior(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            result = self.run_validator(self.valid_brief(), workspace)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_valid_brief_passes_and_matches_one_done_command(self) -> None:
         with self.make_workspace() as temporary:
