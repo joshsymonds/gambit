@@ -33,7 +33,7 @@ class CalibrationTest(unittest.TestCase):
         self.temporary = tempfile.TemporaryDirectory(prefix="gambit-calibration-")
         self.root = Path(self.temporary.name)
         (self.root / "tests" / "fixtures" / "trials" / "demo").mkdir(parents=True)
-        (self.root / "tests" / "fixtures" / "trials" / "calibration").mkdir(
+        (self.root / "tests" / "fixtures" / "calibration").mkdir(
             parents=True
         )
         (self.root / "skills" / "demo").mkdir(parents=True)
@@ -76,7 +76,6 @@ class CalibrationTest(unittest.TestCase):
             self.root
             / "tests"
             / "fixtures"
-            / "trials"
             / "calibration"
             / f"{name}.json"
         )

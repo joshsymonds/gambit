@@ -12,7 +12,7 @@ from typing import Callable, NamedTuple, TextIO
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
-CALIBRATION_DIRECTORY = Path("tests/fixtures/trials/calibration")
+CALIBRATION_DIRECTORY = Path("tests/fixtures/calibration")
 RUN_PATH = Path(__file__).resolve().with_name("run.py")
 RUN_SPEC = importlib.util.spec_from_file_location("gambit_trial_runner", RUN_PATH)
 if RUN_SPEC is None or RUN_SPEC.loader is None:
