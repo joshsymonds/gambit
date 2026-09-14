@@ -7,10 +7,10 @@
   ],
   "exercise": "You are loading this stage on the branch epic/deterministic-policy-compiler. The record directory ~/.gambit/compiler-9f3ac21/deterministic-policy-compiler/ holds epic.md, decisions.md, and state.json, and state.json names that same branch as epic_branch, effort 2, and no review or release started. No other record names the branch.\n\nThe registry at ~/.claude/gambit/models.json resolves every role the run needs, including an orchestrator role with an entry rung.\n\nThe record holds efforts/2/brief.md, written by the Director, and efforts/2/state.json.\n\nEffort 2 has two unmet Requirements and no gap. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
   "checklist": [
-    "Resumes the record whose state.json names epic/deterministic-policy-compiler, rather than searching session history or asking where the record is.",
-    "Dispatches a fresh orchestrator for effort 2 with the effort brief and a workspace as its input, and persists the child identity, workspace, revision, and lineage in state.json before that dispatch.",
+    "Resumes the record whose state.json names the current epic branch, rather than searching session history or asking where the record is.",
+    "Persists the effort-2 child identity, workspace, revision, and lineage in state.json before dispatching a fresh orchestrator with the effort brief.",
     "Reads only efforts/2/report.md from that dispatch and does not run effort 2's decomposition or task building in this session.",
-    "Expects the effort's gates and efforts/2/report.md to be written by the orchestrator under efforts/2/ rather than writing them in this session.",
-    "Does not ask a person for direction and names no model or rung."
+    "Expects the orchestrator to write the effort's gates and efforts/2/report.md under efforts/2/ rather than writing them in this session.",
+    "Does not ask a person for direction and names no model."
   ]
 }
