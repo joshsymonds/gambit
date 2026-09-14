@@ -253,6 +253,32 @@ class TrialRunnerTest(unittest.TestCase):
         )
         self.assertIn("BEGIN EXERCISE\nAnswer the exercise.\nEND EXERCISE", prompt)
 
+    def test_subject_prompt_states_tool_and_answer_constraints(self) -> None:
+        fixture = self.load_one()
+        prompt = trials.subject_prompt(self.root, fixture)
+        self.assertIn(
+            "No tools are available for this exercise, and your entire answer must be prose.",
+            prompt,
+        )
+
+    def test_fixture_hashes_fingerprint_subject_instructions(self) -> None:
+        fixture = self.load_one()
+        hashes = trials.fixture_hashes(self.root, fixture)
+        expected = hashlib.sha256(
+            trials.SUBJECT_PROMPT_TEMPLATE.encode("utf-8")
+        ).hexdigest()
+        self.assertEqual(expected, hashes["subject_instructions"])
+
+    def test_trials_readme_documents_subject_instruction_fingerprint(self) -> None:
+        readme = (ROOT / "tests" / "fixtures" / "trials" / "README.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"subject_instructions": "<sha256>"', readme)
+        self.assertLess(
+            readme.index('"judge_instructions": "<sha256>"'),
+            readme.index('"subject_instructions": "<sha256>"'),
+        )
+
     def test_subject_transport_failure_retries_once(self) -> None:
         fixture = self.load_one()
         fake = FakeTransport(
@@ -1241,6 +1267,33 @@ class TrialRunnerTest(unittest.TestCase):
             )
         finally:
             trials.SCORING_DEFINITION = original_scoring
+        self.assertEqual(
+            ["stale demo/basic@sol-high", "stale demo/basic@opus-low"], problems
+        )
+
+    def test_subject_instruction_change_stales_fresh_cell(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport(
+            "answer sol", judge_json(self.criteria, response="answer sol"),
+            "answer opus", judge_json(self.criteria, response="answer opus"),
+        )
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--fixture", "demo/basic"],
+                root=self.root,
+                transport=fake,
+                output=io.StringIO(),
+            ),
+        )
+        original_subject_prompt = trials.SUBJECT_PROMPT_TEMPLATE
+        try:
+            trials.SUBJECT_PROMPT_TEMPLATE += "\nChanged subject instruction.\n"
+            problems = trials.check_fresh(
+                self.root, [fixture], trials.load_results(self.root)
+            )
+        finally:
+            trials.SUBJECT_PROMPT_TEMPLATE = original_subject_prompt
         self.assertEqual(
             ["stale demo/basic@sol-high", "stale demo/basic@opus-low"], problems
         )

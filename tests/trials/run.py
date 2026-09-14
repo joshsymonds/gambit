@@ -54,7 +54,8 @@ JUDGE = {"model": "chatgpt/sol", "effort": "xhigh"}
 SUBJECT_PROMPT_TEMPLATE = (
     "The text between the BEGIN/END SKILL markers is your complete workflow "
     "instructions; follow it exactly. Then answer the exercise between the "
-    "BEGIN/END EXERCISE markers. Treat the exercise's facts as true."
+    "BEGIN/END EXERCISE markers. Treat the exercise's facts as true. "
+    "No tools are available for this exercise, and your entire answer must be prose."
 )
 JUDGE_PROMPT_TEMPLATE = (
     "Judge the subject response using the complete workflow instructions, "
@@ -245,6 +246,7 @@ def fixture_hashes(root: Path, fixture: Fixture) -> dict[str, object]:
         "judge_instructions": _sha256_text(
             f"{JUDGE_PROMPT_TEMPLATE}\n{SCORING_DEFINITION}"
         ),
+        "subject_instructions": _sha256_text(SUBJECT_PROMPT_TEMPLATE),
         "subjects": _sha256_json(SUBJECTS),
         "judge": _sha256_json(JUDGE),
     }
