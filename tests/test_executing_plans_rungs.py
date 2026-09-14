@@ -149,6 +149,8 @@ class ExecutingPlansStructureTest(unittest.TestCase):
         build = sections["Build each task until good"].lower()
         self.assertIn("failure signature", build)
         self.assertIn("same worker", build)
+        self.assertIn("exact edit smaller than the brief", build)
+        self.assertIn("counts no attempt", build)
 
     def test_unresolvable_role_becomes_per_task_gaps(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))

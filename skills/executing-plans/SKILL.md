@@ -15,7 +15,7 @@ Resume the record whose `state.json` names the current epic branch, and only tha
 
 After compaction or resume, reload by role: the Director reloads `epic.md`, `decisions.md` by pointer, `state.json`, and the latest `efforts/<n>/report.md`; the Orchestrator reloads its effort brief and `efforts/<n>/state.json`; a worker reloads its brief. A lost child is replaced only after confirmed termination, with attempts and budgets unchanged. Reject an orphan return when its child identity or revision does not match the recorded entry.
 
-Write `state.json` before each dispatch and after each return, recording every transition; write each gate record to `gates/<task-slug>-<attempt>.md` before the next dispatch. Mirror each transition through the harness's record-task-state operation so resumption preserves the ladder and review bounds and needs nothing but the record.
+Write `state.json` before each dispatch and after each return; write each gate record to `gates/<task-slug>-<attempt>.md` before the next dispatch. Mirror each transition through the harness's record-task-state operation.
 
 Use five harness operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. Run Git, Done checks, and Release actions through the harness's shell. On a fresh run, isolate the epic with `git worktree add -b <epic-branch> <epic-workspace> <base>`. Resume in that workspace. Never execute on the main branch.
 
@@ -56,7 +56,7 @@ Each brief carries these sections in order:
 - **Requirements covered:** contract identifiers and their named evidence.
 - **Test command:** the task's exact fast check from Done.
 
-A task is one behavior with one failing test, at most three files including the test, every edit location known at brief time, and no change to an interface consumed by unowned files. Repetitive mechanical multi-file changes lift only the file cap. An atomic interface task may exceed three files when its interface and consumers must change together to stay green, and the exception is logged. Oversize splits before dispatch. Interface tasks land first. A worker that reports a separable second behavior triggers a split. If a task is found oversize after dispatch, covering more than three files or more than one behavior, split it at its next routing decision before any further dispatch of that lineage; dispatch the interface task first, and count the split as that lineage's one split.
+A task is one behavior with one failing test, at most three files including the test, every edit location known at brief time, and no change to an interface consumed by unowned files. Repetitive mechanical multi-file changes lift only the file cap. An atomic interface task may exceed three files when its interface and consumers must change together to stay green, and the exception is logged. Oversize splits before dispatch. Interface tasks land first. A worker that reports a separable second behavior triggers a split. A task found oversize after dispatch splits at its next routing decision, before any further dispatch, interface task first, as that lineage's one split.
 
 Give the brief its workspace and base revision, the applicable contract clauses, and evidence needed to implement without session history. Keep simultaneous tasks' owned-file lists disjoint, including hidden surfaces. Do not manufacture parallelism by separating parts that require one another's unfinished output.
 
@@ -96,7 +96,7 @@ Every NOT DONE record names its cause. Normalize the failure signature as the no
 3. **Separable behaviors:** split them once per lineage, preserving the same unmet Requirements across complete descendants.
 4. **The orchestrator's own attempt:** make the attempt in the task's workspace under `contracts/worker.md`, with the complete history of gate records. If it fails, the lineage is a gap on `gap/<task-slug>`, independent work continues, and the run ends with gaps naming the Requirement as unsatisfied as written.
 
-This routing sequence has no separate review dispatch or corrective loop outside it.
+When a gate finding names an exact edit smaller than the brief that would describe it, the orchestrator applies it directly, logs it with the gate that named it, and counts no attempt. This routing sequence has no separate review dispatch or corrective loop outside it.
 
 ## Integrate and repeat
 
