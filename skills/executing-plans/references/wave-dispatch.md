@@ -30,3 +30,11 @@ For a multi-task effort, invoke `scripts/integrate_wave.py` by absolute path thr
 3. Run the full Done gate once on the combined candidate. A nonzero exit or any tracked, staged, or non-ignored untracked integration artifact fails the transaction.
 4. Revalidate the candidate, workers, and epic. Fast-forward the epic from the recorded base only to the exact clean candidate revision that passed the gate.
 5. Remove transient workspaces only after that fast-forward succeeds. Failures before fast-forward retain workspaces and evidence without advancing the epic; preserve any rejected revision on `candidate/<effort>` and route its NOT DONE record through the skill's integration step. A cleanup failure is reported after the tested revision is accepted: record that revision and the remaining workspace paths rather than treating the candidate as rejected. Record successful candidate revisions in the task gates.
+
+## Efforts
+
+An orchestrator owns one effort and runs `scripts/integrate_wave.py` with `epic_worktree` set to that effort's workspace. Create the workspace from the accepted `base` on branch `effort/<epic-slug>-<n>`; concurrent efforts therefore never share a workspace. Keep each effort's manifest outside its workspaces.
+
+Each effort manifest lists only that effort's gated tasks and supplies the full Done gate. Its `base` is the accepted revision for that effort and its `epic_worktree` is the effort workspace; workers still use disjoint exact allowlists. The effort's transaction must pass before its branch is offered to the loading session.
+
+The loading session checks out the epic branch from the accepted base, then merges finished effort branches in completion order. Concurrent efforts own disjoint files, so these merges are conflict-free. After all finished effort branches are merged, run the full Done gate once on the merged epic. If that gate fails, record NOT DONE against the effort whose files it names; retain the rejected revision and evidence for integration handling.
