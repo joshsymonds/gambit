@@ -116,7 +116,7 @@ Write the effort's report to `efforts/<n>/report.md` when the effort ends. Repea
 
 Freeze one candidate after the build loop. Load `skills/review/SKILL.md` through the load-a-stage operation and follow it for that candidate. Record that review began so a resume cannot start another discovery pass.
 
-Route contract defects through one correction round using the build step, including its ladder and gap rules. Then perform review closure and fresh full Done checks on the resulting candidate. A finding still open is a review gap; do not open another correction round or restart review. Record gaps and their evidence. Review never releases; release remains this stage's next decision.
+Route each contract defect through the build step's failure-signature routing. Correct the candidate and re-run review closure until closure passes, using the ladder and gap rules. A finding is a review gap only when no executable work remains for it. Record gaps and their evidence. Review never releases; release remains this stage's next decision.
 
 ## Release
 
@@ -124,7 +124,7 @@ Release is eligible only when every Requirement is DONE, review is clean, and th
 
 For an eligible candidate, execute the Release section's exact actions in order through the shell, against their named targets and intended effects. Record each completed action and evidence immediately. On resume, use that record and inspect postconditions instead of repeating completed external actions.
 
-An action that fails or cannot be confirmed ends the sequence as a release gap. Record the failure and all actions already completed; execute no later action. Report release only when every Release postcondition holds. Before any external action, apply Human boundaries.
+An action that fails within the repository's own authority, including its tests, CI configuration, or build, opens a correction effort under the build step's failure-signature routing. Correct the failure, run its check, and Release resumes at that action once its check is green; do not repeat completed actions. An action that fails or cannot be confirmed outside that authority is a release gap. Record the failure and all actions already completed; execute no later action. Report release only when every Release postcondition holds. Before any external action, apply Human boundaries.
 
 ## Report and end
 

@@ -193,6 +193,18 @@ class ExecutingPlansStructureTest(unittest.TestCase):
         self.assertIn("ends with gaps", self.text)
         self.assertNotIn("unsatisfiable", self.text)
 
+    def test_review_and_release_route_failures_and_resume(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        review = sections["Review once"]
+        release = sections["Release"]
+        self.assertIn("until closure passes", review)
+        self.assertNotIn("one correction round", review)
+        self.assertNotIn("another correction round", review)
+        self.assertIn("correction effort", release)
+        self.assertIn("resumes at", release)
+        self.assertIn("authority", release)
+        self.assertNotIn("ends the sequence as a release gap", release)
+
     def test_skill_names_no_harness_specific_end_run_tools(self) -> None:
         for tool in ("goal_complete", "goal_end"):
             with self.subTest(tool=tool):
