@@ -41,8 +41,18 @@ class ReviewStructureTests(unittest.TestCase):
     def test_stage_sections_follow_the_six_review_steps(self) -> None:
         self.assertEqual(
             headings(self.text),
-            ["Freeze", "Finders", "Verifier", "One correction round", "Closure", "Return"],
+            ["Freeze", "Finders", "Verifier", "Correction", "Closure", "Return"],
         )
+
+    def test_correction_repeats_until_closure(self) -> None:
+        correction = self.text.split("## Correction\n", 1)[1].split("\n## Closure\n", 1)[0]
+        self.assertIn("until", correction.lower())
+        self.assertIn("skills/executing-plans/SKILL.md", correction)
+
+    def test_correction_round_language_is_removed(self) -> None:
+        text = self.text.lower()
+        self.assertNotIn("second correction round", text)
+        self.assertNotIn("round as consumed", text)
 
     def test_role_and_contract_references_are_present(self) -> None:
         for role in ("finder", "verifier"):
