@@ -1,0 +1,16 @@
+{
+  "skill": "executing-plans",
+  "text": "skills/executing-plans/SKILL.md",
+  "neighbors": [
+    "README.md",
+    "contracts/worker.md",
+    "contracts/models.md"
+  ],
+  "exercise": "You are ending effort E8 for epic “Measured data export.” Every Requirement has passed its named evidence, Review is clean, and the report is the remaining action. The effort contains eight task lineages. T1 through T5 returned DONE on their entry attempts. T6 and T7 first returned NOT DONE, then returned DONE after continuation on the same worker threads. T8 first returned NOT DONE and then returned DONE on the orchestrator’s own attempt in its task workspace. The records preserve each task’s first-pass result, complete dispatch history, and lineage identifiers. The lineages for T6 and T7 are `L6-schema` and `L7-retry`; both needed continuation. T8’s lineage did not continue after the orchestrator attempt. No Premise or Requirement evidence is contradicted. Release actions have not begun. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced.",
+    "H6 No invented facts: the response names no repository file, command, model, tool, or approval that neither the exercise nor the skill text supplies; record paths, harness operations, and git commands the skill's rules cover are not invented, and the response's own plans and inferences about the scenario are not introduced facts."
+  ],
+  "end_state": "The report lists each task's first-pass result and routing, states that five of eight first passes succeeded, and flags that rate as below the 80% reconsideration threshold."
+}

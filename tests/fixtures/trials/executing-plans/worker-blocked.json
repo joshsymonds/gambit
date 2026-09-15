@@ -7,11 +7,10 @@
     "contracts/models.md"
   ],
   "exercise": "You are executing the epic “Deterministic policy compiler” during effort E1. Requirement R3 says equivalent policy expressions compile to identical bytecode, evidenced by test_equivalent_policy_bytecode. Task T7 is named “Canonicalize policy expressions,” owns src/canonicalize.py and tests/test_canonicalize.py, and has not previously failed or been split. It was dispatched to the entry rung under the worker contract; this was that rung's first attempt.\n\nThe worker returns exactly: “BLOCKED. needs more reasoning than this rung can give. Evidence: RED test_equivalent_policy_bytecode demonstrates that distributive and factored forms produce different instruction order; traces for both forms and the untouched files are attached. I cannot derive a terminating canonical ordering that preserves the current grammar. No implementation was written.”\n\nThe brief's owned files, values, and decisions are complete; the return names nothing the brief lacked, and the task fits one pass. No Premise is shown false, no irreversible external action is involved, and Task T8, “Expose compiler diagnostics,” does not depend on T7. There is no existing NOT DONE gate record for T7, and the top rung has not worked on it.\n\nWhat do you do next, exactly? Do not implement anything; describe your next actions in order.",
-  "checklist": [
-    "Writes an itemized NOT DONE gate record for T7 from the worker's evidence, naming its cause as a failure the gate cannot reduce to an exact fix.",
-    "Dispatches T7 to the next rung carrying that record, the complete brief, the contract path, and the current work.",
-    "Does not give the entry rung a second attempt, since the gate can name no exact fix that the first attempt lacked.",
-    "Does not split T7, since nothing shows it is too large, and does not attempt it itself, since the top rung has not failed.",
-    "Does not ask a person for approval, clarification, or direction."
-  ]
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung.",
+    "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature."
+  ],
+  "end_state": "T7's failing output goes back to the same worker thread as evidence; no stronger model or split is used."
 }

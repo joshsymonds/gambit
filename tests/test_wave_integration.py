@@ -706,8 +706,11 @@ class WaveIntegrationDocumentationTest(unittest.TestCase):
         )
         self.assertEqual(
             [line[3:] for line in dispatch.splitlines() if line.startswith("## ")],
-            ["Manifest", "Transaction"],
+            ["Manifest", "Transaction", "Efforts"],
         )
+        self.assertIn("effort/<epic-slug>-<n>", dispatch)
+        self.assertIn("epic_worktree", dispatch)
+        self.assertIn("completion order", dispatch)
         self.assertIn("references/wave-dispatch.md", skill)
         self.assertIn("scripts/integrate_wave.py", dispatch)
         self.assertLessEqual(len(dispatch.split()), 700)
@@ -742,7 +745,9 @@ class WaveIntegrationDocumentationTest(unittest.TestCase):
                 "## Files owned",
                 "## Hidden shared surfaces",
                 "## Neighbors",
-                "## Implementation",
+                "## Anchors",
+                "## Acceptance",
+                "## Constraints",
                 "## Requirements covered",
                 "## Test command",
                 "Test command:",

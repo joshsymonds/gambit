@@ -63,6 +63,30 @@ class WorkerContractTest(unittest.TestCase):
         words = re.findall(r"\b[\w'-]+\b", self.text)
         self.assertLessEqual(len(words), 1200)
 
+    def test_test_first_requires_always_before_implementing(self) -> None:
+        section = self.text.split("## Test first\n", 1)[1].split("\n## ", 1)[0].casefold()
+        self.assertRegex(section, r"\balways\b")
+        self.assertIn("before implementing", section)
+
+    def test_test_first_requires_reproducer_not_substitute(self) -> None:
+        section = self.text.split("## Test first\n", 1)[1].split("\n## ", 1)[0].casefold()
+        self.assertIn("not a substitute", section)
+
+    def test_binds_the_nine_brief_fields_and_no_implementation_field(self) -> None:
+        self.assertIn(
+            "Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, "
+            "Acceptance, Constraints, Requirements covered",
+            self.text,
+        )
+        self.assertNotIn("Implementation", self.text)
+
+    def test_mentions_separable_second_behavior(self) -> None:
+        self.assertIn("separable", self.text.casefold())
+
+    def test_return_summary_has_two_hundred_word_cap(self) -> None:
+        section = self.text.split("## Your return\n", 1)[1]
+        self.assertIn("200 words", section.casefold())
+
     def test_omits_forbidden_content(self) -> None:
         lowered = self.text.casefold()
         for token in FORBIDDEN_TOKENS:

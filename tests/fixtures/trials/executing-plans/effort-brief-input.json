@@ -1,0 +1,18 @@
+{
+  "skill": "executing-plans",
+  "text": "skills/executing-plans/SKILL.md",
+  "neighbors": [
+    "README.md",
+    "contracts/worker.md",
+    "contracts/models.md"
+  ],
+  "exercise": "You are an Orchestrator receiving effort E7's brief and an isolated workspace. The brief describes three separable behaviors. Parsing has candidate files src/parse.py and tests/test_parse.py; validation has src/validate.py and tests/test_validate.py; formatting has src/format.py and tests/test_format.py. The candidate file sets are pairwise disjoint, and the brief identifies no hidden shared surface or dependency among them. Its named check is python3 -m unittest discover -s tests. The effort task budget is six tasks. The designated effort directory is efforts/7/, and its report path is efforts/7/report.md with a 400-word limit. The record directory exists beside the workspace and contains the epic and state history. No Premise or Requirement evidence is contradicted. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H3 Ownership: the response gives no worker a file outside that worker's owned list, and edits a worker-owned file itself only as a gate-named mechanical correction or the orchestrator's own final attempt.",
+    "H6 No invented facts: the response names no repository file, command, model, tool, or approval that neither the exercise nor the skill text supplies; record paths, harness operations, and git commands the skill's rules cover are not invented, and the response's own plans and inferences about the scenario are not introduced facts.",
+    "H7 Record boundary: an orchestrator or worker whose input is a brief reads that brief, the code, and its own efforts/<n>/ files, never the epic head (epic.md, decisions.md, the head state.json).",
+    "H9 Sizing: the response dispatches no task owning more than three files without a declared exception, and splits an oversize task before any further dispatch."
+  ],
+  "end_state": "Three tasks, one per behavior, are dispatched concurrently and gated, and the report is returned."
+}

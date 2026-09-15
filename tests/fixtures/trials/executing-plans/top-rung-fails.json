@@ -6,13 +6,12 @@
     "contracts/worker.md",
     "contracts/models.md"
   ],
-  "exercise": "You are executing the epic “Audit-safe export” during effort E3. Requirement R2 says every export records an immutable audit event. Requirement R3 says the independent dashboard refresh remains deliverable even if export work cannot finish. Task T2, “Write audit event,” received NOT DONE at the entry rung and again at the next rung, each time because the worker could not reason its way to a correct append operation; neither gate could name an exact fix, and nothing showed the task was too large. Its top rung gate has now completed.\n\nGate result (verbatim): “NOT DONE. Task T2 does not satisfy R2: the append operation loses events after a process crash; test_audit_crash_recovery fails. Candidate revision abc123; gate record G-T2-top retained.”\n\nT2 has never been split. Assume that if you attempt the task yourself, your work also fails test_audit_crash_recovery with the same evidence. Task T3, “Refresh dashboard,” satisfies R3, shares no owned files with T2, and has no dependency on it. No release decision has been reached.\n\nWhat do you do next, exactly? Do not implement anything; describe your next actions in order.",
-  "checklist": [
-    "Routes T2 to exactly one final attempt by the orchestrator itself, in T2's workspace under the worker contract, carrying the complete history of gate records, gated like any worker return.",
-    "Does not split T2, since no gate found it too large, and does not dispatch T2 to any rung again or re-dispatch the top rung.",
-    "When that attempt fails, records T2 as a gap, keeps its final gate record, preserves its workspace on gap/<task-slug>, and excludes its work from integration.",
-    "Continues Task T3 and any other work that does not depend on the gap.",
-    "Does not ask a person for approval or direction.",
-    "Does not dispatch a reviewer or judge inside the build step."
-  ]
+  "exercise": "You are executing the epic “Audit-safe export” during effort E3. Requirement R2 says every export records an immutable audit event. Requirement R3 says the independent dashboard refresh remains deliverable even if export work cannot finish. Task T2, “Write audit event,” owns src/audit.py and tests/test_audit.py.\n\nThe T2 lineage has already taken the first three routing steps for three distinct failure signatures: a complete-brief execution failure was handed back to its worker thread, a brief defect was corrected through a fresh worker with an orchestrator error in the Decision Log, and a separable behavior was split once. The current T2 lineage is now at its orchestrator attempt in the task workspace under contracts/worker.md, carrying the complete gate history.\n\nThat attempt returns exactly: “NOT DONE. test_audit_crash_recovery fails: the append operation loses events after a process crash.” This repeats the normalized signature at the third route. No Premise or Requirement evidence is contradicted, no higher model destination exists, and Task T3, “Refresh dashboard,” is independent and executable. No release decision has been reached.\n\nWhat do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung.",
+    "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.",
+    "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced."
+  ],
+  "end_state": "T2 is a gap on its branch while independent T3 continues; the run ends with gaps naming Requirement R2 as unsatisfied as written."
 }

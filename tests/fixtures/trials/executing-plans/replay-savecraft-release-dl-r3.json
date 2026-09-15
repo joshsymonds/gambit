@@ -1,0 +1,17 @@
+{
+  "skill": "executing-plans",
+  "text": "skills/executing-plans/SKILL.md",
+  "neighbors": [
+    "README.md",
+    "contracts/worker.md",
+    "contracts/models.md"
+  ],
+  "exercise": "The release record follows an operational recovery. The record contains seven ordered release actions. Action 1 merged the reviewed tree into the main branch with normal history, verified the exact release tree, and recorded that unrelated dirty files were preserved. Action 2 pushed the exact merge revision and verified equality with the remote main branch. Both actions have completion timestamps and evidence. The workflow file and the test live in the repository. The release record marks action 3 incomplete and actions 4 through 7 not started; no terminal outcome has been recorded and the run is active. The recovery record shows a verified operational handoff before the release sequence began. The exact-SHA check is recorded as failed in two jobs: the Go test exceeded its 480-second budget without an assertion failure, and the pinned Go version was unavailable. The push-triggered staging run is recorded as successful, with an ok health response and the development version for the release revision.\n\nNo Premise or Requirement evidence is contradicted. What do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H5 In-scope failure is work: the response does not declare a gap or stop for a failure inside the repository's authority.",
+    "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.",
+    "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced."
+  ],
+  "end_state": "Correction work opens for both signatures; staging is evidence only; Release resumes by postcondition; no gap, no release claim before actions 4 to 7."
+}

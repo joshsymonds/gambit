@@ -37,14 +37,19 @@ class FakeTransport:
         return outcome
 
 
-def judge_json(checklist: list[str], passes: list[bool] | None = None) -> str:
+def judge_json(
+    criteria: list[str],
+    passes: list[bool] | None = None,
+    *,
+    response: str = "subject answer",
+) -> str:
     if passes is None:
-        passes = [True] * len(checklist)
+        passes = [True] * len(criteria)
     return json.dumps(
         {
             "items": [
-                {"item": item, "pass": passed, "evidence": f"evidence {index}"}
-                for index, (item, passed) in enumerate(zip(checklist, passes))
+                {"item": item, "verdict": "pass" if passed else "fail", "evidence": response}
+                for item, passed in zip(criteria, passes)
             ]
         }
     )
@@ -65,7 +70,9 @@ class TrialRunnerTest(unittest.TestCase):
         (self.root / "contracts" / "models.md").write_text(
             "Use the configured role.\n", encoding="utf-8"
         )
-        self.checklist = ["states the result", "does not invent facts"]
+        self.hard_lines = ["states the result"]
+        self.end_state = "does not invent facts"
+        self.criteria = [*self.hard_lines, f"End state: {self.end_state}"]
 
     def tearDown(self) -> None:
         self.temporary.cleanup()
@@ -78,19 +85,23 @@ class TrialRunnerTest(unittest.TestCase):
         text: str = "skills/demo/SKILL.md",
         neighbors: list[str] | None = None,
         exercise: str = "Answer the exercise.",
-        checklist: list[str] | None = None,
+        hard_lines: list[str] | None = None,
+        end_state: str | None = None,
         payload_override: dict[str, object] | None = None,
     ) -> Path:
         if neighbors is None:
             neighbors = ["contracts/models.md"]
-        if checklist is None:
-            checklist = self.checklist
+        if hard_lines is None:
+            hard_lines = self.hard_lines
+        if end_state is None:
+            end_state = self.end_state
         payload: dict[str, object] = {
             "skill": skill,
             "text": text,
             "neighbors": neighbors,
             "exercise": exercise,
-            "checklist": checklist,
+            "hard_lines": hard_lines,
+            "end_state": end_state,
         }
         if payload_override is not None:
             payload = payload_override
@@ -106,6 +117,31 @@ class TrialRunnerTest(unittest.TestCase):
         path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         return path
 
+    def write_calibration_example(
+        self,
+        *,
+        name: str = "example",
+        expected: dict[str, str] | None = None,
+    ) -> Path:
+        if expected is None:
+            expected = {criterion: "pass" for criterion in self.criteria}
+        directory = self.root / "tests" / "fixtures" / "calibration"
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / f"{name}.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "fixture": "demo/basic",
+                    "response": "calibration response",
+                    "expected": expected,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return path
+
     def load_one(self) -> object:
         self.write_fixture()
         loaded = trials.load_fixtures(self.root, "demo")
@@ -118,7 +154,8 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertEqual("basic", fixture.name)
         self.assertEqual("skills/demo/SKILL.md", fixture.text)
         self.assertEqual(("contracts/models.md",), fixture.neighbors)
-        self.assertEqual(tuple(self.checklist), fixture.checklist)
+        self.assertEqual(tuple(self.hard_lines), fixture.hard_lines)
+        self.assertEqual(self.end_state, fixture.end_state)
 
         bad = self.write_fixture(
             name="bad",
@@ -129,7 +166,7 @@ class TrialRunnerTest(unittest.TestCase):
                 "exercise": "exercise",
             },
         )
-        with self.assertRaisesRegex(trials.FixtureError, "checklist"):
+        with self.assertRaisesRegex(trials.FixtureError, "hard_lines"):
             trials.load_fixture(self.root, bad)
 
         bad.write_text(
@@ -139,13 +176,71 @@ class TrialRunnerTest(unittest.TestCase):
                     "text": "/absolute/SKILL.md",
                     "neighbors": [],
                     "exercise": "exercise",
-                    "checklist": ["binary item"],
+                    "hard_lines": ["binary item"],
+                    "end_state": "required outcome",
                 }
             ),
             encoding="utf-8",
         )
         with self.assertRaisesRegex(trials.FixtureError, "repo-relative"):
             trials.load_fixture(self.root, bad)
+
+    def test_legacy_checklist_fixture_is_rejected(self) -> None:
+        legacy = self.write_fixture(
+            name="legacy",
+            payload_override={
+                "skill": "demo",
+                "text": "skills/demo/SKILL.md",
+                "neighbors": ["contracts/models.md"],
+                "exercise": "exercise",
+                "checklist": ["binary item"],
+            },
+        )
+        with self.assertRaisesRegex(trials.FixtureError, "checklist"):
+            trials.load_fixture(self.root, legacy)
+
+    def test_hard_lines_and_end_state_feed_judge_criteria(self) -> None:
+        fixture_path = self.write_fixture(
+            name="criteria",
+            payload_override={
+                "skill": "demo",
+                "text": "skills/demo/SKILL.md",
+                "neighbors": ["contracts/models.md"],
+                "exercise": "exercise",
+                "hard_lines": ["states the result", "does not invent facts"],
+                "end_state": "returns a useful answer",
+            },
+        )
+        fixture = trials.load_fixture(self.root, fixture_path)
+        criteria = fixture.hard_lines + (f"End state: {fixture.end_state}",)
+        prompt = trials.judge_prompt(self.root, fixture, "subject answer")
+        self.assertIn("1. states the result", prompt)
+        self.assertIn("2. does not invent facts", prompt)
+        self.assertIn("3. End state: returns a useful answer", prompt)
+
+    def test_stored_items_include_each_criterion(self) -> None:
+        fixture_path = self.write_fixture(
+            name="criteria",
+            payload_override={
+                "skill": "demo",
+                "text": "skills/demo/SKILL.md",
+                "neighbors": ["contracts/models.md"],
+                "exercise": "exercise",
+                "hard_lines": ["states the result", "does not invent facts"],
+                "end_state": "returns a useful answer",
+            },
+        )
+        fixture = trials.load_fixture(self.root, fixture_path)
+        criteria = fixture.hard_lines + (f"End state: {fixture.end_state}",)
+        record = trials.run_cell(
+            self.root,
+            fixture,
+            "opus-low",
+            FakeTransport("subject answer", judge_json(list(criteria))),
+        )
+        self.assertEqual("ok", record["status"])
+        self.assertEqual(list(criteria), [item["item"] for item in record["items"]])
+        self.assertEqual(len(criteria), len(record["items"]))
 
     def test_cell_id_and_hashes_cover_exact_file_bytes(self) -> None:
         fixture = self.load_one()
@@ -183,12 +278,38 @@ class TrialRunnerTest(unittest.TestCase):
         )
         self.assertIn("BEGIN EXERCISE\nAnswer the exercise.\nEND EXERCISE", prompt)
 
+    def test_subject_prompt_states_tool_and_answer_constraints(self) -> None:
+        fixture = self.load_one()
+        prompt = trials.subject_prompt(self.root, fixture)
+        self.assertIn(
+            "No tools are available for this exercise, and your entire answer must be prose.",
+            prompt,
+        )
+
+    def test_fixture_hashes_fingerprint_subject_instructions(self) -> None:
+        fixture = self.load_one()
+        hashes = trials.fixture_hashes(self.root, fixture)
+        expected = hashlib.sha256(
+            trials.SUBJECT_PROMPT_TEMPLATE.encode("utf-8")
+        ).hexdigest()
+        self.assertEqual(expected, hashes["subject_instructions"])
+
+    def test_trials_readme_documents_subject_instruction_fingerprint(self) -> None:
+        readme = (ROOT / "tests" / "fixtures" / "trials" / "README.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"subject_instructions": "<sha256>"', readme)
+        self.assertLess(
+            readme.index('"judge_instructions": "<sha256>"'),
+            readme.index('"subject_instructions": "<sha256>"'),
+        )
+
     def test_subject_transport_failure_retries_once(self) -> None:
         fixture = self.load_one()
         fake = FakeTransport(
             OSError("disconnected"),
             "subject answer",
-            judge_json(self.checklist),
+            judge_json(self.criteria),
         )
         record = trials.run_cell(self.root, fixture, "opus-low", fake)
         self.assertEqual("ok", record["status"])
@@ -201,12 +322,41 @@ class TrialRunnerTest(unittest.TestCase):
     def test_second_subject_transport_failure_is_recorded(self) -> None:
         fixture = self.load_one()
         fake = FakeTransport(OSError("first"), OSError("second"))
-        record = trials.run_cell(self.root, fixture, "fable-high", fake)
+        record = trials.run_cell(self.root, fixture, "sol-high", fake)
         self.assertEqual("transport_failure", record["status"])
         self.assertFalse(record["pass"])
         self.assertEqual("", record["response"])
         self.assertEqual([], record["items"])
         self.assertEqual(2, len(fake.calls))
+
+    def test_subject_transport_failure_records_last_error(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport(OSError("first"), OSError("second"))
+
+        record = trials.run_cell(self.root, fixture, "sol-high", fake)
+
+        self.assertEqual("transport_failure", record["status"])
+        self.assertEqual("second", record["error"])
+
+    def test_judge_failure_records_last_error(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport(
+            "subject answer", json.dumps({"items": []}), "not json"
+        )
+
+        record = trials.run_cell(self.root, fixture, "opus-low", fake)
+
+        self.assertEqual("judge_failure", record["status"])
+        self.assertEqual("judge output contains no JSON object", record["error"])
+
+    def test_ok_sample_omits_error(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport("subject answer", judge_json(self.criteria))
+
+        record = trials.run_cell(self.root, fixture, "opus-low", fake)
+
+        self.assertEqual("ok", record["status"])
+        self.assertNotIn("error", record)
 
     def test_claude_failures_retry_once_and_record_transport_failure(self) -> None:
         fixture = self.load_one()
@@ -258,29 +408,210 @@ class TrialRunnerTest(unittest.TestCase):
             with self.assertRaises(trials.TransportError):
                 trials.claude_transport("claude-opus-5", "low", "prompt")
 
+    def test_judge_prompt_is_grounded_in_fixture_context_without_subject_model(self) -> None:
+        fixture = self.load_one()
+        prompt = trials.judge_prompt(self.root, fixture, "states the result without inventing facts")
+        self.assertIn("BEGIN SKILL\nDo the demonstrated thing.\nEND SKILL", prompt)
+        self.assertIn(
+            "BEGIN REFERENCE contracts/models.md\nUse the configured role.\nEND REFERENCE contracts/models.md",
+            prompt,
+        )
+        self.assertIn("BEGIN EXERCISE\nAnswer the exercise.\nEND EXERCISE", prompt)
+        self.assertIn("Treat the exercise's facts as true", prompt)
+        self.assertIn("hard line", prompt)
+        self.assertIn("end state", prompt)
+        self.assertIn("independently", prompt)
+        self.assertIn("BEGIN SUBJECT RESPONSE\nstates the result without inventing facts\nEND SUBJECT RESPONSE", prompt)
+        self.assertNotIn("claude-opus-5", prompt)
+
+    def test_pass_verdict_requires_response_span(self) -> None:
+        criteria = ("states the result", "End state: does not invent facts")
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "pass", "evidence": "missing span"},
+                {"item": criteria[1], "verdict": "pass", "evidence": "states the result"},
+            ]
+        })
+        with self.assertRaisesRegex(trials.JudgeParseError, "pass"):
+            trials.parse_judge_output(raw, criteria, "states the result")
+
+    def test_pass_verdict_requires_nonempty_evidence(self) -> None:
+        criteria = ("states the result", "End state: does not invent facts")
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "pass", "evidence": ""},
+                {"item": criteria[1], "verdict": "pass", "evidence": "states the result"},
+            ]
+        })
+        with self.assertRaisesRegex(trials.JudgeParseError, "pass"):
+            trials.parse_judge_output(raw, criteria, "states the result")
+
+    def test_pass_evidence_accepts_response_span_with_markdown_emphasis(self) -> None:
+        criteria = ("states the result",)
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "pass", "evidence": "Obtain authoritative confirmation from the harness."},
+            ]
+        })
+        parsed = trials.parse_judge_output(
+            raw,
+            criteria,
+            "Obtain **authoritative** confirmation from the harness.",
+        )
+        self.assertEqual("pass", parsed[0]["verdict"])
+
+    def test_fail_evidence_accepts_response_span_with_markdown_code_marks(self) -> None:
+        criteria = ("states the result",)
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "fail", "evidence": "run make check before opening"},
+            ]
+        })
+        parsed = trials.parse_judge_output(
+            raw,
+            criteria,
+            "run `make check` before opening",
+        )
+        self.assertEqual("fail", parsed[0]["verdict"])
+
+    def test_normalized_missing_evidence_names_its_verdict(self) -> None:
+        criteria = ("states the result",)
+        for verdict in ("pass", "fail"):
+            with self.subTest(verdict=verdict):
+                raw = json.dumps({
+                    "items": [
+                        {"item": criteria[0], "verdict": verdict, "evidence": "missing span"},
+                    ]
+                })
+                with self.assertRaisesRegex(trials.JudgeParseError, verdict):
+                    trials.parse_judge_output(raw, criteria, "**states the result**")
+
+    def test_markdown_only_evidence_is_rejected_as_empty(self) -> None:
+        criteria = ("states the result",)
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "pass", "evidence": "**"},
+            ]
+        })
+        with self.assertRaisesRegex(trials.JudgeParseError, "pass"):
+            trials.parse_judge_output(raw, criteria, "**states the result**")
+
+    def test_verbatim_pass_and_fail_evidence_are_accepted(self) -> None:
+        criteria = ("states the result", "End state: does not invent facts")
+        subject_response = "states the result; does not invent facts"
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "pass", "evidence": "states the result"},
+                {"item": criteria[1], "verdict": "fail", "evidence": "does not invent facts"},
+            ]
+        })
+        parsed = trials.parse_judge_output(raw, criteria, subject_response)
+        self.assertEqual(["pass", "fail"], [item["verdict"] for item in parsed])
+
+    def test_unknown_verdict_may_have_empty_evidence(self) -> None:
+        criteria = ("states the result",)
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "unknown", "evidence": ""},
+            ]
+        })
+        parsed = trials.parse_judge_output(raw, criteria, "subject response")
+        self.assertEqual("unknown", parsed[0]["verdict"])
+
+    def test_judge_prompt_instructs_prohibition_pass_evidence(self) -> None:
+        fixture = self.load_one()
+        prompt = trials.judge_prompt(self.root, fixture, "subject answer")
+        self.assertIn(
+            "For a pass on a criterion that forbids something, evidence is the span showing the compliant action the response takes instead.",
+            prompt,
+        )
+
+    def test_unknown_criterion_is_inconclusive_and_never_passes(self) -> None:
+        fixture = self.load_one()
+        response = "states the result"
+        raw = json.dumps({
+            "items": [
+                {"item": self.criteria[0], "verdict": "pass", "evidence": "states the result"},
+                {"item": self.criteria[1], "verdict": "unknown", "evidence": ""},
+            ]
+        })
+        record = trials.run_cell(self.root, fixture, "opus-low", FakeTransport(response, raw))
+        self.assertEqual("inconclusive", record["status"])
+        self.assertFalse(record["pass"])
+        self.assertEqual("unknown", record["items"][1]["verdict"])
+
+    def test_all_passing_verdicts_make_cell_pass(self) -> None:
+        fixture = self.load_one()
+        response = "states the result; does not invent facts"
+        raw = json.dumps({
+            "items": [
+                {"item": self.criteria[0], "verdict": "pass", "evidence": "states the result"},
+                {"item": self.criteria[1], "verdict": "pass", "evidence": "does not invent facts"},
+            ]
+        })
+        record = trials.run_cell(self.root, fixture, "opus-low", FakeTransport(response, raw))
+        self.assertEqual("ok", record["status"])
+        self.assertTrue(record["pass"])
+        self.assertEqual(["pass", "pass"], [item["verdict"] for item in record["items"]])
+
+    def test_check_fresh_reports_inconclusive_cell_as_failing(self) -> None:
+        fixture = self.load_one()
+        identifier = trials.cell_id(fixture, "opus-low")
+        results = {
+            identifier: {
+                "samples": [{
+                    "status": "inconclusive",
+                    "pass": False,
+                    "hashes": trials.fixture_hashes(self.root, fixture),
+                    "attempt": 1,
+                    "at": "2026-01-01T00:00:00+00:00",
+                }]
+            }
+        }
+        results.update(
+            {
+                trials.cell_id(fixture, subject): {
+                    "samples": [{
+                        "status": "ok",
+                        "pass": True,
+                        "hashes": trials.fixture_hashes(self.root, fixture),
+                        "attempt": 1,
+                        "at": "2026-01-01T00:00:00+00:00",
+                    }]
+                }
+                for subject in trials.SUBJECTS
+                if subject != "opus-low"
+            }
+        )
+        results_path = self.root / "tests/fixtures/trials/results.json"
+        results_path.write_text(json.dumps(results), encoding="utf-8")
+        output = io.StringIO()
+        self.assertEqual(1, trials.main(["--check-fresh"], root=self.root, transport=FakeTransport(), output=output))
+        self.assertIn(f"failing {identifier}", output.getvalue())
+
     def test_judge_output_matches_numbered_items_by_position(self) -> None:
-        checklist = ("first item", "second item", "third item")
+        criteria = ("first item", "second item", "third item")
         response = json.dumps(
             {
                 "items": [
-                    {"item": "1. first item", "pass": True, "evidence": "one"},
-                    {"item": "2) second item", "pass": True, "evidence": "two"},
+                    {"item": "1. first item", "verdict": "pass", "evidence": "one"},
+                    {"item": "2) second item", "verdict": "pass", "evidence": "two"},
                     {
                         "item": "  third   item  ",
-                        "pass": True,
+                        "verdict": "pass",
                         "evidence": "three",
                     },
                 ]
             }
         )
 
-        parsed = trials.parse_judge_output(response, checklist)
+        parsed = trials.parse_judge_output(response, criteria, "one two three")
 
         self.assertEqual(3, len(parsed))
-        self.assertTrue(all(item["pass"] is True for item in parsed))
+        self.assertTrue(all(item["verdict"] == "pass" for item in parsed))
 
     def test_judge_output_extracts_fenced_or_surrounded_object(self) -> None:
-        payload = json.loads(judge_json(self.checklist))
+        payload = json.loads(judge_json(self.criteria))
         payload["summary"] = "extra top-level keys are ignored"
         raw = json.dumps(payload)
         responses = [
@@ -293,7 +624,7 @@ class TrialRunnerTest(unittest.TestCase):
 
         for response in responses:
             with self.subTest(response=response):
-                parsed = trials.parse_judge_output(response, tuple(self.checklist))
+                parsed = trials.parse_judge_output(response, tuple(self.criteria), "subject answer")
                 self.assertEqual(2, len(parsed))
 
     def test_judge_output_rejects_invalid_item_data(self) -> None:
@@ -302,22 +633,36 @@ class TrialRunnerTest(unittest.TestCase):
             "wrong item count": {
                 "items": [
                     {
-                        "item": self.checklist[0],
-                        "pass": True,
+                        "item": self.criteria[0],
+                        "verdict": "pass",
                         "evidence": "only one item",
                     }
                 ]
             },
-            "non-boolean pass": {
+            "invalid verdict": {
                 "items": [
                     {
-                        "item": self.checklist[0],
-                        "pass": "true",
+                        "item": self.criteria[0],
+                        "verdict": "maybe",
                         "evidence": "first",
                     },
                     {
-                        "item": self.checklist[1],
-                        "pass": True,
+                        "item": self.criteria[1],
+                        "verdict": "pass",
+                        "evidence": "second",
+                    },
+                ]
+            },
+            "unhashable verdict": {
+                "items": [
+                    {
+                        "item": self.criteria[0],
+                        "verdict": [],
+                        "evidence": "first",
+                    },
+                    {
+                        "item": self.criteria[1],
+                        "verdict": "pass",
                         "evidence": "second",
                     },
                 ]
@@ -326,12 +671,12 @@ class TrialRunnerTest(unittest.TestCase):
                 "items": [
                     {
                         "item": "1. states the wrong result",
-                        "pass": True,
+                        "verdict": "pass",
                         "evidence": "first",
                     },
                     {
-                        "item": self.checklist[1],
-                        "pass": True,
+                        "item": self.criteria[1],
+                        "verdict": "pass",
                         "evidence": "second",
                     },
                 ]
@@ -339,13 +684,13 @@ class TrialRunnerTest(unittest.TestCase):
             "non-string evidence": {
                 "items": [
                     {
-                        "item": self.checklist[0],
-                        "pass": True,
+                        "item": self.criteria[0],
+                        "verdict": "pass",
                         "evidence": ["first"],
                     },
                     {
-                        "item": self.checklist[1],
-                        "pass": True,
+                        "item": self.criteria[1],
+                        "verdict": "pass",
                         "evidence": "second",
                     },
                 ]
@@ -356,27 +701,28 @@ class TrialRunnerTest(unittest.TestCase):
             with self.subTest(name=name):
                 with self.assertRaises(trials.JudgeParseError):
                     trials.parse_judge_output(
-                        json.dumps(payload), tuple(self.checklist)
+                        json.dumps(payload), tuple(self.criteria), "subject answer"
                     )
 
     def test_judge_scores_every_item(self) -> None:
         fixture = self.load_one()
         fake = FakeTransport(
-            "subject answer", judge_json(self.checklist, [True, False])
+            "subject answer", judge_json(self.criteria, [True, False])
         )
         record = trials.run_cell(self.root, fixture, "opus-low", fake)
         self.assertEqual("ok", record["status"])
         self.assertFalse(record["pass"])
-        self.assertEqual(self.checklist, [item["item"] for item in record["items"]])
+        self.assertEqual(self.criteria, [item["item"] for item in record["items"]])
 
     def test_judge_prompt_allows_numbered_or_unnumbered_item_text(self) -> None:
-        prompt = trials.judge_prompt(tuple(self.checklist), "subject answer")
+        fixture = self.load_one()
+        prompt = trials.judge_prompt(self.root, fixture, "subject answer")
         self.assertIn("with or without its number", prompt)
 
     def test_judge_parse_failure_retries_once_then_records_failure(self) -> None:
         fixture = self.load_one()
         recovered = FakeTransport(
-            "subject answer", "not json", judge_json(self.checklist)
+            "subject answer", "not json", judge_json(self.criteria)
         )
         record = trials.run_cell(self.root, fixture, "opus-low", recovered)
         self.assertEqual("ok", record["status"])
@@ -402,45 +748,43 @@ class TrialRunnerTest(unittest.TestCase):
         problems = trials.check_fresh(self.root, [fixture], {})
         self.assertEqual([f"missing {identifier}" for identifier in identifiers], problems)
 
-        results = {
-            identifier: {"status": "ok", "pass": True, "hashes": current_hashes}
-            for identifier in identifiers
-        }
-        results[identifiers[0]] = {
-            "status": "ok",
-            "pass": True,
-            "hashes": {**current_hashes, "text": "0" * 64},
-        }
+        def cell(
+            hashes: dict[str, object], status: str = "ok", passed: bool = True
+        ) -> dict[str, object]:
+            return {
+                "samples": [{
+                    "status": status,
+                    "pass": passed,
+                    "hashes": hashes,
+                    "attempt": 1,
+                    "at": "2026-01-01T00:00:00+00:00",
+                }]
+            }
+
+        results = {identifier: cell(current_hashes) for identifier in identifiers}
+        results[identifiers[0]] = cell(
+            {**current_hashes, "text": "0" * 64}
+        )
         self.assertEqual(
             [f"stale {identifiers[0]}"],
             trials.check_fresh(self.root, [fixture], results),
         )
 
-        results[identifiers[0]] = {
-            "status": "ok",
-            "pass": False,
-            "hashes": current_hashes,
-        }
+        results[identifiers[0]] = cell(current_hashes, passed=False)
         self.assertEqual(
             [f"failing {identifiers[0]}"],
             trials.check_fresh(self.root, [fixture], results),
         )
 
-        results[identifiers[0]] = {
-            "status": "judge_failure",
-            "pass": False,
-            "hashes": current_hashes,
-        }
+        results[identifiers[0]] = cell(
+            current_hashes, status="judge_failure", passed=False
+        )
         self.assertEqual(
             [f"failing {identifiers[0]}"],
             trials.check_fresh(self.root, [fixture], results),
         )
 
-        results[identifiers[0]] = {
-            "status": "ok",
-            "pass": True,
-            "hashes": current_hashes,
-        }
+        results[identifiers[0]] = cell(current_hashes)
         self.assertEqual([], trials.check_fresh(self.root, [fixture], results))
 
     def test_result_file_update_is_atomic_and_preserves_other_cells(self) -> None:
@@ -448,7 +792,16 @@ class TrialRunnerTest(unittest.TestCase):
         results_path.write_text(
             json.dumps({"other/cell@opus-low": {"pass": True}}), encoding="utf-8"
         )
-        new_record = {"status": "ok", "pass": True}
+        new_record = {
+            "status": "ok",
+            "pass": True,
+            "hashes": {},
+            "subject": {},
+            "judge": {},
+            "at": "2026-01-01T00:00:00+00:00",
+            "response": "answer",
+            "items": [],
+        }
         real_replace = os.replace
         replacements: list[tuple[Path, Path]] = []
 
@@ -462,8 +815,13 @@ class TrialRunnerTest(unittest.TestCase):
             trials.store_result(self.root, "demo/basic@opus-low", new_record)
 
         stored = json.loads(results_path.read_text(encoding="utf-8"))
-        self.assertEqual({"pass": True}, stored["other/cell@opus-low"])
-        self.assertEqual(new_record, stored["demo/basic@opus-low"])
+        self.assertEqual(
+            {"pass": True}, stored["other/cell@opus-low"])
+        stored_sample = stored["demo/basic@opus-low"]["samples"][0]
+        self.assertEqual(
+            new_record,
+            {key: value for key, value in stored_sample.items() if key != "attempt"},
+        )
         self.assertEqual(1, len(replacements))
         self.assertNotEqual(results_path, replacements[0][0])
         self.assertEqual(results_path, replacements[0][1])
@@ -518,10 +876,10 @@ class TrialRunnerTest(unittest.TestCase):
     def test_cli_exit_codes_writes_results_and_never_networks_for_checks(self) -> None:
         self.write_fixture()
         passing = FakeTransport(
-            "answer one",
-            judge_json(self.checklist),
-            "answer two",
-            judge_json(self.checklist),
+            "answer sol",
+            judge_json(self.criteria, response="answer sol"),
+            "answer opus",
+            judge_json(self.criteria, response="answer opus"),
         )
         output = io.StringIO()
         self.assertEqual(
@@ -550,7 +908,7 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertEqual([], never.calls)
 
         first_id = sorted(results)[0]
-        results[first_id]["pass"] = False
+        results[first_id]["samples"][-1]["pass"] = False
         (self.root / "tests/fixtures/trials/results.json").write_text(
             json.dumps(results), encoding="utf-8"
         )
@@ -572,16 +930,17 @@ class TrialRunnerTest(unittest.TestCase):
             "text": "skills/demo/SKILL.md",
             "neighbors": [],
             "exercise": "exercise",
-            "checklist": ["passes"],
+            "hard_lines": ["passes"],
+            "end_state": self.end_state,
         }
         (failing_root / "tests/fixtures/trials/demo/basic.json").write_text(
             json.dumps(payload), encoding="utf-8"
         )
         failing = FakeTransport(
-            "one",
-            judge_json(["passes"], [False]),
-            "two",
-            judge_json(["passes"], [True]),
+            "sol",
+            judge_json(["passes", f"End state: {self.end_state}"], [False, True], response="sol"),
+            "opus",
+            judge_json(["passes", f"End state: {self.end_state}"], [True, True], response="opus"),
         )
         self.assertEqual(
             1,
@@ -612,23 +971,24 @@ class TrialRunnerTest(unittest.TestCase):
         (self.root / "skills/other/SKILL.md").write_text(
             "Other instructions.\n", encoding="utf-8"
         )
-        other_checklist = ["other item"]
+        other_hard_lines = ["other item"]
+        other_criteria = [*other_hard_lines, f"End state: {self.end_state}"]
         self.write_fixture(
             name="second",
             skill="other",
             text="skills/other/SKILL.md",
             neighbors=[],
-            checklist=other_checklist,
+            hard_lines=other_hard_lines,
         )
         fake = FakeTransport(
+            "demo sol",
+            judge_json(self.criteria, response="demo sol"),
             "demo opus",
-            judge_json(self.checklist),
-            "demo fable",
-            judge_json(self.checklist),
+            judge_json(self.criteria, response="demo opus"),
+            "other sol",
+            judge_json(other_criteria, response="other sol"),
             "other opus",
-            judge_json(other_checklist),
-            "other fable",
-            judge_json(other_checklist),
+            judge_json(other_criteria, response="other opus"),
         )
         self.assertEqual(
             0,
@@ -639,13 +999,85 @@ class TrialRunnerTest(unittest.TestCase):
         results = trials.load_results(self.root)
         self.assertEqual(
             {
+                "demo/basic@sol-high",
                 "demo/basic@opus-low",
-                "demo/basic@fable-high",
+                "other/second@sol-high",
                 "other/second@opus-low",
-                "other/second@fable-high",
             },
             set(results),
         )
+
+    def test_trial_routes_include_sol_and_opus_subjects_and_sol_judge(self) -> None:
+        self.assertEqual(
+            {"model": "chatgpt/sol", "effort": "high"},
+            trials.SUBJECTS["sol-high"],
+        )
+        self.assertEqual(
+            {"model": "claude-opus-5", "effort": "low"},
+            trials.SUBJECTS["opus-low"],
+        )
+        self.assertEqual(
+            {"model": "chatgpt/sol", "effort": "xhigh"},
+            trials.JUDGE,
+        )
+
+    def test_claude_transport_configures_patchbay_route_and_reads_caller_key(
+        self,
+    ) -> None:
+        captured: dict[str, object] = {}
+        key_path = self.root / "caller-key"
+        key = os.urandom(16).hex()
+        key_path.write_text(key + "\n", encoding="utf-8")
+
+        def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+            captured["kwargs"] = kwargs
+            return subprocess.CompletedProcess(
+                args=argv, returncode=0, stdout="transport reply\n", stderr=""
+            )
+
+        with (
+            mock.patch.dict(
+                os.environ,
+                {
+                    "PATH": "/usr/bin",
+                    "GAMBIT_TRIALS_BASE_URL": "http://patchbay.test:4100",
+                    "PATCHBAY_CALLER_KEY_FILE": str(key_path),
+                },
+                clear=True,
+            ),
+            mock.patch.object(trials.subprocess, "run", side_effect=run),
+        ):
+            trials.claude_transport("chatgpt/sol", "high", "prompt")
+
+        environment = captured["kwargs"]["env"]
+        self.assertEqual("http://patchbay.test:4100", environment["ANTHROPIC_BASE_URL"])
+        self.assertEqual(
+            f"X-Patchbay-Key: {key}", environment["ANTHROPIC_CUSTOM_HEADERS"]
+        )
+
+    def test_claude_transport_uses_default_route_without_unreadable_key(self) -> None:
+        captured: dict[str, object] = {}
+        missing_key = self.root / "missing-key"
+
+        def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+            captured["kwargs"] = kwargs
+            return subprocess.CompletedProcess(
+                args=argv, returncode=0, stdout="transport reply\n", stderr=""
+            )
+
+        with (
+            mock.patch.dict(
+                os.environ,
+                {"PATH": "/usr/bin", "PATCHBAY_CALLER_KEY_FILE": str(missing_key)},
+                clear=True,
+            ),
+            mock.patch.object(trials.subprocess, "run", side_effect=run),
+        ):
+            trials.claude_transport("chatgpt/sol", "xhigh", "prompt")
+
+        environment = captured["kwargs"]["env"]
+        self.assertEqual("http://127.0.0.1:4100", environment["ANTHROPIC_BASE_URL"])
+        self.assertNotIn("ANTHROPIC_CUSTOM_HEADERS", environment)
 
     def test_claude_transport_prints_with_model_effort_and_no_api_credentials(
         self,
@@ -665,6 +1097,7 @@ class TrialRunnerTest(unittest.TestCase):
             "CLAUDE_CODE_ENTRYPOINT": "cli",
             "ANTHROPIC_API_KEY": "key-secret",
             "ANTHROPIC_AUTH_TOKEN": "token-secret",
+            "PATCHBAY_CALLER_KEY_FILE": str(self.root / "missing-key"),
         }
         with (
             mock.patch.dict(os.environ, environment, clear=True),
@@ -690,13 +1123,22 @@ class TrialRunnerTest(unittest.TestCase):
                 "--strict-mcp-config",
                 "--tools",
                 "",
+                "--append-system-prompt",
+                trials.TRANSPORT_INSTRUCTIONS,
             ],
             captured["argv"],
         )
         kwargs = captured["kwargs"]
         self.assertEqual("prompt", kwargs["input"])
-        self.assertEqual(300, kwargs["timeout"])
-        self.assertEqual({"PATH": "/usr/bin"}, kwargs["env"])
+        self.assertEqual(900, kwargs["timeout"])
+        self.assertEqual(
+            {
+                "PATH": "/usr/bin",
+                "PATCHBAY_CALLER_KEY_FILE": str(self.root / "missing-key"),
+                "ANTHROPIC_BASE_URL": "http://127.0.0.1:4100",
+            },
+            kwargs["env"],
+        )
         self.assertIs(True, kwargs["capture_output"])
         self.assertIs(True, kwargs["text"])
 
@@ -782,8 +1224,83 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertIn("<SUBJECT RESPONSE>", rendered)
         self.assertEqual([], fake.calls)
 
+    def test_cli_calibrate_reports_agreement_through_runner_transport(self) -> None:
+        self.write_fixture()
+        self.write_calibration_example()
+        fake = FakeTransport(
+            judge_json(self.criteria, response="calibration response")
+        )
+        output = io.StringIO()
+
+        result = trials.main(
+            ["--calibrate"],
+            root=self.root,
+            transport=fake,
+            output=output,
+        )
+
+        self.assertEqual(0, result)
+        self.assertEqual(
+            [("chatgpt/sol", "xhigh")],
+            [(model, effort) for model, effort, _ in fake.calls],
+        )
+        rendered = output.getvalue()
+        self.assertIn("example.json", rendered)
+        self.assertIn("agreement 2/2", rendered)
+
+    def test_cli_calibrate_disagreement_names_example_and_exits_nonzero(self) -> None:
+        self.write_fixture()
+        self.write_calibration_example(
+            expected={self.criteria[0]: "fail", self.criteria[1]: "pass"}
+        )
+        fake = FakeTransport(
+            judge_json(self.criteria, response="calibration response")
+        )
+        output = io.StringIO()
+
+        result = trials.main(
+            ["--calibrate"],
+            root=self.root,
+            transport=fake,
+            output=output,
+        )
+
+        self.assertNotEqual(0, result)
+        rendered = output.getvalue()
+        self.assertIn("example.json", rendered)
+        self.assertIn("states the result", rendered)
+        self.assertIn("agreement 1/2", rendered)
+
+    def test_cli_calibrate_dry_run_prints_prompt_without_transport(self) -> None:
+        self.write_fixture()
+        self.write_calibration_example()
+        fake = FakeTransport()
+        output = io.StringIO()
+
+        result = trials.main(
+            ["--calibrate", "--dry-run"],
+            root=self.root,
+            transport=fake,
+            output=output,
+        )
+
+        self.assertEqual(0, result)
+        self.assertEqual([], fake.calls)
+        rendered = output.getvalue()
+        self.assertIn("Judge the subject response", rendered)
+        self.assertIn(
+            "BEGIN SUBJECT RESPONSE\ncalibration response\nEND SUBJECT RESPONSE",
+            rendered,
+        )
+
+    def test_cli_calibrate_is_mutually_exclusive_with_other_actions(self) -> None:
+        arguments = trials._parser().parse_args(["--calibrate"])
+        self.assertTrue(arguments.calibrate)
+        with self.assertRaises(SystemExit):
+            trials._parser().parse_args(["--calibrate", "--all"])
+
     def test_cli_probe_calls_each_subject_and_judge(self) -> None:
-        fake = FakeTransport("opus reply", "fable reply", "judge reply")
+        fake = FakeTransport("sol reply", "opus reply", "judge reply")
         output = io.StringIO()
         self.assertEqual(
             0,
@@ -793,16 +1310,395 @@ class TrialRunnerTest(unittest.TestCase):
         )
         self.assertEqual(
             [
+                ("chatgpt/sol", "high"),
                 ("claude-opus-5", "low"),
-                ("claude-fable-5-1", "high"),
-                ("claude-fable-5-1", "xhigh"),
+                ("chatgpt/sol", "xhigh"),
             ],
             [(model, effort) for model, effort, _ in fake.calls],
         )
+        self.assertIn("sol-high: 200 sol reply", output.getvalue())
         self.assertIn("opus-low: 200 opus reply", output.getvalue())
-        self.assertIn("fable-high: 200 fable reply", output.getvalue())
         self.assertIn("judge: 200 judge reply", output.getvalue())
 
+    def test_cli_fixture_runs_only_named_fixture_and_writes_two_cells(self) -> None:
+        self.write_fixture()
+        self.write_fixture(name="other", exercise="Other exercise.")
+        fake = FakeTransport(
+            "sol answer",
+            judge_json(self.criteria, response="sol answer"),
+            "opus answer",
+            judge_json(self.criteria, response="opus answer"),
+        )
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--fixture", "demo/basic"],
+                root=self.root,
+                transport=fake,
+                output=io.StringIO(),
+            ),
+        )
+        self.assertEqual(4, len(fake.calls))
+        self.assertEqual(
+            {
+                "demo/basic@sol-high",
+                "demo/basic@opus-low",
+            },
+            set(trials.load_results(self.root)),
+        )
+
+    def test_cli_dry_run_fixture_prints_only_named_fixture(self) -> None:
+        self.write_fixture()
+        self.write_fixture(name="other", exercise="Other exercise.")
+        fake = FakeTransport()
+        output = io.StringIO()
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--dry-run", "--fixture", "demo/basic"],
+                root=self.root,
+                transport=fake,
+                output=output,
+            ),
+        )
+        rendered = output.getvalue()
+        self.assertIn("demo/basic@opus-low", rendered)
+        self.assertIn("Answer the exercise.", rendered)
+        self.assertNotIn("demo/other", rendered)
+        self.assertNotIn("Other exercise.", rendered)
+        self.assertEqual([], fake.calls)
+
+    def test_cli_fixture_unknown_name_exits_nonzero_and_names_it(self) -> None:
+        error = io.StringIO()
+        result = trials.main(
+            ["--fixture", "demo/missing"],
+            root=self.root,
+            transport=FakeTransport(),
+            output=io.StringIO(),
+            error=error,
+        )
+        self.assertNotEqual(0, result)
+        self.assertIn("demo/missing", error.getvalue())
+
+
+    def test_store_result_retains_old_format_record_before_new_sample(self) -> None:
+        identifier = "demo/basic@opus-low"
+        old_at = "2026-01-01T00:00:00+00:00"
+        old_record = {
+            "status": "ok",
+            "pass": True,
+            "response": "OLD RESPONSE",
+            "items": [{"item": "old criterion", "verdict": "pass", "evidence": ""}],
+            "hashes": {"old": "hash"},
+            "subject": {"model": "old-model", "effort": "low"},
+            "judge": {"model": "old-judge", "effort": "xhigh"},
+            "at": old_at,
+        }
+        new_record = {
+            "status": "inconclusive",
+            "pass": False,
+            "response": "NEW RESPONSE",
+            "items": [{"item": "new criterion", "verdict": "unknown", "evidence": ""}],
+            "hashes": {"new": "hash"},
+            "subject": {"model": "new-model", "effort": "high"},
+            "judge": {"model": "new-judge", "effort": "xhigh"},
+            "at": "2026-01-02T00:00:00+00:00",
+        }
+        results_path = self.root / "tests/fixtures/trials/results.json"
+        results_path.parent.mkdir(parents=True, exist_ok=True)
+        results_path.write_text(json.dumps({identifier: old_record}), encoding="utf-8")
+
+        trials.store_result(self.root, identifier, new_record)
+
+        cell = trials.load_results(self.root)[identifier]
+        self.assertEqual([1, 2], [sample["attempt"] for sample in cell["samples"]])
+        self.assertEqual("OLD RESPONSE", cell["samples"][0]["response"])
+        self.assertEqual(old_at, cell["samples"][0]["at"])
+        self.assertEqual(new_record, {key: value for key, value in cell["samples"][1].items() if key != "attempt"})
+        self.assertEqual("NEW RESPONSE", cell["samples"][1]["response"])
+        self.assertEqual("inconclusive", cell["status"])
+        self.assertFalse(cell["pass"])
+        self.assertEqual(new_record["hashes"], cell["hashes"])
+        self.assertEqual(new_record["subject"], cell["subject"])
+        self.assertEqual(new_record["judge"], cell["judge"])
+        self.assertEqual(new_record["at"], cell["latest"])
+
+    def test_store_result_legacy_record_without_at_omits_at_from_sample(self) -> None:
+        identifier = "demo/basic@opus-low"
+        old_record = {
+            "status": "ok",
+            "pass": True,
+            "response": "OLD RESPONSE",
+            "items": [],
+            "hashes": {"old": "hash"},
+        }
+        new_record = {"status": "ok", "pass": True, "at": "2026-01-02T00:00:00+00:00"}
+        results_path = self.root / "tests/fixtures/trials/results.json"
+        results_path.parent.mkdir(parents=True, exist_ok=True)
+        results_path.write_text(json.dumps({identifier: old_record}), encoding="utf-8")
+
+        trials.store_result(self.root, identifier, new_record)
+
+        first_sample = trials.load_results(self.root)[identifier]["samples"][0]
+        self.assertNotIn("at", first_sample)
+        self.assertEqual("OLD RESPONSE", first_sample["response"])
+        self.assertEqual(1, first_sample["attempt"])
+
+    def test_store_result_rejects_malformed_existing_cell_with_identifier(self) -> None:
+        identifier = "demo/basic@opus-low"
+        results_path = self.root / "tests/fixtures/trials/results.json"
+        results_path.parent.mkdir(parents=True, exist_ok=True)
+        results_path.write_text(json.dumps({identifier: {"pass": True}}), encoding="utf-8")
+
+        with self.assertRaisesRegex(trials.FixtureError, identifier):
+            trials.store_result(self.root, identifier, {"status": "ok", "pass": True})
+
+
+    def test_refresh_retains_samples_and_latest_summary(self) -> None:
+        self.write_fixture()
+        first = FakeTransport(
+            "first sol", judge_json(self.criteria, response="first sol"),
+            "first opus", judge_json(self.criteria, response="first opus"),
+        )
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--fixture", "demo/basic"],
+                root=self.root,
+                transport=first,
+                output=io.StringIO(),
+            ),
+        )
+        second = FakeTransport(
+            "second sol", judge_json(self.criteria, response="second sol"),
+            "second opus", judge_json(self.criteria, response="second opus"),
+        )
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--fixture", "demo/basic"],
+                root=self.root,
+                transport=second,
+                output=io.StringIO(),
+            ),
+        )
+        results = trials.load_results(self.root)
+        record = results["demo/basic@sol-high"]
+        self.assertEqual([1, 2], [sample["attempt"] for sample in record["samples"]])
+        self.assertEqual("second sol", record["samples"][-1]["response"])
+        self.assertEqual(record["samples"][-1]["at"], record["latest"])
+        self.assertEqual(record["samples"][-1]["status"], record["status"])
+        self.assertEqual(record["samples"][-1]["pass"], record["pass"])
+        self.assertNotIn("response", record)
+        self.assertNotIn("items", record)
+
+    def test_judge_instruction_change_stales_fresh_cell(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport(
+            "answer sol", judge_json(self.criteria, response="answer sol"),
+            "answer opus", judge_json(self.criteria, response="answer opus"),
+        )
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--fixture", "demo/basic"],
+                root=self.root,
+                transport=fake,
+                output=io.StringIO(),
+            ),
+        )
+        original_scoring = trials.SCORING_DEFINITION
+        try:
+            trials.SCORING_DEFINITION += "\nChanged scoring instruction.\n"
+            problems = trials.check_fresh(
+                self.root, [fixture], trials.load_results(self.root)
+            )
+        finally:
+            trials.SCORING_DEFINITION = original_scoring
+        self.assertEqual(
+            ["stale demo/basic@sol-high", "stale demo/basic@opus-low"], problems
+        )
+
+    def test_subject_instruction_change_stales_fresh_cell(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport(
+            "answer sol", judge_json(self.criteria, response="answer sol"),
+            "answer opus", judge_json(self.criteria, response="answer opus"),
+        )
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--fixture", "demo/basic"],
+                root=self.root,
+                transport=fake,
+                output=io.StringIO(),
+            ),
+        )
+        original_subject_prompt = trials.SUBJECT_PROMPT_TEMPLATE
+        try:
+            trials.SUBJECT_PROMPT_TEMPLATE += "\nChanged subject instruction.\n"
+            problems = trials.check_fresh(
+                self.root, [fixture], trials.load_results(self.root)
+            )
+        finally:
+            trials.SUBJECT_PROMPT_TEMPLATE = original_subject_prompt
+        self.assertEqual(
+            ["stale demo/basic@sol-high", "stale demo/basic@opus-low"], problems
+        )
+
+    def test_probe_lists_only_current_subjects_and_judge(self) -> None:
+        fake = FakeTransport("sol", "opus", "judge")
+        output = io.StringIO()
+        self.assertEqual(
+            0,
+            trials.main(["--probe"], root=self.root, transport=fake, output=output),
+        )
+        self.assertEqual(
+            [("chatgpt/sol", "high"), ("claude-opus-5", "low"), ("chatgpt/sol", "xhigh")],
+            [(model, effort) for model, effort, _ in fake.calls],
+        )
+        rendered = output.getvalue()
+        self.assertIn("sol-high: 200 sol", rendered)
+        self.assertIn("opus-low: 200 opus", rendered)
+        self.assertIn("judge: 200 judge", rendered)
+        self.assertNotIn("fable-high", rendered)
+        self.assertNotIn("luna-low", rendered)
+
+    def test_max_calls_stops_before_unrefreshable_cells(self) -> None:
+        self.write_fixture()
+        self.write_fixture(name="other", exercise="Other exercise.")
+        fake = FakeTransport(
+            "sol one", judge_json(self.criteria, response="sol one"),
+            "opus one", judge_json(self.criteria, response="opus one"),
+            "sol two", judge_json(self.criteria, response="sol two"),
+        )
+        output = io.StringIO()
+        self.assertNotEqual(
+            0,
+            trials.main(
+                ["--all", "--max-calls", "3"],
+                root=self.root,
+                transport=fake,
+                output=output,
+            ),
+        )
+        self.assertEqual(3, len(fake.calls))
+        self.assertEqual(
+            {"demo/basic@sol-high"},
+            set(trials.load_results(self.root)),
+        )
+        self.assertIn("demo/other@sol-high", output.getvalue())
+        self.assertIn("demo/other@opus-low", output.getvalue())
+
+    def test_max_calls_above_the_ceiling_is_rejected(self) -> None:
+        self.write_fixture()
+        fake = FakeTransport()
+        with self.assertRaises(SystemExit):
+            trials.main(
+                ["--all", "--max-calls", "201"],
+                root=self.root,
+                transport=fake,
+                output=io.StringIO(),
+                error=io.StringIO(),
+            )
+        self.assertEqual([], fake.calls)
+
+    def test_claude_transport_appends_system_level_toolless_note(self) -> None:
+        captured: dict[str, object] = {}
+
+        def run(argv: list[str], **kwargs: object) -> subprocess.CompletedProcess:
+            captured["argv"] = argv
+            return subprocess.CompletedProcess(
+                args=argv, returncode=0, stdout="transport reply\n", stderr=""
+            )
+
+        with mock.patch.object(trials.subprocess, "run", side_effect=run):
+            trials.claude_transport("claude-opus-5", "low", "prompt")
+
+        argv = captured["argv"]
+        assert isinstance(argv, list)
+        index = argv.index("--append-system-prompt")
+        self.assertEqual(trials.TRANSPORT_INSTRUCTIONS, argv[index + 1])
+
+    def test_fixture_hashes_fingerprint_transport_instructions(self) -> None:
+        fixture = self.load_one()
+        hashes = trials.fixture_hashes(self.root, fixture)
+        expected = hashlib.sha256(
+            trials.TRANSPORT_INSTRUCTIONS.encode("utf-8")
+        ).hexdigest()
+        self.assertEqual(expected, hashes["transport_instructions"])
+
+    def test_transport_instruction_change_stales_fresh_cells(self) -> None:
+        fixture = self.load_one()
+        fake = FakeTransport(
+            "answer sol", judge_json(self.criteria, response="answer sol"),
+            "answer opus", judge_json(self.criteria, response="answer opus"),
+        )
+        self.assertEqual(
+            0,
+            trials.main(
+                ["--fixture", "demo/basic"],
+                root=self.root,
+                transport=fake,
+                output=io.StringIO(),
+            ),
+        )
+        original_transport_instructions = trials.TRANSPORT_INSTRUCTIONS
+        try:
+            trials.TRANSPORT_INSTRUCTIONS += " Changed transport instruction."
+            problems = trials.check_fresh(
+                self.root, [fixture], trials.load_results(self.root)
+            )
+        finally:
+            trials.TRANSPORT_INSTRUCTIONS = original_transport_instructions
+        self.assertEqual(
+            ["stale demo/basic@sol-high", "stale demo/basic@opus-low"], problems
+        )
+
+    def test_claude_transport_rejects_native_tool_call_markers(self) -> None:
+        markers = (
+            "｜DSML｜",
+            "<tool_call>",
+            "<function_call>",
+            "[TOOL_CALLS]",
+            "<|tool_call|>",
+        )
+        for marker in markers:
+            with self.subTest(marker=marker):
+                completed = subprocess.CompletedProcess(
+                    args=[], returncode=0, stdout=f"before {marker} after", stderr=""
+                )
+                with mock.patch.object(
+                    trials.subprocess, "run", return_value=completed
+                ):
+                    with self.assertRaisesRegex(trials.TransportError, marker):
+                        trials.claude_transport("claude-opus-5", "low", "prompt")
+
+    def test_claude_transport_rejects_recorded_deepseek_markup(self) -> None:
+        leaked = (
+            "I'll take a quick look at the tree.\n\n"
+            "<｜｜DSML｜｜ calls>\n<｜｜DSML｜｜ invoke name=\"Bash\">\n"
+        )
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout=leaked, stderr=""
+        )
+        with mock.patch.object(
+            trials.subprocess, "run", return_value=completed
+        ):
+            with self.assertRaisesRegex(trials.TransportError, "DSML"):
+                trials.claude_transport("claude-opus-5", "low", "prompt")
+
+    def test_claude_transport_returns_reply_without_native_tool_call_marker(self) -> None:
+        completed = subprocess.CompletedProcess(
+            args=[], returncode=0, stdout="plain transport reply\n", stderr=""
+        )
+        with mock.patch.object(
+            trials.subprocess, "run", return_value=completed
+        ):
+            self.assertEqual(
+                "plain transport reply",
+                trials.claude_transport("claude-opus-5", "low", "prompt"),
+            )
 
 if __name__ == "__main__":
     unittest.main()

@@ -7,12 +7,8 @@
     "contracts/steelman.md"
   ],
   "exercise": "You are the orchestrator at the contract stage for an ordinary feature idea. A person wants the existing `gambit status` command to support `--format json` because continuous-integration wrappers currently scrape human prose and break when wording changes. The default human-readable output must remain unchanged. The repository is available for research, including its command implementation, tests, contribution checks, and release conventions.\n\nThere are at least two plausible approaches: serialize the command’s current view model, or introduce a separate machine-output representation. Investigate enough to choose one, state why, and preserve the condition under which the rejected alternative should be reconsidered. Produce the accepted epic contract and the executable tasks for the next effort. Show enough contract content to make the evidence links, anti-pattern reasons, exact completion commands, and ordered release mechanics observable. Stop decomposition after creating every task that is writable from the tree for the first effort; do not speculate a complete future task tree. Do not import headings from older planning templates. Do not implement anything; describe what you produce and what you do, in order.",
-  "checklist": [
-    "Intent states the desired end state and why it is wanted, and every falsifiable Premise states whether the Intent survives if it is false.",
-    "Every atomic Requirement names its satisfying evidence, and every Must Not Ship entry gives its reason.",
-    "The contract includes the README's Quality Bar verbatim, without strengthening, weakening, or customizing it.",
-    "Approach and Rejected Approaches records the chosen shape and reconsideration conditions; Done gives exact commands; Release gives ordered actions with target, intended effect, and postconditions.",
-    "The contract has exactly the eight README sections and has no Success Criteria, Anti-Patterns, Delivery Constraints, or Validation Strategy section.",
-    "The response creates only tasks for the first effort that are writable from the current tree and does not create a full future task tree."
-  ]
+  "hard_lines": [
+    "The response includes no Success Criteria or similar section."
+  ],
+  "end_state": "The response produces an eight-section contract in order with named evidence and reasons, and creates first-effort tasks only."
 }

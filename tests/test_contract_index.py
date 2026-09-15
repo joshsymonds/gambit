@@ -25,7 +25,6 @@ class ContractIndexTest(unittest.TestCase):
         )
         for role in (
             "worker",
-            "escalation",
             "scout",
             "steelman",
             "finder",

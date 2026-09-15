@@ -3,21 +3,27 @@
 
 Fixtures live at ``tests/fixtures/trials/<skill>/<name>.json`` and contain
 ``skill``, repo-relative ``text``, repo-relative ``neighbors``, ``exercise``,
-and a non-empty binary ``checklist``. Cells are fixture x subject and are
-stored by ``<skill>/<name>@<subject>`` in ``results.json`` with current SHA-256
-hashes for the fixture, tested text, and every neighbor. Cell status is ``ok``,
+and non-empty ``hard_lines`` plus a non-empty ``end_state``. Cells combine each
+fixture with each subject and are stored by ``<skill>/<name>@<subject>`` in
+``results.json``. Each cell retains every run as an attempted sample, with a
+summary derived from the newest sample. Cell status is ``ok``, ``inconclusive``,
 ``transport_failure``, or ``judge_failure``.
 
-CLI: ``--skill NAME`` or ``--all`` runs and stores cells; ``--check-fresh``
-performs no network calls; ``--probe`` checks both subjects and the judge; and
-``--dry-run --skill NAME`` prints subject and judge prompts without sending.
+CLI: ``--skill NAME``, ``--fixture SKILL/NAME``, or ``--all`` runs and stores
+cells; ``--calibrate`` judges saved calibration examples; ``--check-fresh``
+performs no network calls; ``--probe`` checks all subjects and the judge; and
+``--dry-run`` with ``--skill``, ``--fixture``, or ``--calibrate`` prints prompts
+without sending. Refresh commands accept ``--max-calls`` (default 200) for
+the subject and judge call budget.
 
 Transport runs ``claude -p --model <model> --effort <effort> --output-format
 text`` with the prompt on stdin, no tools, a permission mode that cannot
 bypass, no setting sources, no MCP servers, and a fresh temporary working
-directory outside the repository. It removes ``CLAUDECODE``,
-``CLAUDE_CODE_ENTRYPOINT``, ``ANTHROPIC_API_KEY``, and ``ANTHROPIC_AUTH_TOKEN``
-from the child environment so the subscription login is the only credential.
+directory outside the repository. It supplies the patchbay route through
+``ANTHROPIC_BASE_URL`` and an optional ``ANTHROPIC_CUSTOM_HEADERS`` caller-key
+header. It removes ``CLAUDECODE``, ``CLAUDE_CODE_ENTRYPOINT``,
+``ANTHROPIC_API_KEY``, and ``ANTHROPIC_AUTH_TOKEN`` from the child environment
+so the subscription login is the only credential.
 """
 
 from __future__ import annotations
@@ -39,12 +45,42 @@ from typing import Callable, NamedTuple, TextIO
 REPO_ROOT = Path(__file__).resolve().parents[2]
 FIXTURE_DIRECTORY = Path("tests/fixtures/trials")
 RESULTS_FILE = FIXTURE_DIRECTORY / "results.json"
-TIMEOUT_SECONDS = 300
+TIMEOUT_SECONDS = 900
+DEFAULT_MAX_CALLS = 200
 SUBJECTS = {
+    "sol-high": {"model": "chatgpt/sol", "effort": "high"},
     "opus-low": {"model": "claude-opus-5", "effort": "low"},
-    "fable-high": {"model": "claude-fable-5-1", "effort": "high"},
 }
-JUDGE = {"model": "claude-fable-5-1", "effort": "xhigh"}
+JUDGE = {"model": "chatgpt/sol", "effort": "xhigh"}
+SUBJECT_PROMPT_TEMPLATE = (
+    "The text between the BEGIN/END SKILL markers is your complete workflow "
+    "instructions; follow it exactly. Then answer the exercise between the "
+    "BEGIN/END EXERCISE markers. Treat the exercise's facts as true. "
+    "No tools are available for this exercise, and your entire answer must be prose."
+)
+TRANSPORT_INSTRUCTIONS = (
+    "No tools are available in this session, and your entire answer must be text only."
+)
+TOOL_CALL_MARKERS = (
+    "｜DSML｜",
+    "<tool_call>",
+    "<function_call>",
+    "[TOOL_CALLS]",
+    "<|tool_call|>",
+)
+JUDGE_PROMPT_TEMPLATE = (
+    "Judge the subject response using the complete workflow instructions, "
+    "exercise, and references below. Treat the exercise's facts as true. "
+    "Return JSON and nothing else, exactly "
+    "in this shape: "
+    '{"items": [{"item": "...", "verdict": "pass|fail|unknown", "evidence": "..."}]}. '
+    "Include every criterion once, in the original order. Decide each item "
+    "independently. Copy each item text with or without its number. For a "
+    "pass or fail, evidence must be a verbatim response span. For a pass "
+    "on a criterion that forbids something, evidence is the span showing the "
+    "compliant action the response takes instead. Unknown may use an empty "
+    "evidence string."
+)
 SKILL_NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 Transport = Callable[[str, str, str], str]
 
@@ -56,7 +92,8 @@ class Fixture(NamedTuple):
     text: str
     neighbors: tuple[str, ...]
     exercise: str
-    checklist: tuple[str, ...]
+    hard_lines: tuple[str, ...]
+    end_state: str
 
 
 class FixtureError(ValueError):
@@ -73,6 +110,25 @@ class TransportError(RuntimeError):
     def __init__(self, message: str, status: int | None = None) -> None:
         super().__init__(message)
         self.status = status
+
+
+class CallBudgetExceeded(RuntimeError):
+    """The configured subject and judge call budget has been exhausted."""
+
+
+class CallBudget:
+    def __init__(self, transport: Transport, max_calls: int) -> None:
+        self.transport = transport
+        self.max_calls = max_calls
+        self.calls = 0
+
+    def __call__(self, model: str, effort: str, prompt: str) -> str:
+        if self.calls >= self.max_calls:
+            raise CallBudgetExceeded(
+                f"maximum call budget of {self.max_calls} reached"
+            )
+        self.calls += 1
+        return self.transport(model, effort, prompt)
 
 
 def _repo_path(root: Path, value: object, field: str) -> tuple[str, Path]:
@@ -98,7 +154,7 @@ def load_fixture(root: Path, path: Path) -> Fixture:
         raise FixtureError(f"invalid fixture {path}: {error}") from error
     if not isinstance(payload, dict):
         raise FixtureError(f"fixture {path} must be a JSON object")
-    required = {"skill", "text", "neighbors", "exercise", "checklist"}
+    required = {"skill", "text", "neighbors", "exercise", "hard_lines", "end_state"}
     if set(payload) != required:
         missing = sorted(required - set(payload))
         extra = sorted(set(payload) - required)
@@ -129,15 +185,18 @@ def load_fixture(root: Path, path: Path) -> Fixture:
     exercise = payload["exercise"]
     if not isinstance(exercise, str) or not exercise.strip():
         raise FixtureError(f"fixture {path} exercise must be a non-empty string")
-    checklist_value = payload["checklist"]
+    hard_lines_value = payload["hard_lines"]
     if (
-        not isinstance(checklist_value, list)
-        or not checklist_value
-        or any(not isinstance(item, str) or not item.strip() for item in checklist_value)
+        not isinstance(hard_lines_value, list)
+        or not hard_lines_value
+        or any(not isinstance(item, str) or not item.strip() for item in hard_lines_value)
     ):
         raise FixtureError(
-            f"fixture {path} checklist must be a non-empty list of strings"
+            f"fixture {path} hard_lines must be a non-empty list of strings"
         )
+    end_state = payload["end_state"]
+    if not isinstance(end_state, str) or not end_state.strip():
+        raise FixtureError(f"fixture {path} end_state must be a non-empty string")
 
     return Fixture(
         skill=skill,
@@ -146,7 +205,8 @@ def load_fixture(root: Path, path: Path) -> Fixture:
         text=text,
         neighbors=tuple(neighbors),
         exercise=exercise,
-        checklist=tuple(checklist_value),
+        hard_lines=tuple(hard_lines_value),
+        end_state=end_state,
     )
 
 
@@ -161,8 +221,32 @@ def load_fixtures(root: Path, skill: str | None = None) -> list[Fixture]:
     return [load_fixture(root, path) for path in paths]
 
 
+def load_named_fixture(root: Path, identifier: str) -> list[Fixture]:
+    parts = PurePosixPath(identifier).parts
+    if (
+        len(parts) != 2
+        or not SKILL_NAME.fullmatch(parts[0])
+        or not parts[1]
+        or parts[1] in {".", ".."}
+    ):
+        raise FixtureError(f"unknown fixture: {identifier}")
+    path = root / FIXTURE_DIRECTORY / parts[0] / f"{parts[1]}.json"
+    if not path.is_file():
+        raise FixtureError(f"unknown fixture: {identifier}")
+    return [load_fixture(root, path)]
+
+
 def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
+
+
+def _sha256_text(value: str) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()
+
+
+def _sha256_json(value: object) -> str:
+    encoded = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    return _sha256_text(encoded)
 
 
 def fixture_hashes(root: Path, fixture: Fixture) -> dict[str, object]:
@@ -172,6 +256,13 @@ def fixture_hashes(root: Path, fixture: Fixture) -> dict[str, object]:
         "neighbors": {
             neighbor: _sha256(root / neighbor) for neighbor in fixture.neighbors
         },
+        "judge_instructions": _sha256_text(
+            f"{JUDGE_PROMPT_TEMPLATE}\n{SCORING_DEFINITION}"
+        ),
+        "subject_instructions": _sha256_text(SUBJECT_PROMPT_TEMPLATE),
+        "transport_instructions": _sha256_text(TRANSPORT_INSTRUCTIONS),
+        "subjects": _sha256_json(SUBJECTS),
+        "judge": _sha256_json(JUDGE),
     }
 
 
@@ -186,9 +277,7 @@ def _marked(marker: str, content: str) -> str:
 
 def subject_prompt(root: Path, fixture: Fixture) -> str:
     sections = [
-        "The text between the BEGIN/END SKILL markers is your complete workflow "
-        "instructions; follow it exactly. Then answer the exercise between the "
-        "BEGIN/END EXERCISE markers. Treat the exercise's facts as true.",
+        SUBJECT_PROMPT_TEMPLATE,
         _marked("SKILL", (root / fixture.text).read_text(encoding="utf-8")),
     ]
     for neighbor in fixture.neighbors:
@@ -202,19 +291,44 @@ def subject_prompt(root: Path, fixture: Fixture) -> str:
     return "\n\n".join(sections)
 
 
-def judge_prompt(checklist: tuple[str, ...], response: str) -> str:
+SCORING_DEFINITION = """SCORING DEFINITION
+Judge each criterion independently.
+A hard line fails only when the response does or commits to the prohibited thing, or omits a necessary decision.
+A branch the response describes for a later outcome that has not occurred is neither a step taken, an outcome claimed, nor a gap declared; judge the actions the response takes on the stated facts.
+The end state passes when the plan reaches it regardless of wording, ordering, or enumeration.
+Use unknown when the response gives no basis for a decision.
+"""
+
+
+def _criteria(fixture: Fixture) -> tuple[str, ...]:
+    return fixture.hard_lines + (f"End state: {fixture.end_state}",)
+
+
+def judge_prompt(root: Path, fixture: Fixture, response: str) -> str:
+    criteria = _criteria(fixture)
     numbered = "\n".join(
-        f"{index}. {item}" for index, item in enumerate(checklist, start=1)
+        f"{index}. {item}" for index, item in enumerate(criteria, start=1)
     )
-    return (
-        "Judge the subject response against every binary checklist item. Return "
-        "JSON and nothing else, exactly in this shape: "
-        '{"items": [{"item": "...", "pass": true, "evidence": "..."}]}. '
-        "Include every checklist item once, in the original order. Copy each item "
-        "text with or without its number. Evidence must cite the response.\n\n"
-        f"CHECKLIST\n{numbered}\n\n"
-        f"{_marked('SUBJECT RESPONSE', response)}"
+    sections = [
+        f"{JUDGE_PROMPT_TEMPLATE}\n\n",
+        _marked("SKILL", (root / fixture.text).read_text(encoding="utf-8")),
+    ]
+    for neighbor in fixture.neighbors:
+        sections.append(
+            _marked(
+                f"REFERENCE {neighbor}",
+                (root / neighbor).read_text(encoding="utf-8"),
+            )
+        )
+    sections.extend(
+        [
+            _marked("EXERCISE", fixture.exercise),
+            SCORING_DEFINITION,
+            f"CRITERIA\n{numbered}",
+            _marked("SUBJECT RESPONSE", response),
+        ]
     )
+    return "\n\n".join(sections)
 
 
 def _extract_json_object(response: str) -> str:
@@ -253,7 +367,9 @@ def _extract_json_object(response: str) -> str:
     raise JudgeParseError("judge output contains no complete JSON object")
 
 
-def parse_judge_output(response: str, checklist: tuple[str, ...]) -> list[dict[str, object]]:
+def parse_judge_output(
+    response: str, criteria: tuple[str, ...], subject_response: str
+) -> list[dict[str, object]]:
     try:
         payload = json.loads(_extract_json_object(response))
     except json.JSONDecodeError as error:
@@ -261,23 +377,37 @@ def parse_judge_output(response: str, checklist: tuple[str, ...]) -> list[dict[s
     if not isinstance(payload, dict) or "items" not in payload:
         raise JudgeParseError("judge output must contain items")
     items = payload["items"]
-    if not isinstance(items, list) or len(items) != len(checklist):
-        raise JudgeParseError("judge output must contain every checklist item")
+    if not isinstance(items, list) or len(items) != len(criteria):
+        raise JudgeParseError("judge output must contain every criterion")
     parsed: list[dict[str, object]] = []
-    for expected, item in zip(checklist, items):
-        if not isinstance(item, dict) or set(item) != {"item", "pass", "evidence"}:
-            raise JudgeParseError("each judge item must contain item, pass, and evidence")
+    normalized_subject = " ".join(
+        re.sub(r"[*_`]", "", subject_response).split()
+    )
+    for expected, item in zip(criteria, items):
+        if not isinstance(item, dict) or set(item) != {"item", "verdict", "evidence"}:
+            raise JudgeParseError(
+                "each judge item must contain item, verdict, and evidence"
+            )
         item_text = item["item"]
         if not isinstance(item_text, str):
             raise JudgeParseError("judge item text must be a string")
         normalized = re.sub(r"^\s*\d+[.)]\s*", "", item_text)
         normalized = " ".join(normalized.split())
         if normalized != expected:
-            raise JudgeParseError("judge checklist items must match in order")
-        if type(item["pass"]) is not bool:
-            raise JudgeParseError("judge pass values must be booleans")
-        if not isinstance(item["evidence"], str):
+            raise JudgeParseError("judge criteria must match in order")
+        verdict = item["verdict"]
+        if not isinstance(verdict, str) or verdict not in {"pass", "fail", "unknown"}:
+            raise JudgeParseError("judge verdicts must be pass, fail, or unknown")
+        evidence = item["evidence"]
+        if not isinstance(evidence, str):
             raise JudgeParseError("judge evidence must be a string")
+        normalized_evidence = " ".join(
+            re.sub(r"[*_`]", "", evidence).split()
+        )
+        if verdict in {"pass", "fail"} and not normalized_evidence:
+            raise JudgeParseError(f"{verdict} verdicts require evidence")
+        if verdict in {"pass", "fail"} and normalized_evidence not in normalized_subject:
+            raise JudgeParseError(f"{verdict} evidence must be a response span")
         parsed.append(item)
     return parsed
 
@@ -291,6 +421,19 @@ def claude_transport(model: str, effort: str, prompt: str) -> str:
         "ANTHROPIC_AUTH_TOKEN",
     ):
         environment.pop(name, None)
+    environment["ANTHROPIC_BASE_URL"] = os.environ.get(
+        "GAMBIT_TRIALS_BASE_URL", "http://127.0.0.1:4100"
+    )
+    environment.pop("ANTHROPIC_CUSTOM_HEADERS", None)
+    key_path = os.environ.get(
+        "PATCHBAY_CALLER_KEY_FILE", "/run/agenix/patchbay-caller-key"
+    )
+    try:
+        key = Path(key_path).read_text(encoding="utf-8").strip()
+    except (OSError, UnicodeError):
+        pass
+    else:
+        environment["ANTHROPIC_CUSTOM_HEADERS"] = f"X-Patchbay-Key: {key}"
     try:
         with tempfile.TemporaryDirectory(prefix="gambit-trials-") as workdir:
             completed = subprocess.run(
@@ -310,6 +453,8 @@ def claude_transport(model: str, effort: str, prompt: str) -> str:
                     "--strict-mcp-config",
                     "--tools",
                     "",
+                    "--append-system-prompt",
+                    TRANSPORT_INSTRUCTIONS,
                 ],
                 input=prompt,
                 capture_output=True,
@@ -330,31 +475,47 @@ def claude_transport(model: str, effort: str, prompt: str) -> str:
     text = completed.stdout.strip()
     if not text:
         raise TransportError("claude returned no text")
+    for marker in TOOL_CALL_MARKERS:
+        if marker in text:
+            raise TransportError(f"claude returned native tool-call marker {marker}")
     return text
 
 
 def _transport_call(
-    transport: Transport, model: str, effort: str, prompt: str
+    transport: Transport,
+    model: str,
+    effort: str,
+    prompt: str,
+    last_error: list[str] | None = None,
 ) -> str | None:
     for _ in range(2):
         try:
             return transport(model, effort, prompt)
-        except (TransportError, OSError):
+        except (TransportError, OSError) as error:
+            if last_error is not None:
+                last_error[:] = [str(error)]
             continue
     return None
 
 
 def _judge_call(
-    transport: Transport, checklist: tuple[str, ...], response: str
+    transport: Transport,
+    root: Path,
+    fixture: Fixture,
+    response: str,
+    last_error: list[str] | None = None,
 ) -> tuple[list[dict[str, object]] | None, str]:
-    prompt = judge_prompt(checklist, response)
+    criteria = _criteria(fixture)
+    prompt = judge_prompt(root, fixture, response)
     last_raw = ""
     for _ in range(2):
         try:
             output = transport(JUDGE["model"], JUDGE["effort"], prompt)
             last_raw = output
-            return parse_judge_output(output, checklist), last_raw
-        except (TransportError, OSError, JudgeParseError):
+            return parse_judge_output(output, criteria, response), last_raw
+        except (TransportError, OSError, JudgeParseError) as error:
+            if last_error is not None:
+                last_error[:] = [str(error)]
             continue
     return None, last_raw
 
@@ -373,11 +534,13 @@ def run_cell(
     root: Path, fixture: Fixture, subject_name: str, transport: Transport
 ) -> dict[str, object]:
     subject = SUBJECTS[subject_name]
+    transport_error: list[str] = []
     response = _transport_call(
         transport,
         subject["model"],
         subject["effort"],
         subject_prompt(root, fixture),
+        transport_error,
     )
     base = _record_base(root, fixture, subject_name)
     if response is None:
@@ -387,8 +550,12 @@ def run_cell(
             **base,
             "response": "",
             "items": [],
+            "error": transport_error[-1],
         }
-    items, judge_raw = _judge_call(transport, fixture.checklist, response)
+    judge_error: list[str] = []
+    items, judge_raw = _judge_call(
+        transport, root, fixture, response, judge_error
+    )
     if items is None:
         return {
             "status": "judge_failure",
@@ -397,10 +564,12 @@ def run_cell(
             "response": response,
             "items": [],
             "judge_raw": judge_raw,
+            "error": judge_error[-1],
         }
+    has_unknown = any(item["verdict"] == "unknown" for item in items)
     return {
-        "status": "ok",
-        "pass": all(item["pass"] is True for item in items),
+        "status": "inconclusive" if has_unknown else "ok",
+        "pass": all(item["verdict"] == "pass" for item in items),
         **base,
         "response": response,
         "items": items,
@@ -420,6 +589,48 @@ def load_results(root: Path) -> dict[str, object]:
     return payload
 
 
+def _retained_cell(
+    existing: object, record: dict[str, object]
+) -> dict[str, object]:
+    samples: list[dict[str, object]] = []
+    if isinstance(existing, dict) and isinstance(existing.get("samples"), list):
+        samples = [
+            dict(sample) for sample in existing["samples"] if isinstance(sample, dict)
+        ]
+    elif isinstance(existing, dict) and "samples" not in existing:
+        legacy_fields = {"status", "pass", "response", "items", "hashes"}
+        if not legacy_fields.issubset(existing):
+            raise FixtureError(
+                "existing cell must be a samples-layout or legacy result record"
+            )
+        legacy_sample = dict(existing)
+        legacy_sample["attempt"] = 1
+        samples.append(legacy_sample)
+    elif existing is not None:
+        raise FixtureError(
+            "existing cell must be a samples-layout or legacy result record"
+        )
+    attempts = [
+        sample["attempt"]
+        for sample in samples
+        if isinstance(sample.get("attempt"), int)
+        and not isinstance(sample.get("attempt"), bool)
+    ]
+    sample = dict(record)
+    sample["attempt"] = max(attempts, default=0) + 1
+    samples.append(sample)
+    summary = {
+        "hashes": sample.get("hashes"),
+        "subject": sample.get("subject"),
+        "judge": sample.get("judge"),
+        "pass": sample.get("pass"),
+        "status": sample.get("status"),
+        "latest": sample.get("at"),
+        "samples": samples,
+    }
+    return summary
+
+
 def store_result(root: Path, identifier: str, record: dict[str, object]) -> None:
     path = root / RESULTS_FILE
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -428,7 +639,14 @@ def store_result(root: Path, identifier: str, record: dict[str, object]) -> None
         fcntl.flock(directory_descriptor, fcntl.LOCK_EX)
         try:
             results = load_results(root)
-            results[identifier] = record
+            if identifier in results and results[identifier] is None:
+                raise FixtureError(
+                    f"{identifier}: existing cell must be a samples-layout or legacy result record"
+                )
+            try:
+                results[identifier] = _retained_cell(results.get(identifier), record)
+            except FixtureError as error:
+                raise FixtureError(f"{identifier}: {error}") from error
             temporary_descriptor, temporary_name = tempfile.mkstemp(
                 prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
             )
@@ -451,6 +669,24 @@ def store_result(root: Path, identifier: str, record: dict[str, object]) -> None
         os.close(directory_descriptor)
 
 
+def _newest_sample(record: object) -> dict[str, object] | None:
+    if not isinstance(record, dict) or not isinstance(record.get("samples"), list):
+        return None
+    samples = [sample for sample in record["samples"] if isinstance(sample, dict)]
+    if not samples:
+        return None
+    return max(
+        samples,
+        key=lambda sample: (
+            sample.get("attempt")
+            if isinstance(sample.get("attempt"), int)
+            and not isinstance(sample.get("attempt"), bool)
+            else -1,
+            str(sample.get("at", "")),
+        ),
+    )
+
+
 def check_fresh(
     root: Path, fixtures: list[Fixture], results: dict[str, object]
 ) -> list[str]:
@@ -459,12 +695,12 @@ def check_fresh(
         hashes = fixture_hashes(root, fixture)
         for subject_name in SUBJECTS:
             identifier = cell_id(fixture, subject_name)
-            record = results.get(identifier)
-            if not isinstance(record, dict):
+            sample = _newest_sample(results.get(identifier))
+            if sample is None:
                 problems.append(f"missing {identifier}")
-            elif record.get("hashes") != hashes:
+            elif sample.get("hashes") != hashes:
                 problems.append(f"stale {identifier}")
-            elif record.get("status") != "ok" or record.get("pass") is not True:
+            elif sample.get("status") != "ok" or sample.get("pass") is not True:
                 problems.append(f"failing {identifier}")
     return problems
 
@@ -474,16 +710,34 @@ def _run(
     fixtures: list[Fixture],
     transport: Transport,
     output: TextIO,
+    max_calls: int = DEFAULT_MAX_CALLS,
 ) -> int:
     failed = False
-    for fixture in fixtures:
-        for subject_name in SUBJECTS:
-            identifier = cell_id(fixture, subject_name)
-            record = run_cell(root, fixture, subject_name, transport)
-            store_result(root, identifier, record)
-            passed = record["status"] == "ok" and record["pass"] is True
-            print(f"{identifier}: {'PASS' if passed else 'FAIL'}", file=output)
-            failed = failed or not passed
+    budget = CallBudget(transport, max_calls)
+    cells = [
+        (fixture, subject_name)
+        for fixture in fixtures
+        for subject_name in SUBJECTS
+    ]
+    for index, (fixture, subject_name) in enumerate(cells):
+        identifier = cell_id(fixture, subject_name)
+        try:
+            record = run_cell(root, fixture, subject_name, budget)
+        except CallBudgetExceeded:
+            unrefreshed = [
+                cell_id(pending_fixture, pending_subject)
+                for pending_fixture, pending_subject in cells[index:]
+            ]
+            print(
+                f"max-calls {max_calls} reached; unrefreshed cells: "
+                + ", ".join(unrefreshed),
+                file=output,
+            )
+            return 1
+        store_result(root, identifier, record)
+        passed = record["status"] == "ok" and record["pass"] is True
+        print(f"{identifier}: {'PASS' if passed else 'FAIL'}", file=output)
+        failed = failed or not passed
     return 1 if failed else 0
 
 
@@ -494,7 +748,7 @@ def _dry_run(root: Path, fixtures: list[Fixture], output: TextIO) -> int:
             print(f"=== {identifier} SUBJECT ===", file=output)
             print(subject_prompt(root, fixture), file=output)
             print(f"=== {identifier} JUDGE ===", file=output)
-            print(judge_prompt(fixture.checklist, "<SUBJECT RESPONSE>"), file=output)
+            print(judge_prompt(root, fixture, "<SUBJECT RESPONSE>"), file=output)
     return 0
 
 
@@ -524,10 +778,13 @@ def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     action = parser.add_mutually_exclusive_group(required=True)
     action.add_argument("--skill")
+    action.add_argument("--fixture")
     action.add_argument("--all", action="store_true")
     action.add_argument("--check-fresh", action="store_true")
     action.add_argument("--probe", action="store_true")
+    action.add_argument("--calibrate", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--max-calls", type=int, default=DEFAULT_MAX_CALLS)
     return parser
 
 
@@ -541,13 +798,41 @@ def main(
 ) -> int:
     parser = _parser()
     arguments = parser.parse_args(argv)
-    if arguments.dry_run and arguments.skill is None:
+    if (
+        arguments.dry_run
+        and arguments.skill is None
+        and arguments.fixture is None
+        and not arguments.calibrate
+    ):
         parser.error("--dry-run requires --skill")
+    if arguments.max_calls < 0 or arguments.max_calls > DEFAULT_MAX_CALLS:
+        parser.error(f"--max-calls must be between 0 and {DEFAULT_MAX_CALLS}")
     active_transport = transport or claude_transport
     try:
         if arguments.probe:
             return _probe(active_transport, output)
-        fixtures = load_fixtures(root, arguments.skill if arguments.skill else None)
+        if arguments.calibrate:
+            import importlib.util
+
+            calibrate_path = Path(__file__).resolve().with_name("calibrate.py")
+            calibrate_spec = importlib.util.spec_from_file_location(
+                "gambit_trial_calibrate", calibrate_path
+            )
+            if calibrate_spec is None or calibrate_spec.loader is None:
+                raise RuntimeError(f"cannot load calibration runner: {calibrate_path}")
+            calibrate = importlib.util.module_from_spec(calibrate_spec)
+            calibrate_spec.loader.exec_module(calibrate)
+            return calibrate.main(
+                ["--dry-run"] if arguments.dry_run else [],
+                root=root,
+                transport=active_transport,
+                output=output,
+                error=error,
+            )
+        if arguments.fixture is not None:
+            fixtures = load_named_fixture(root, arguments.fixture)
+        else:
+            fixtures = load_fixtures(root, arguments.skill if arguments.skill else None)
         if arguments.check_fresh:
             problems = check_fresh(root, fixtures, load_results(root))
             for problem in problems:
@@ -555,7 +840,9 @@ def main(
             return 1 if problems else 0
         if arguments.dry_run:
             return _dry_run(root, fixtures, output)
-        return _run(root, fixtures, active_transport, output)
+        return _run(
+            root, fixtures, active_transport, output, arguments.max_calls
+        )
     except FixtureError as fixture_error:
         print(str(fixture_error), file=error)
         return 2

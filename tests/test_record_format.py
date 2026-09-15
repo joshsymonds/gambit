@@ -24,7 +24,7 @@ RECORD_FILES = (
     "decisions.md",
     "state.json",
     "gates/<task-slug>-<attempt>.md",
-    "efforts/<n>.md",
+    "efforts/<n>/",
 )
 STATE_KEYS = (
     "repository_id",
@@ -34,9 +34,11 @@ STATE_KEYS = (
     "accepted_base",
     "candidate_revision",
     "effort",
+    "done",
     "tasks",
     "review",
     "release",
+    "efforts",
     "next_actions",
     "never_drop",
 )
@@ -51,10 +53,23 @@ TASK_KEYS = (
     "attempts",
     "status",
     "gate_paths",
+    "dispatch",
+    "conduct",
 )
+DISPATCH_KEYS = ("child", "workspace", "revision")
+CONDUCT_KEYS = (
+    "brief_defects",
+    "violations_prevented",
+    "violations_escaped",
+    "routing_history",
+    "outcome",
+    "cost",
+)
+ROUTING_HISTORY_KEYS = ("signature", "step", "attempt")
 LINEAGE_KEYS = ("parent", "descendants", "split_used")
 REVIEW_KEYS = ("started", "candidate", "ledger")
 RELEASE_ACTION_KEYS = ("action", "target", "effect", "completed_at", "evidence")
+EFFORT_KEYS = ("n", "branch", "workspace", "child", "revision", "status", "report")
 DECOMPOSITION_KEYS = ("requirement", "owned_files", "lineage", "split_used")
 DECISION_FIELDS = ("id", "timestamp", "decision", "reason", "evidence", "supersedes")
 CONTRACT_SECTIONS = (
@@ -104,7 +119,14 @@ class RecordReferenceTest(unittest.TestCase):
                 self.assertIn(name, self.text)
 
     def test_state_keys_are_named(self) -> None:
-        for key in STATE_KEYS + TASK_KEYS + REVIEW_KEYS + RELEASE_ACTION_KEYS:
+        for key in (
+            STATE_KEYS
+            + TASK_KEYS
+            + CONDUCT_KEYS
+            + ROUTING_HISTORY_KEYS
+            + REVIEW_KEYS
+            + RELEASE_ACTION_KEYS
+        ):
             with self.subTest(key=key):
                 self.assertIn(key, self.text)
 
@@ -126,6 +148,21 @@ class RecordReferenceTest(unittest.TestCase):
             with self.subTest(term=term):
                 self.assertIn(term, self.text)
         self.assertIsNone(re.search(r"\bwave\b", self.text, re.IGNORECASE))
+
+    def test_effort_directories_and_director_decisions_are_named(self) -> None:
+        for path in (
+            "efforts/<n>/",
+            "efforts/<n>/brief.md",
+            "efforts/<n>/state.json",
+            "efforts/<n>/gates/<task-slug>-<attempt>.md",
+            "efforts/<n>/decisions.md",
+            "efforts/<n>/report.md",
+        ):
+            with self.subTest(path=path):
+                self.assertIn(path, self.text)
+        self.assertIn("Director-level", self.text)
+        self.assertIn("Reopen history files by path", self.text)
+        self.assertIn("never read a history file whole", self.text)
 
 
 class BrainstormingWritesTheRecordTest(unittest.TestCase):
@@ -177,9 +214,21 @@ class FixtureRecordTest(unittest.TestCase):
             with self.subTest(task=task.get("slug")):
                 self.assertEqual(tuple(task), TASK_KEYS)
                 self.assertEqual(tuple(task["lineage"]), LINEAGE_KEYS)
+                self.assertEqual(tuple(task["dispatch"]), DISPATCH_KEYS)
+                self.assertEqual(tuple(task["conduct"]), CONDUCT_KEYS)
+                for route in task["conduct"]["routing_history"]:
+                    self.assertEqual(tuple(route), ROUTING_HISTORY_KEYS)
                 self.assertIsInstance(task["owned_files"], list)
                 self.assertTrue(task["owned_files"])
                 self.assertIsInstance(task["gate_paths"], list)
+
+    def test_every_effort_has_exactly_the_effort_keys(self) -> None:
+        efforts = self.state.get("efforts", [])
+        self.assertTrue(efforts, "fixture records no effort")
+        for effort in efforts:
+            with self.subTest(effort=effort.get("n")):
+                self.assertEqual(tuple(effort), EFFORT_KEYS)
+        self.assertEqual(efforts[0]["branch"], "effort/config-loader-2")
 
     def test_review_and_release_carry_exactly_their_keys(self) -> None:
         self.assertEqual(tuple(self.state.get("review", {})), REVIEW_KEYS)

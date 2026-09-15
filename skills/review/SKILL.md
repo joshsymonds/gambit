@@ -44,26 +44,24 @@ For checks needing writable scratch state, dispatch `test-runner` in an isolated
 
 Freeze all confirmed findings into one ledger. Every entry retains its identifier, claim, contract citation, `file:line`, verify-by step, and confirming evidence. Record dropped claims separately. Ledger membership and claims are fixed; correction and closure may attach evidence and status but cannot add findings.
 
-## One correction round
+## Correction
 
 Turn each confirmed ledger finding into a correction task citing its identifier and contract defect. Send these tasks through the build step in `skills/executing-plans/SKILL.md`, Loop step 3. Start each worker on the entry rung in an isolated workspace based on the frozen candidate, under `contracts/worker.md` and a complete brief with exact owned files and the named check. Only workers edit; only the orchestrator gates and commits their accepted changes.
 
-For each return, write the binary gate record with its contract-item evidence, owned-files and mechanical-floor results, Premises touched, lineage, rung, candidate revision, verdict, and next action. Route each NOT DONE by the build step's rules: a second attempt on the same rung only for a named exact fix, a split for a task too large, escalation otherwise, one final attempt by the orchestrator after the top rung, then a gap. Keep exhausted work on its gap branch, outside the candidate, and continue independent tasks. These attempts belong to this one correction round.
-
-Record the round as consumed. If the ledger is empty, create no correction tasks. Never start a second correction round, including after failed closure. A proposed quick repair does not reset the round or the ledger.
+For each return, write the binary gate record with its contract-item evidence, owned-files and mechanical-floor results, Premises touched, lineage, rung, candidate revision, verdict, and next action. Route each NOT DONE through the build step's failure signature routing in `skills/executing-plans/SKILL.md`, Loop step 3. Keep exhausted work on its gap branch, outside the candidate, and continue independent tasks. After each correction effort, run Closure against the resulting candidate. Continue correction until each finding's lineage is DONE or exhausted as a review gap. If the ledger is empty, create no correction tasks.
 
 ## Closure
 
-After the sole correction round finishes, dispatch the verifier with the same contract path, the frozen ledger, and the corrected candidate revision. Re-check only the ledger's findings against that candidate. Do not dispatch finders again or broaden discovery to newly noticed issues.
+After each correction effort, dispatch the verifier with the same contract path, the frozen ledger, and the resulting candidate revision. Re-check only the ledger's findings against that candidate. Do not dispatch finders again or broaden discovery to newly noticed issues.
 
-For every identifier, attach fresh closure evidence. Close it only when the original defect is proven resolved. A finding that remains confirmed, or whose resolution cannot be established, stays open as a **review gap**. Record its original contract citation and location, the closure result, correction task and gate evidence, and any gap branch.
+For every identifier, attach fresh closure evidence. Close it only when the original defect is proven resolved. A finding that remains confirmed, or whose resolution cannot be established, stays open for another correction effort while its lineage can continue. If its lineage is exhausted while it remains open, record it as a **review gap**. Preserve its original contract citation and location, the closure result, correction task and gate evidence, and any gap branch.
 
-Then run the full Done gate fresh on that exact candidate, even if entry checks were green or the ledger is empty. Record the commands and output. Failed or unavailable Done evidence prevents a clean result and is recorded as a review gap. Neither closure nor Done failure starts more correction work. Record additional observations without expanding the ledger.
+Then run the full Done gate fresh on that exact candidate, even if entry checks were green or the ledger is empty. Record the commands and output. Failed or unavailable Done evidence prevents a clean result and is recorded as a review gap. Continue Correction only for findings whose lineage can continue; otherwise retain the review gap. Record additional observations without expanding the ledger.
 
 ## Return
 
 Return the frozen and corrected revisions, ledger with closure evidence, fresh Done results, decisions and observations, and any review gaps to the calling orchestrator.
 
-Return **clean** only when the required review completed, every ledger finding is closed, and the fresh full Done gate is green. Otherwise return the review gaps and the reason nothing can be released. A finding still open after closure makes the run's terminal outcome **ended with gaps**; the orchestrator records the report and ends the run without further correction.
+Return **clean** only when the required review completed, every ledger finding is closed, and the fresh full Done gate is green. Otherwise return the review gaps and the reason nothing can be released. A finding still open after its lineage is exhausted is a **review gap**; the orchestrator records the report and ends the run with the terminal outcome **ended with gaps**.
 
 Review never releases, performs Release actions, opens a pull request, or hands off to any integration or finishing step. Returning evidence to its caller is its final action. No result becomes a question to a person.

@@ -15,7 +15,7 @@ Give a complete, ordered answer before optional elaboration. A request to descri
 
 Begin with the person's idea, bug report, or the complete goal file. Preserve the requested scope. Establish the desired end state and why it matters before choosing mechanisms.
 
-In conversation, the person resolves contract-stage choices and accepts the contract. With a goal file, the orchestrator stands in for the person throughout this stage: answer every question from the goal and research, choose a scope-preserving answer wherever evidence leaves a choice, and record each assumption with its reason in the Decision Log. Never ask a person, wait for input, or leave an unresolved question for someone to answer. Accept the completed contract on the goal file's behalf and continue automatically.
+In conversation, the person resolves contract-stage choices and accepts the contract. With a goal file, the orchestrator stands in for the person throughout this stage: answer every question from the goal and research, choose a scope-preserving answer wherever evidence leaves a choice, and record each assumption with its reason in the Decision Log. Treat every Premise, every fact resolved after a `NOT FOUND`, and every substitute for missing research as an assumption with its own Decision Log entry and reason, and cite that entry by id beside the Premise. Never ask a person, wait for input, or leave an unresolved question for someone to answer. Accept the completed contract on the goal file's behalf and continue automatically.
 
 Collect decisions and their reasons for the epic's attached Decision Log. Keep it outside the contract's eight-section body. When a decision concerns a steelman finding, name the finding ID in the log entry.
 
@@ -27,7 +27,7 @@ Dispatch a read-only `scout` under `contracts/scout.md` with the repository root
 
 For a bug, make this evidence chain explicit and complete:
 
-1. Give the scout the report and observed failure as clues to verify. Have it identify the exact reproduction command or smallest sequence and trace the root cause with causal `file:line` evidence, including what would falsify that cause. A suspected file or stack frame is not a verified diagnosis.
+1. Give the scout the report and observed failure as clues to verify. Have it return the exact reproduction command as a command line and trace the root cause with causal `file:line` evidence, including what would falsify that cause. A suspected file or stack frame is not a verified diagnosis.
 2. If reproduction writes build artifacts, fixtures, a cache, or other state, dispatch `test-runner` with the exact command in an isolated workspace. It writes scratch state only and returns the command and output. The scout does not execute writable reproduction.
 3. Reconcile that output with the scout's causal evidence. Turn the verified root cause into a falsifiable Premise with its explicit Intent-survival clause.
 4. Make the verified reproduction the first task's failing test. Name that same reproduction and its expected corrected result as a Requirement's satisfying evidence, with the exact check. Carry the observed failure into the brief so the worker begins from RED.
@@ -54,7 +54,7 @@ Run exactly one discovery pass on the agreed design, before accepting the contra
 
 Supply a self-contained Design Packet using the receiver contract's exact fields, in order: Intent; Premises; Requirements; Must Not Ship; Approach and Rejected Approaches; Done; Release; Unresolved decisions. Include each field's required evidence, survival clauses, reasons, commands, actions, and postconditions. Write `None` for genuinely absent unresolved decisions. The fixed Quality Bar goes in the epic contract; it is not an additional packet field. Discovery receives this packet without prior steelman output.
 
-Read its status and every finding. Freeze a transcript-local Design Ledger retaining every finding ID with exactly one disposition: `ADOPTED`, `REJECTED` with a reason, `OPEN`, or `DEFERRED` with a boundary. It is design context, never task state or an independent source of Requirements. Reflect the findings to the person present in conversation. In a goal-file run, decide every named choice yourself from the goal and research. Record every decision, reason, and affected finding ID in the Decision Log, including a choice already made but not yet written down. Incorporate adopted conclusions into the packet without expanding scope.
+Read its status and every finding. Freeze a transcript-local Design Ledger retaining every finding ID with exactly one disposition: `ADOPTED`, `REJECTED` with a reason, `OPEN`, or `DEFERRED` with a boundary. It is design context, never task state or an independent source of Requirements. Reflect the findings to the person present in conversation. In a goal-file run, decide every named choice yourself from the goal and research. Record every decision, reason, and affected finding ID in the Decision Log, including a choice already made but not yet written down. No finding stays `OPEN` in a goal-file run: decide each Design Ledger finding and record its reason in the Decision Log. Before acceptance, show the steelman's returned status and every finding; never assert it as done without that result. Incorporate adopted conclusions into the packet without expanding scope.
 
 Use at most one closure pass to check revisions. Its only inputs are the revised self-contained packet, the frozen ledger verbatim, and a concise delta. Closure checks adopted and open findings and concerns introduced by the delta. Rejected and deferred findings stay closed.
 
@@ -65,7 +65,7 @@ After a non-`READY` closure, finish by revising the packet without another steel
 Create the epic record through the record-task-state operation from the finalized design and decisions. Read `TEMPLATES.md` and `skills/executing-plans/references/record.md`. Emit the full contract, with exactly these sections in this order:
 
 1. **Intent:** one paragraph stating the desired end state and reason, never a solution.
-2. **Premises:** falsifiable facts. Every one states whether the Intent survives if false and the consequence of that clause.
+2. **Premises:** falsifiable facts. Every one states whether the Intent survives if false and the consequence of that clause; in a goal-file run, every one also cites its Decision Log entry by id.
 3. **Requirements:** immutable, atomic, testable outcomes. Every one names the specific evidence and check that satisfies it.
 4. **Must Not Ship:** forbidden outcomes and non-goals, each with its reason.
 5. **Quality Bar:** copy the complete paragraph from README verbatim. Output the paragraph itself, not a summary, reference, or promise to copy it. Never customize it.
@@ -75,7 +75,7 @@ Create the epic record through the record-task-state operation from the finalize
 
 In live execution, bind evidence links, file paths, commands, and release targets from inspected evidence before task creation. Do not present guesses as verified facts: an assumption can settle an open design choice, but cannot establish that an invented file exists. In a worked scenario, use the findings established by its research. In both cases, show finished records, not section names or promises to populate them.
 
-In conversation, present the complete contract for acceptance and settle requested changes here. With a goal file, accept it yourself on that file's behalf. Record acceptance and freeze Intent, Premises with their survival clauses, and Requirements. Later changes of assessment belong in the Decision Log, leaving those clauses intact. The contract alone authorizes the work that follows.
+In conversation, present the complete contract for acceptance and settle requested changes here. With a goal file, first check that every assumption the research produced, including each fact resolved after a `NOT FOUND` and each question you answered yourself, has its Decision Log entry, and log any missing one; then accept the contract yourself on that file's behalf. Record acceptance and freeze Intent, Premises with their survival clauses, and Requirements. Later changes of assessment belong in the Decision Log, leaving those clauses intact. The contract alone authorizes the work that follows.
 
 At acceptance, and in addition to the record-task-state operation, write the epic's record directory `~/.gambit/<repository-id>/<epic-slug>/` as `skills/executing-plans/references/record.md` specifies: the frozen eight-section contract to `epic.md`, every Decision Log entry to `decisions.md` in its append-only line format, and the head to `state.json`. Derive repository-id from the tree by that reference's rule, never from a workspace name. The record carries this epic for a reader holding no transcript.
 
@@ -83,7 +83,7 @@ At acceptance, and in addition to the record-task-state operation, write the epi
 
 Create every task writable from the tree now for the first effort, with complete briefs. Cover each unmet Requirement that has executable work now; leave work needing unfinished interfaces for later decomposition. Never produce a full future task tree or split one behavior just to create parallel work.
 
-Use the task template's fields in order: Goal, Files owned, Hidden shared surfaces, Neighbors, Implementation, Requirements covered, Test command. Supply the workspace, base revision, applicable contract clauses, verified `file:line` anchors, test-first instructions, and exact task check from Done. Each brief must be executable without conversation history or questions.
+Use the task template's fields in order: Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, Acceptance, Constraints, Requirements covered, Test command. Supply the workspace, base revision, applicable contract clauses, verified `path:symbol:line` anchors, and the acceptance condition (an existing test or reproduction with its expected result, or the behavioral criteria for the failing test the worker writes first). Keep Goal plus Acceptance plus Constraints under 250 words total. This brief carries no implementation steps, code, or diffs. Each brief must be executable without conversation history or questions.
 
 Give every concurrent task a disjoint exact owned-file list, including tests, additions, deletions, and implicit writes. Hidden shared surfaces and neighbors grant no ownership. Put work with overlapping files into one coherent task or leave it for a later effort. For bugs, the first brief carries the verified reproduction as its failing test and maps it to the Requirement's evidence.
 

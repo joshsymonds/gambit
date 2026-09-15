@@ -7,12 +7,11 @@
     "contracts/models.md"
   ],
   "exercise": "You are executing the epic “Canonical event storage” during effort E2. Requirement R1 says Task T1, “Normalize event timestamps,” produces UTC timestamps, evidenced by test_normalize_timestamp. Requirement R2 says Task T2, “Persist normalized events,” stores accepted events, evidenced by test_persist_event. T1 and T2 each passed their own itemized gates at the entry rung and were committed to the effort candidate. Their owned files are disjoint.\n\nThe combined candidate is preserved on candidate/effort-2 over last accepted base revision b71ace. The full Done gate now returns exactly: “NOT DONE. make test exits 1: test_normalized_round_trip fails because T1 emits a Z-suffixed UTC timestamp that T2’s schema rejects. The task checks for R1 and R2 remain green separately.”\n\nThis cross-task failure first appeared after combination. No integration lineage exists yet for effort E2. Task T3, “Document event retention,” is independent and still executable. Review has not started, release is not eligible, and the Decision Log contains no record for this failure.\n\nWhat do you do next, exactly? Do not implement anything; describe your next actions in order.",
-  "checklist": [
-    "Creates an itemized NOT DONE gate record for the cross-task failure and assigns it to the contributing lineage or to one integration lineage for effort E2.",
-    "Leaves the rejected combined revision preserved on candidate/effort-2.",
-    "Keeps b71ace as the last accepted base until a combined candidate passes the full Done gate.",
-    "Applies the ladder to the owned failure: a new integration lineage starts at the entry rung with no attempts spent, while an existing contributing lineage continues from the rung it used and the attempts it has spent, never backward.",
-    "Continues independent Task T3 while the integration failure is repaired.",
-    "Does not ask a person for approval or direction."
-  ]
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung.",
+    "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.",
+    "H4 State first: the response writes the record (state.json entry or transition) before the dispatch it describes."
+  ],
+  "end_state": "The failure is owned by a lineage, the rejected candidate is preserved, the base is unchanged, and T3 continues."
 }

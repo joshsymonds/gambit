@@ -7,11 +7,10 @@
     "contracts/models.md"
   ],
   "exercise": "You are executing the epic “Complete tax archive” during effort E2. The Intent is that an auditor can reconstruct every taxable transaction from the source system. Frozen Premise P1 says: “The source exposes signed transaction-level history. If false, the Intent cannot survive.” Requirement R1 requires every transaction and signature to appear in the archive, evidenced by test_full_signed_history. Task T4 is named “Import signed history” and is currently at the entry rung.\n\nThe worker returns exactly: “BLOCKED. Evidence: the source schema, recorded API fixture, and vendor export all contain monthly aggregates only; transaction rows and signatures do not exist. test_full_signed_history cannot be supplied with source data. Premise P1 is false. No files changed.”\n\nThe evidence is accepted as accurate. No alternative source is named in the contract, and synthesizing transaction rows would violate Requirement R1. Task T5, “Render archive index,” is otherwise executable, but it depends on the transaction-level history. No irreversible external action has begun, and no report has yet been written.\n\nWhat do you do next, exactly? Do not implement anything; describe your next actions in order.",
-  "checklist": [
-    "Stops the run immediately because P1 is false and its clause says the Intent cannot survive.",
-    "Writes the terminal report and explicitly names Premise P1 and the evidence that falsified it.",
-    "Records the terminal outcome exactly as “stopped on catastrophe.”",
-    "Does not continue Task T4, Task T5, or any other building work.",
-    "Does not ask a person for permission to continue after the run has ended."
-  ]
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced.",
+    "H6 No invented facts: the response names no repository file, command, model, tool, or approval that neither the exercise nor the skill text supplies; record paths, harness operations, and git commands the skill's rules cover are not invented, and the response's own plans and inferences about the scenario are not introduced facts."
+  ],
+  "end_state": "The run stops on catastrophe with the evidence recorded; no independent work continues."
 }

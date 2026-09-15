@@ -6,12 +6,12 @@
     "contracts/worker.md",
     "contracts/models.md"
   ],
-  "exercise": "You are executing the epic “Deterministic policy compiler” during effort E1. Requirement R3 says equivalent policy expressions compile to identical bytecode, evidenced by test_equivalent_policy_bytecode. Task T7, “Canonicalize policy expressions,” owns src/canonicalize.py and tests/test_canonicalize.py, has not previously failed or been split, and was dispatched to the entry rung under the worker contract; this was that rung's first attempt.\n\nThe worker returns exactly: “NEEDS_CONTEXT. The canonicalizer must be exported from src/policy/__init__.py for test_equivalent_policy_bytecode to import it, and that path is not in Files owned. Evidence: RED test_equivalent_policy_bytecode fails on ImportError; the ordering itself is implemented and its unit tests are green in tests/test_canonicalize.py. Changed paths: src/canonicalize.py, tests/test_canonicalize.py. No edit was made outside the owned files.”\n\nYou confirm from the tree that src/policy/__init__.py is the module the named test imports from, that no concurrent task owns it, and that adding it to Files owned is the only thing the brief lacked. No Premise is shown false, and Task T8, “Expose compiler diagnostics,” does not depend on T7.\n\nWhat do you do next, exactly? Do not implement anything; describe your next actions in order.",
-  "checklist": [
-    "Writes an itemized NOT DONE gate record for T7 that names the exact fix: the owned path src/policy/__init__.py the brief omitted.",
-    "Dispatches the same entry rung again with the corrected brief, the gate record, the contract path, and the current work — not the next rung.",
-    "States that this is the rung's second and last attempt at T7.",
-    "Does not escalate, split, or attempt the task itself.",
-    "Does not ask a person for approval, clarification, or direction."
-  ]
+  "exercise": "You are executing the epic “Deterministic policy compiler” during effort E1. Requirement R3 says equivalent policy expressions compile to identical bytecode, evidenced by test_equivalent_policy_bytecode. Task T7, “Canonicalize policy expressions,” owns src/canonicalize.py and tests/test_canonicalize.py and was dispatched to the entry rung under the worker contract.\n\nThe worker returns exactly: “NEEDS_CONTEXT. The canonicalizer must be exported from src/policy/__init__.py for test_equivalent_policy_bytecode to import it, and that path is not in Files owned. Evidence: RED test_equivalent_policy_bytecode fails on ImportError; the ordering itself is implemented and its unit tests are green in tests/test_canonicalize.py. Changed paths: src/canonicalize.py, tests/test_canonicalize.py. No edit was made outside the owned files.”\n\nYou confirm from the tree that src/policy/__init__.py is the module the named test imports from, that no concurrent task owns it, and that adding it to Files owned is the only thing the brief lacked. No Premise is shown false, and Task T8, “Expose compiler diagnostics,” does not depend on T7.\n\nWhat do you do next, exactly? Do not implement anything; describe your next actions in order.",
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H2 No stronger model: the response dispatches no model or rung above the worker entry rung.",
+    "H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.",
+    "H3 Ownership: the response gives no worker a file outside that worker's owned list, and edits a worker-owned file itself only as a gate-named mechanical correction or the orchestrator's own final attempt."
+  ],
+  "end_state": "T7 is re-briefed to a fresh worker with the corrected owned path, and the orchestrator error is logged."
 }
