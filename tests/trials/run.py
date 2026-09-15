@@ -590,6 +590,19 @@ def _retained_cell(
         samples = [
             dict(sample) for sample in existing["samples"] if isinstance(sample, dict)
         ]
+    elif isinstance(existing, dict) and "samples" not in existing:
+        legacy_fields = {"status", "pass", "response", "items", "hashes"}
+        if not legacy_fields.issubset(existing):
+            raise FixtureError(
+                "existing cell must be a samples-layout or legacy result record"
+            )
+        legacy_sample = dict(existing)
+        legacy_sample["attempt"] = 1
+        samples.append(legacy_sample)
+    elif existing is not None:
+        raise FixtureError(
+            "existing cell must be a samples-layout or legacy result record"
+        )
     attempts = [
         sample["attempt"]
         for sample in samples
@@ -619,7 +632,14 @@ def store_result(root: Path, identifier: str, record: dict[str, object]) -> None
         fcntl.flock(directory_descriptor, fcntl.LOCK_EX)
         try:
             results = load_results(root)
-            results[identifier] = _retained_cell(results.get(identifier), record)
+            if identifier in results and results[identifier] is None:
+                raise FixtureError(
+                    f"{identifier}: existing cell must be a samples-layout or legacy result record"
+                )
+            try:
+                results[identifier] = _retained_cell(results.get(identifier), record)
+            except FixtureError as error:
+                raise FixtureError(f"{identifier}: {error}") from error
             temporary_descriptor, temporary_name = tempfile.mkstemp(
                 prefix=f".{path.name}.", suffix=".tmp", dir=path.parent
             )

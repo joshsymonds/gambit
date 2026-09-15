@@ -1208,6 +1208,79 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertIn("demo/missing", error.getvalue())
 
 
+    def test_store_result_retains_old_format_record_before_new_sample(self) -> None:
+        identifier = "demo/basic@opus-low"
+        old_at = "2026-01-01T00:00:00+00:00"
+        old_record = {
+            "status": "ok",
+            "pass": True,
+            "response": "OLD RESPONSE",
+            "items": [{"item": "old criterion", "verdict": "pass", "evidence": ""}],
+            "hashes": {"old": "hash"},
+            "subject": {"model": "old-model", "effort": "low"},
+            "judge": {"model": "old-judge", "effort": "xhigh"},
+            "at": old_at,
+        }
+        new_record = {
+            "status": "inconclusive",
+            "pass": False,
+            "response": "NEW RESPONSE",
+            "items": [{"item": "new criterion", "verdict": "unknown", "evidence": ""}],
+            "hashes": {"new": "hash"},
+            "subject": {"model": "new-model", "effort": "high"},
+            "judge": {"model": "new-judge", "effort": "xhigh"},
+            "at": "2026-01-02T00:00:00+00:00",
+        }
+        results_path = self.root / "tests/fixtures/trials/results.json"
+        results_path.parent.mkdir(parents=True, exist_ok=True)
+        results_path.write_text(json.dumps({identifier: old_record}), encoding="utf-8")
+
+        trials.store_result(self.root, identifier, new_record)
+
+        cell = trials.load_results(self.root)[identifier]
+        self.assertEqual([1, 2], [sample["attempt"] for sample in cell["samples"]])
+        self.assertEqual("OLD RESPONSE", cell["samples"][0]["response"])
+        self.assertEqual(old_at, cell["samples"][0]["at"])
+        self.assertEqual(new_record, {key: value for key, value in cell["samples"][1].items() if key != "attempt"})
+        self.assertEqual("NEW RESPONSE", cell["samples"][1]["response"])
+        self.assertEqual("inconclusive", cell["status"])
+        self.assertFalse(cell["pass"])
+        self.assertEqual(new_record["hashes"], cell["hashes"])
+        self.assertEqual(new_record["subject"], cell["subject"])
+        self.assertEqual(new_record["judge"], cell["judge"])
+        self.assertEqual(new_record["at"], cell["latest"])
+
+    def test_store_result_legacy_record_without_at_omits_at_from_sample(self) -> None:
+        identifier = "demo/basic@opus-low"
+        old_record = {
+            "status": "ok",
+            "pass": True,
+            "response": "OLD RESPONSE",
+            "items": [],
+            "hashes": {"old": "hash"},
+        }
+        new_record = {"status": "ok", "pass": True, "at": "2026-01-02T00:00:00+00:00"}
+        results_path = self.root / "tests/fixtures/trials/results.json"
+        results_path.parent.mkdir(parents=True, exist_ok=True)
+        results_path.write_text(json.dumps({identifier: old_record}), encoding="utf-8")
+
+        trials.store_result(self.root, identifier, new_record)
+
+        first_sample = trials.load_results(self.root)[identifier]["samples"][0]
+        self.assertNotIn("at", first_sample)
+        self.assertEqual("OLD RESPONSE", first_sample["response"])
+        self.assertEqual(1, first_sample["attempt"])
+
+    def test_store_result_rejects_malformed_existing_cell_with_identifier(self) -> None:
+        identifier = "demo/basic@opus-low"
+        results_path = self.root / "tests/fixtures/trials/results.json"
+        results_path.parent.mkdir(parents=True, exist_ok=True)
+        results_path.write_text(json.dumps({identifier: {"pass": True}}), encoding="utf-8")
+
+        with self.assertRaisesRegex(trials.FixtureError, identifier):
+            trials.store_result(self.root, identifier, {"status": "ok", "pass": True})
+
+
     def test_refresh_retains_samples_and_latest_summary(self) -> None:
         self.write_fixture()
         first = FakeTransport(
