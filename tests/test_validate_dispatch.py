@@ -40,6 +40,24 @@ class ValidateDispatchTest(unittest.TestCase):
     def make_workspace(self) -> tempfile.TemporaryDirectory[str]:
         return tempfile.TemporaryDirectory(prefix="validate-dispatch-")
 
+    def git(self, workspace: Path, *arguments: str) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(
+            ["git", *arguments],
+            cwd=workspace,
+            text=True,
+            capture_output=True,
+            check=True,
+        )
+
+    def make_git_base(self, workspace: Path) -> str:
+        self.git(workspace, "init", "-q")
+        self.git(workspace, "config", "user.name", "Validator Test")
+        self.git(workspace, "config", "user.email", "validator@example.invalid")
+        (workspace / "source.py").write_text("base line\n", encoding="utf-8")
+        self.git(workspace, "add", "source.py")
+        self.git(workspace, "commit", "-qm", "base")
+        return self.git(workspace, "rev-parse", "HEAD").stdout.strip()
+
     def valid_record(self, **updates: object) -> dict[str, object]:
         task: dict[str, object] = {
             "id": 7,
@@ -176,6 +194,98 @@ Test command: {test_command}
             self.assertIn("Anchors", result.stdout)
             self.assertIn("line", result.stdout.lower())
 
+    def test_record_anchor_uncommitted_line_is_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            base_revision = self.make_git_base(workspace)
+            (workspace / "source.py").write_text(
+                "base line\nuncommitted line\n", encoding="utf-8"
+            )
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = base_revision
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:2"),
+                workspace,
+                record=record,
+                task="validate-record",
+                entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("source.py:2", result.stdout)
+            self.assertNotIn("Traceback", result.stderr)
+
+    def test_brief_only_anchor_uses_workspace_head(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            self.make_git_base(workspace)
+            (workspace / "source.py").write_text(
+                "base line\nuncommitted line\n", encoding="utf-8"
+            )
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:2"),
+                workspace,
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("source.py:2", result.stdout)
+            self.assertIn("base", result.stdout.lower())
+
+    def test_record_anchor_after_commit_passes(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            self.make_git_base(workspace)
+            (workspace / "source.py").write_text(
+                "base line\ncommitted line\n", encoding="utf-8"
+            )
+            self.git(workspace, "add", "source.py")
+            self.git(workspace, "commit", "-qm", "add anchor line")
+            revision = self.git(workspace, "rev-parse", "HEAD").stdout.strip()
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = revision
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:2"),
+                workspace,
+                record=record,
+                task="validate-record",
+                entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_record_anchor_path_absent_at_base_is_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            base_revision = self.make_git_base(workspace)
+            (workspace / "new.py").write_text("new line\n", encoding="utf-8")
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = base_revision
+            result = self.run_validator(
+                self.valid_brief(anchors="- new.py:1"),
+                workspace,
+                record=record,
+                task="validate-record",
+                entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("new.py:1", result.stdout)
+            self.assertIn("base", result.stdout.lower())
+
+    def test_record_unresolvable_revision_is_a_named_defect(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            self.make_git_base(workspace)
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = "does-not-exist"
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1"),
+                workspace,
+                record=record,
+                task="validate-record",
+                entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("revision", result.stdout.lower())
+            self.assertIn("does-not-exist", result.stdout)
+            self.assertNotIn("Traceback", result.stderr)
+
     def test_test_command_mismatch_is_rejected_when_done_commands_are_given(self) -> None:
         with self.make_workspace() as temporary:
             workspace = Path(temporary)
@@ -272,9 +382,12 @@ Test command: {test_command}
     def test_valid_record_passes(self) -> None:
         with self.make_workspace() as temporary:
             workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = revision
             result = self.run_validator(
-                self.valid_brief(), workspace,
-                record=self.valid_record(), task="validate-record", entry_rung="luna-low",
+                self.valid_brief(anchors="- source.py:1"), workspace,
+                record=record, task="validate-record", entry_rung="luna-low",
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout, "")

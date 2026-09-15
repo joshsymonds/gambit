@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import re
+import subprocess
 import sys
 from pathlib import Path, PurePosixPath
 from typing import Sequence
@@ -81,7 +82,54 @@ def under_workspace(workspace: Path, relative: str) -> Path | None:
     return candidate
 
 
-def validate(text: str, workspace: Path, done_commands: Sequence[str]) -> list[str]:
+def recorded_revision(record_path: Path, task_selector: str) -> str | None:
+    try:
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return None
+    tasks = record.get("tasks", []) if isinstance(record, dict) else []
+    if not isinstance(tasks, list):
+        return None
+    task = next(
+        (
+            candidate
+            for candidate in tasks
+            if isinstance(candidate, dict)
+            and (
+                str(candidate.get("id")) == task_selector
+                or candidate.get("slug") == task_selector
+            )
+        ),
+        None,
+    )
+    if not isinstance(task, dict):
+        return None
+    dispatch = task.get("dispatch")
+    if not isinstance(dispatch, dict) or dispatch.get("revision") is None:
+        return None
+    return str(dispatch["revision"])
+
+
+def workspace_head_revision(workspace: Path) -> str | None:
+    try:
+        head_check = subprocess.run(
+            ["git", "rev-parse", "--verify", "HEAD"],
+            cwd=workspace.resolve(),
+            text=True,
+            encoding="utf-8",
+            capture_output=True,
+        )
+    except (OSError, UnicodeError):
+        return None
+    return "HEAD" if head_check.returncode == 0 else None
+
+
+def validate(
+    text: str,
+    workspace: Path,
+    done_commands: Sequence[str],
+    base_revision: str | None = None,
+) -> list[str]:
     actual_headings, sections = section_map(text)
     defects: list[str] = []
 
@@ -113,24 +161,73 @@ def validate(text: str, workspace: Path, done_commands: Sequence[str]) -> list[s
             )
 
         root = workspace.resolve()
+        revision_resolved = True
+        if base_revision is not None:
+            try:
+                revision_check = subprocess.run(
+                    ["git", "rev-parse", "--verify", f"{base_revision}^{{commit}}"],
+                    cwd=root,
+                    text=True,
+                    encoding="utf-8",
+                    capture_output=True,
+                )
+            except (OSError, UnicodeError) as error:
+                revision_resolved = False
+                defects.append(
+                    f"task.dispatch.revision: {base_revision!r} could not be resolved ({error})"
+                )
+            else:
+                if revision_check.returncode != 0:
+                    revision_resolved = False
+                    defects.append(
+                        f"task.dispatch.revision: {base_revision!r} could not be resolved"
+                    )
+
         for match in ANCHOR_RE.finditer(sections["Anchors"]):
             token = match.group("token")
             path_and_line, line_text = token.rsplit(":", 1)
             line_number = int(line_text)
             path = path_and_line.rsplit(":", 1)[0] if ":" in path_and_line else path_and_line
             candidate = under_workspace(root, path)
-            if candidate is None or not candidate.is_file():
+            if candidate is None:
                 defects.append(f"Anchors: {token} names no file under the workspace")
                 continue
-            try:
-                lines = candidate.read_text(encoding="utf-8").splitlines()
-            except (OSError, UnicodeError) as error:
-                defects.append(f"Anchors: {token} could not be read ({error})")
-                continue
+            if base_revision is not None:
+                if not revision_resolved:
+                    continue
+                try:
+                    base_file = subprocess.run(
+                        ["git", "show", f"{base_revision}:{path}"],
+                        cwd=root,
+                        text=True,
+                        encoding="utf-8",
+                        capture_output=True,
+                    )
+                except (OSError, UnicodeError) as error:
+                    defects.append(f"Anchors: {token} could not be read ({error})")
+                    continue
+                if base_file.returncode != 0:
+                    defects.append(
+                        f"Anchors: {token} names no file at base revision {base_revision!r}"
+                    )
+                    continue
+                lines = base_file.stdout.splitlines()
+            else:
+                if not candidate.is_file():
+                    defects.append(f"Anchors: {token} names no file under the workspace")
+                    continue
+                try:
+                    lines = candidate.read_text(encoding="utf-8").splitlines()
+                except (OSError, UnicodeError) as error:
+                    defects.append(f"Anchors: {token} could not be read ({error})")
+                    continue
             if line_number < 1 or line_number > len(lines):
-                defects.append(
-                    f"Anchors: {token} line is outside {candidate.relative_to(root)}"
+                location = (
+                    f"base revision {base_revision!r}"
+                    if base_revision is not None
+                    else str(candidate.relative_to(root))
                 )
+                defects.append(f"Anchors: {token} line is outside {location}")
 
         test_match = TEST_COMMAND_RE.search(sections["Test command"])
         test_command = test_match.group(1).strip() if test_match else ""
@@ -239,7 +336,17 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (OSError, UnicodeError) as error:
         print(f"brief: could not read {args.brief}: {error}")
         return 1
-    defects = validate(text, args.workspace, args.done_commands)
+    base_revision = (
+        recorded_revision(args.record, args.task)
+        if args.record is not None
+        else workspace_head_revision(args.workspace)
+    )
+    defects = validate(
+        text,
+        args.workspace,
+        args.done_commands,
+        base_revision=base_revision,
+    )
     if args.record is not None:
         defects.extend(validate_record(args.record, args.task, args.entry_rung))
     for defect in defects:
