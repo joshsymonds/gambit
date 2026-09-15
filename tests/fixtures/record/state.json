@@ -6,6 +6,9 @@
   "accepted_base": "9d31ba7",
   "candidate_revision": null,
   "effort": 2,
+  "done": [
+    "python3 -m unittest discover -s tests"
+  ],
   "tasks": [
     {
       "id": 4,
@@ -36,8 +39,12 @@
         "revision": null
       },
       "conduct": {
-        "brief_defects": ["loader task exceeded one focused behavior"],
-        "violations_prevented": ["unbounded task scope"],
+        "brief_defects": [
+          "loader task exceeded one focused behavior"
+        ],
+        "violations_prevented": [
+          "unbounded task scope"
+        ],
         "violations_escaped": [],
         "routing_history": [
           {

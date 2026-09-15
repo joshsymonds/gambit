@@ -44,6 +44,7 @@ Write `supersedes: none` when the entry reverses nothing.
   "accepted_base": "<revision the current effort started from>",
   "candidate_revision": "<integrated candidate, or null>",
   "effort": 2,
+  "done": ["<each task fast check from the contract's Done section, verbatim>"],
   "tasks": [
     {
       "id": 11,
