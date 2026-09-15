@@ -776,8 +776,8 @@ def main(
         and arguments.fixture is None
     ):
         parser.error("--dry-run requires --skill")
-    if arguments.max_calls < 0:
-        parser.error("--max-calls must be non-negative")
+    if arguments.max_calls < 0 or arguments.max_calls > DEFAULT_MAX_CALLS:
+        parser.error(f"--max-calls must be between 0 and {DEFAULT_MAX_CALLS}")
     active_transport = transport or claude_transport
     try:
         if arguments.probe:

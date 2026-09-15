@@ -72,6 +72,14 @@ class WorkerContractTest(unittest.TestCase):
         section = self.text.split("## Test first\n", 1)[1].split("\n## ", 1)[0].casefold()
         self.assertIn("not a substitute", section)
 
+    def test_binds_the_nine_brief_fields_and_no_implementation_field(self) -> None:
+        self.assertIn(
+            "Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, "
+            "Acceptance, Constraints, Requirements covered",
+            self.text,
+        )
+        self.assertNotIn("Implementation", self.text)
+
     def test_mentions_separable_second_behavior(self) -> None:
         self.assertIn("separable", self.text.casefold())
 

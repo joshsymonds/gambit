@@ -59,10 +59,20 @@ class RootSkillsTest(unittest.TestCase):
             and line.split("|")[1].strip() != "Role"
         ]
         self.assertEqual(
-            ["worker", "scout", "steelman", "finder", "verifier", "test-runner"],
+            [
+                "orchestrator",
+                "worker",
+                "scout",
+                "steelman",
+                "finder",
+                "verifier",
+                "test-runner",
+            ],
             roles,
         )
         self.assertIn("failure signature", readme)
+        self.assertNotIn("top rung", readme)
+        self.assertNotIn("one correction round", readme)
 
     def test_readme_describes_brief_fields_and_review_closure(self) -> None:
         readme = (ROOT / "README.md").read_text(encoding="utf-8")

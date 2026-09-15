@@ -1344,6 +1344,19 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertIn("demo/other@sol-high", output.getvalue())
         self.assertIn("demo/other@opus-low", output.getvalue())
 
+    def test_max_calls_above_the_ceiling_is_rejected(self) -> None:
+        self.write_fixture()
+        fake = FakeTransport()
+        with self.assertRaises(SystemExit):
+            trials.main(
+                ["--all", "--max-calls", "201"],
+                root=self.root,
+                transport=fake,
+                output=io.StringIO(),
+                error=io.StringIO(),
+            )
+        self.assertEqual([], fake.calls)
+
     def test_claude_transport_appends_system_level_toolless_note(self) -> None:
         captured: dict[str, object] = {}
 

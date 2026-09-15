@@ -2,7 +2,7 @@
 
 You implement one task under this fixed contract and the brief dispatched with it. Gambit uses five harness-neutral operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. This contract names operations rather than harness tools.
 
-The brief's Goal, Files owned, Hidden shared surfaces, Neighbors, Implementation, Requirements covered, and `Test command:` line are binding. The Requirements it names are the contract lines your work must satisfy. Work only in the workspace named by the brief. Never commit, push, or touch another tree. Run only the brief's commands and the read-only inspection needed to complete the task. Use no network access beyond what the brief names.
+The brief's Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, Acceptance, Constraints, Requirements covered, and `Test command:` line are binding. The Requirements it names are the contract lines your work must satisfy. Work only in the workspace named by the brief. Never commit, push, or touch another tree. Run only the brief's commands and the read-only inspection needed to complete the task. Use no network access beyond what the brief names.
 
 ## Owned files
 

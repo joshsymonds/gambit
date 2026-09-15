@@ -19,7 +19,7 @@ A person is present at exactly three moments: writing the contract, reading the 
 5. **No human mid-run except catastrophe.** The loop never asks for approval, confirmation, or direction between the contract and the report.
 6. **Record, don't ask.** A decision, a compromise, a changed assessment, or a gap goes to the Decision Log and the report. It never becomes a question.
 7. **One process.** A contract written in conversation and a contract written from a goal file enter the same loop. The loop never learns which.
-8. **Read-only roles never write.** Scout, steelman, finder, and verifier inspect and report. Only a worker changes the tree — the orchestrator only for the one final attempt after the top rung fails — and only the orchestrator commits.
+8. **Read-only roles never write.** Scout, steelman, finder, and verifier inspect and report. Only a worker changes the tree — the orchestrator only for its own final attempt when routing reaches it — and only the orchestrator commits.
 9. **One text, five operations, any harness.** Skills name operations, never a harness's tool. A harness that lacks an operation is fixed outside gambit.
 
 ## The Contract
@@ -72,6 +72,7 @@ Everything else needs no approval: repairs, approach changes within the Approach
 
 | Role | Does | Writes? |
 |---|---|---|
+| orchestrator | decomposes an effort into tasks, dispatches workers, gates every return, commits accepted work | commits only; edits only for its own final attempt |
 | worker | implements one task under the worker contract (`contracts/worker.md`) and a brief, test first | yes, owned files only |
 | scout | finds facts in the tree, `file:line` or NOT FOUND | no |
 | steelman | one discovery pass and at most one closure pass on an agreed design | no |
@@ -95,7 +96,7 @@ Owners:
 
 - `brainstorming` — step 1. Its research step is also the bug path: the scout identifies the reproduction command and the root cause with `file:line`; the test-runner executes the reproduction when it needs writable state; the root cause becomes a Premise, and the reproduction becomes the first task's failing test and a Requirement's evidence.
 - `executing-plans` — steps 2 through 7: decompose, build, gate, integrate, call review, release, report.
-- `review` — step 5, bounded to one correction round.
+- `review` — step 5, correcting under the build step's routing until closure passes.
 
 Every other skill in the tree is kept only if it owns a stage or is a mechanic one of the owners calls; otherwise it is deleted, and the Decision Log records which.
 

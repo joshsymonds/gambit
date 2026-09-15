@@ -193,8 +193,13 @@ def validate_record(record_path: Path, task_selector: str, entry_rung: str) -> l
     seen: set[tuple[object, object]] = set()
     repeated: tuple[object, object] | None = None
     if isinstance(history, list):
-        for route in history:
+        for index, route in enumerate(history):
             if not isinstance(route, dict) or "signature" not in route or "step" not in route:
+                continue
+            if not isinstance(route["signature"], str) or not isinstance(route["step"], str):
+                defects.append(
+                    f"task.conduct.routing_history[{index}]: signature and step must be strings"
+                )
                 continue
             key = (route["signature"], route["step"])
             if key in seen:

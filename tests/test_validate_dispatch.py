@@ -257,6 +257,18 @@ Test command: {test_command}
             self.assertEqual(result.returncode, 1)
             self.assertIn("routing_history", result.stdout)
 
+    def test_record_non_string_routing_signature_is_a_named_defect(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            conduct = {"routing_history": [{"signature": [], "step": "dispatch"}]}
+            result = self.run_validator(
+                self.valid_brief(), workspace,
+                record=self.valid_record(conduct=conduct), task="validate-record", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("routing_history[0]", result.stdout)
+            self.assertNotIn("Traceback", result.stderr)
+
     def test_valid_record_passes(self) -> None:
         with self.make_workspace() as temporary:
             workspace = Path(temporary)
