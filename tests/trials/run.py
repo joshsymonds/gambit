@@ -10,10 +10,11 @@ summary derived from the newest sample. Cell status is ``ok``, ``inconclusive``,
 ``transport_failure``, or ``judge_failure``.
 
 CLI: ``--skill NAME``, ``--fixture SKILL/NAME``, or ``--all`` runs and stores
-cells; ``--check-fresh`` performs no network calls; ``--probe`` checks all
-subjects and the judge; and ``--dry-run`` with ``--skill`` or ``--fixture``
-prints subject and judge prompts without sending. Refresh commands accept
-``--max-calls`` (default 200) for the subject and judge call budget.
+cells; ``--calibrate`` judges saved calibration examples; ``--check-fresh``
+performs no network calls; ``--probe`` checks all subjects and the judge; and
+``--dry-run`` with ``--skill``, ``--fixture``, or ``--calibrate`` prints prompts
+without sending. Refresh commands accept ``--max-calls`` (default 200) for
+the subject and judge call budget.
 
 Transport runs ``claude -p --model <model> --effort <effort> --output-format
 text`` with the prompt on stdin, no tools, a permission mode that cannot
@@ -775,6 +776,7 @@ def _parser() -> argparse.ArgumentParser:
     action.add_argument("--all", action="store_true")
     action.add_argument("--check-fresh", action="store_true")
     action.add_argument("--probe", action="store_true")
+    action.add_argument("--calibrate", action="store_true")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--max-calls", type=int, default=DEFAULT_MAX_CALLS)
     return parser
@@ -794,6 +796,7 @@ def main(
         arguments.dry_run
         and arguments.skill is None
         and arguments.fixture is None
+        and not arguments.calibrate
     ):
         parser.error("--dry-run requires --skill")
     if arguments.max_calls < 0 or arguments.max_calls > DEFAULT_MAX_CALLS:
@@ -802,6 +805,24 @@ def main(
     try:
         if arguments.probe:
             return _probe(active_transport, output)
+        if arguments.calibrate:
+            import importlib.util
+
+            calibrate_path = Path(__file__).resolve().with_name("calibrate.py")
+            calibrate_spec = importlib.util.spec_from_file_location(
+                "gambit_trial_calibrate", calibrate_path
+            )
+            if calibrate_spec is None or calibrate_spec.loader is None:
+                raise RuntimeError(f"cannot load calibration runner: {calibrate_path}")
+            calibrate = importlib.util.module_from_spec(calibrate_spec)
+            calibrate_spec.loader.exec_module(calibrate)
+            return calibrate.main(
+                ["--dry-run"] if arguments.dry_run else [],
+                root=root,
+                transport=active_transport,
+                output=output,
+                error=error,
+            )
         if arguments.fixture is not None:
             fixtures = load_named_fixture(root, arguments.fixture)
         else:

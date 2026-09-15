@@ -117,6 +117,31 @@ class TrialRunnerTest(unittest.TestCase):
         path.write_text(json.dumps(payload, indent=2) + "\n", encoding="utf-8")
         return path
 
+    def write_calibration_example(
+        self,
+        *,
+        name: str = "example",
+        expected: dict[str, str] | None = None,
+    ) -> Path:
+        if expected is None:
+            expected = {criterion: "pass" for criterion in self.criteria}
+        directory = self.root / "tests" / "fixtures" / "calibration"
+        directory.mkdir(parents=True, exist_ok=True)
+        path = directory / f"{name}.json"
+        path.write_text(
+            json.dumps(
+                {
+                    "fixture": "demo/basic",
+                    "response": "calibration response",
+                    "expected": expected,
+                },
+                indent=2,
+            )
+            + "\n",
+            encoding="utf-8",
+        )
+        return path
+
     def load_one(self) -> object:
         self.write_fixture()
         loaded = trials.load_fixtures(self.root, "demo")
@@ -1125,6 +1150,81 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertIn("BEGIN EXERCISE", rendered)
         self.assertIn("<SUBJECT RESPONSE>", rendered)
         self.assertEqual([], fake.calls)
+
+    def test_cli_calibrate_reports_agreement_through_runner_transport(self) -> None:
+        self.write_fixture()
+        self.write_calibration_example()
+        fake = FakeTransport(
+            judge_json(self.criteria, response="calibration response")
+        )
+        output = io.StringIO()
+
+        result = trials.main(
+            ["--calibrate"],
+            root=self.root,
+            transport=fake,
+            output=output,
+        )
+
+        self.assertEqual(0, result)
+        self.assertEqual(
+            [("chatgpt/sol", "xhigh")],
+            [(model, effort) for model, effort, _ in fake.calls],
+        )
+        rendered = output.getvalue()
+        self.assertIn("example.json", rendered)
+        self.assertIn("agreement 2/2", rendered)
+
+    def test_cli_calibrate_disagreement_names_example_and_exits_nonzero(self) -> None:
+        self.write_fixture()
+        self.write_calibration_example(
+            expected={self.criteria[0]: "fail", self.criteria[1]: "pass"}
+        )
+        fake = FakeTransport(
+            judge_json(self.criteria, response="calibration response")
+        )
+        output = io.StringIO()
+
+        result = trials.main(
+            ["--calibrate"],
+            root=self.root,
+            transport=fake,
+            output=output,
+        )
+
+        self.assertNotEqual(0, result)
+        rendered = output.getvalue()
+        self.assertIn("example.json", rendered)
+        self.assertIn("states the result", rendered)
+        self.assertIn("agreement 1/2", rendered)
+
+    def test_cli_calibrate_dry_run_prints_prompt_without_transport(self) -> None:
+        self.write_fixture()
+        self.write_calibration_example()
+        fake = FakeTransport()
+        output = io.StringIO()
+
+        result = trials.main(
+            ["--calibrate", "--dry-run"],
+            root=self.root,
+            transport=fake,
+            output=output,
+        )
+
+        self.assertEqual(0, result)
+        self.assertEqual([], fake.calls)
+        rendered = output.getvalue()
+        self.assertIn("Judge the subject response", rendered)
+        self.assertIn(
+            "BEGIN SUBJECT RESPONSE\ncalibration response\nEND SUBJECT RESPONSE",
+            rendered,
+        )
+
+    def test_cli_calibrate_is_mutually_exclusive_with_other_actions(self) -> None:
+        arguments = trials._parser().parse_args(["--calibrate"])
+        self.assertTrue(arguments.calibrate)
+        with self.assertRaises(SystemExit):
+            trials._parser().parse_args(["--calibrate", "--all"])
 
     def test_cli_probe_calls_each_subject_and_judge(self) -> None:
         fake = FakeTransport("sol reply", "opus reply", "judge reply")
