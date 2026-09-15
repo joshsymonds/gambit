@@ -424,34 +424,57 @@ class TrialRunnerTest(unittest.TestCase):
         self.assertIn("BEGIN SUBJECT RESPONSE\nstates the result without inventing facts\nEND SUBJECT RESPONSE", prompt)
         self.assertNotIn("claude-opus-5", prompt)
 
-    def test_judge_evidence_must_be_a_response_span(self) -> None:
+    def test_pass_verdict_requires_response_span(self) -> None:
         criteria = ("states the result", "End state: does not invent facts")
         raw = json.dumps({
             "items": [
-                {"item": criteria[0], "verdict": "fail", "evidence": "missing span"},
+                {"item": criteria[0], "verdict": "pass", "evidence": "missing span"},
                 {"item": criteria[1], "verdict": "pass", "evidence": "states the result"},
             ]
         })
-        with self.assertRaises(trials.JudgeParseError):
+        with self.assertRaisesRegex(trials.JudgeParseError, "pass"):
             trials.parse_judge_output(raw, criteria, "states the result")
-        paraphrased_pass = json.dumps({
+
+    def test_pass_verdict_requires_nonempty_evidence(self) -> None:
+        criteria = ("states the result", "End state: does not invent facts")
+        raw = json.dumps({
             "items": [
-                {"item": criteria[0], "verdict": "pass", "evidence": "no question is asked"},
-                {"item": criteria[1], "verdict": "pass", "evidence": ""},
+                {"item": criteria[0], "verdict": "pass", "evidence": ""},
+                {"item": criteria[1], "verdict": "pass", "evidence": "states the result"},
             ]
         })
-        parsed = trials.parse_judge_output(paraphrased_pass, criteria, "states the result")
-        self.assertEqual(["pass", "pass"], [item["verdict"] for item in parsed])
+        with self.assertRaisesRegex(trials.JudgeParseError, "pass"):
+            trials.parse_judge_output(raw, criteria, "states the result")
 
+    def test_verbatim_pass_and_fail_evidence_are_accepted(self) -> None:
+        criteria = ("states the result", "End state: does not invent facts")
+        subject_response = "states the result; does not invent facts"
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "pass", "evidence": "states the result"},
+                {"item": criteria[1], "verdict": "fail", "evidence": "does not invent facts"},
+            ]
+        })
+        parsed = trials.parse_judge_output(raw, criteria, subject_response)
+        self.assertEqual(["pass", "fail"], [item["verdict"] for item in parsed])
+
+    def test_unknown_verdict_may_have_empty_evidence(self) -> None:
+        criteria = ("states the result",)
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "unknown", "evidence": ""},
+            ]
+        })
+        parsed = trials.parse_judge_output(raw, criteria, "subject response")
+        self.assertEqual("unknown", parsed[0]["verdict"])
+
+    def test_judge_prompt_instructs_prohibition_pass_evidence(self) -> None:
         fixture = self.load_one()
-        failed = trials.run_cell(
-            self.root,
-            fixture,
-            "opus-low",
-            FakeTransport("states the result", raw, raw),
+        prompt = trials.judge_prompt(self.root, fixture, "subject answer")
+        self.assertIn(
+            "For a pass on a criterion that forbids something, evidence is the span showing the compliant action the response takes instead.",
+            prompt,
         )
-        self.assertEqual("judge_failure", failed["status"])
-        self.assertEqual([], failed["items"])
 
     def test_unknown_criterion_is_inconclusive_and_never_passes(self) -> None:
         fixture = self.load_one()

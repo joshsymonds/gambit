@@ -76,8 +76,10 @@ JUDGE_PROMPT_TEMPLATE = (
     '{"items": [{"item": "...", "verdict": "pass|fail|unknown", "evidence": "..."}]}. '
     "Include every criterion once, in the original order. Decide each item "
     "independently. Copy each item text with or without its number. For a "
-    "pass or fail, evidence must be a verbatim response span. Unknown may "
-    "use an empty evidence string."
+    "pass or fail, evidence must be a verbatim response span. For a pass "
+    "on a criterion that forbids something, evidence is the span showing the "
+    "compliant action the response takes instead. Unknown may use an empty "
+    "evidence string."
 )
 SKILL_NAME = re.compile(r"^[a-z][a-z0-9-]*$")
 Transport = Callable[[str, str, str], str]
@@ -398,10 +400,10 @@ def parse_judge_output(
         if not isinstance(evidence, str):
             raise JudgeParseError("judge evidence must be a string")
         normalized_evidence = " ".join(evidence.split())
-        if verdict == "fail" and not normalized_evidence:
-            raise JudgeParseError("fail verdicts require evidence")
-        if verdict == "fail" and normalized_evidence not in normalized_subject:
-            raise JudgeParseError("fail evidence must be a response span")
+        if verdict in {"pass", "fail"} and not normalized_evidence:
+            raise JudgeParseError(f"{verdict} verdicts require evidence")
+        if verdict in {"pass", "fail"} and normalized_evidence not in normalized_subject:
+            raise JudgeParseError(f"{verdict} evidence must be a response span")
         parsed.append(item)
     return parsed
 
