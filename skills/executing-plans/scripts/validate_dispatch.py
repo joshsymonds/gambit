@@ -110,18 +110,24 @@ def recorded_revision(record_path: Path, task_selector: str) -> str | None:
     return str(dispatch["revision"])
 
 
-def workspace_head_revision(workspace: Path) -> str | None:
+def recorded_done_commands(record_path: Path) -> tuple[list[str], list[str]]:
     try:
-        head_check = subprocess.run(
-            ["git", "rev-parse", "--verify", "HEAD"],
-            cwd=workspace.resolve(),
-            text=True,
-            encoding="utf-8",
-            capture_output=True,
-        )
-    except (OSError, UnicodeError):
-        return None
-    return "HEAD" if head_check.returncode == 0 else None
+        record = json.loads(record_path.read_text(encoding="utf-8"))
+    except (OSError, UnicodeError, json.JSONDecodeError):
+        return [], []
+    if not isinstance(record, dict) or "done" not in record:
+        return [], ["record.done: missing"]
+    done = record["done"]
+    if not isinstance(done, list):
+        return [], ["record.done: must be a list of command strings"]
+    commands: list[str] = []
+    defects: list[str] = []
+    for index, command in enumerate(done):
+        if not isinstance(command, str):
+            defects.append(f"record.done[{index}]: must be a command string")
+            continue
+        commands.append(command)
+    return commands, defects
 
 
 def validate(
@@ -231,8 +237,17 @@ def validate(
 
         test_match = TEST_COMMAND_RE.search(sections["Test command"])
         test_command = test_match.group(1).strip() if test_match else ""
-        if done_commands and test_command not in done_commands:
-            defects.append("Test command: does not match any --done command")
+        workspace_prefix = f"cd {workspace} && "
+        comparable_test_command = (
+            test_command[len(workspace_prefix):]
+            if test_command.startswith(workspace_prefix)
+            else test_command
+        )
+        if comparable_test_command not in done_commands:
+            expected = ", ".join(repr(command) for command in done_commands)
+            defects.append(
+                f"Test command: {test_command!r} does not match any Done fast check ({expected})"
+            )
 
     return defects
 
@@ -316,39 +331,34 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--brief", required=True, type=Path)
     parser.add_argument("--workspace", required=True, type=Path)
-    parser.add_argument("--done", action="append", default=[], dest="done_commands")
-    parser.add_argument("--record", type=Path)
-    parser.add_argument("--task")
-    parser.add_argument("--entry-rung")
+    parser.add_argument("--done", action="append", default=None, dest="done_commands")
+    parser.add_argument("--record", required=True, type=Path)
+    parser.add_argument("--task", required=True)
+    parser.add_argument("--entry-rung", required=True)
     return parser
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    record_flags = (args.record, args.task, args.entry_rung)
-    if any(value is not None for value in record_flags) and not all(
-        value is not None for value in record_flags
-    ):
-        parser.error("--record, --task, and --entry-rung must be provided together")
     try:
         text = args.brief.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as error:
         print(f"brief: could not read {args.brief}: {error}")
         return 1
-    base_revision = (
-        recorded_revision(args.record, args.task)
-        if args.record is not None
-        else workspace_head_revision(args.workspace)
-    )
+    record_done_defects: list[str] = []
+    done_commands = args.done_commands
+    if done_commands is None:
+        done_commands, record_done_defects = recorded_done_commands(args.record)
+    base_revision = recorded_revision(args.record, args.task)
     defects = validate(
         text,
         args.workspace,
-        args.done_commands,
+        done_commands,
         base_revision=base_revision,
     )
-    if args.record is not None:
-        defects.extend(validate_record(args.record, args.task, args.entry_rung))
+    defects.extend(record_done_defects)
+    defects.extend(validate_record(args.record, args.task, args.entry_rung))
     for defect in defects:
         print(defect)
     return 1 if defects else 0

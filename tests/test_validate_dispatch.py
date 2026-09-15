@@ -21,9 +21,22 @@ class ValidateDispatchTest(unittest.TestCase):
         record: dict[str, object] | None = None,
         task: str | int | None = None,
         entry_rung: str | None = None,
+        brief_only: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         brief_path = workspace / "brief.md"
         brief_path.write_text(brief, encoding="utf-8")
+        if record is None and not brief_only:
+            if not (workspace / ".git").exists():
+                self.git(workspace, "init", "-q")
+                self.git(workspace, "config", "user.name", "Validator Test")
+                self.git(workspace, "config", "user.email", "validator@example.invalid")
+                self.git(workspace, "add", ".")
+                self.git(workspace, "commit", "-qm", "base")
+            revision = self.git(workspace, "rev-parse", "HEAD").stdout.strip()
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = revision
+            task = "validate-record"
+            entry_rung = "luna-low"
         command = [sys.executable, str(SCRIPT), "--brief", str(brief_path), "--workspace", str(workspace)]
         for item in done:
             command.extend(["--done", item])
@@ -77,7 +90,7 @@ class ValidateDispatchTest(unittest.TestCase):
             },
         }
         task.update(updates)
-        return {"tasks": [task]}
+        return {"done": ["python3 -m unittest"], "tasks": [task]}
 
     def valid_brief(self, *, files: str = "- src/main.py", anchors: str = "- brief.md:1", test_command: str = "python3 -m unittest") -> str:
         return f"""## Goal
@@ -298,6 +311,111 @@ Test command: {test_command}
             self.assertIn("Test command", result.stdout)
             self.assertIn("match", result.stdout.lower())
 
+    def test_record_task_and_entry_rung_are_required(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            result = self.run_validator(self.valid_brief(), workspace, brief_only=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("--record", result.stderr)
+            self.assertIn("--task", result.stderr)
+            self.assertIn("--entry-rung", result.stderr)
+
+    def test_record_done_accepts_cd_prefixed_and_exact_test_commands(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record(
+                done=["python3 -m unittest"],
+                dispatch={
+                    "child": "worker-7",
+                    "workspace": "/workspace/7",
+                    "revision": revision,
+                },
+            )
+            for command in (
+                f"cd {workspace} && python3 -m unittest",
+                "python3 -m unittest",
+            ):
+                with self.subTest(command=command):
+                    result = self.run_validator(
+                        self.valid_brief(anchors="- source.py:1", test_command=command),
+                        workspace,
+                        record=record,
+                        task="validate-record",
+                        entry_rung="luna-low",
+                    )
+                    self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_test_command_not_in_record_done_is_named_defect(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record(
+                done=["python3 -m unittest"],
+                dispatch={
+                    "child": "worker-7",
+                    "workspace": "/workspace/7",
+                    "revision": revision,
+                },
+            )
+            command = "python3 -m unittest discover"
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1", test_command=command),
+                workspace,
+                record=record,
+                task="validate-record",
+                entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("Test command", result.stdout)
+            self.assertIn(command, result.stdout)
+            self.assertIn("python3 -m unittest", result.stdout)
+
+    def test_record_without_done_is_named_defect(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record(
+                dispatch={
+                    "child": "worker-7",
+                    "workspace": "/workspace/7",
+                    "revision": revision,
+                },
+            )
+            del record["done"]
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1"),
+                workspace,
+                record=record,
+                task="validate-record",
+                entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("record.done", result.stdout)
+
+    def test_explicit_done_commands_override_record_done(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record(
+                done=["python3 -m unittest"],
+                dispatch={
+                    "child": "worker-7",
+                    "workspace": "/workspace/7",
+                    "revision": revision,
+                },
+            )
+            command = "python3 tests/scan_prose.py"
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1", test_command=command),
+                workspace,
+                command,
+                record=record,
+                task="validate-record",
+                entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
     def test_record_missing_task_is_rejected(self) -> None:
         with self.make_workspace() as temporary:
             workspace = Path(temporary)
@@ -392,11 +510,12 @@ Test command: {test_command}
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout, "")
 
-    def test_omitting_record_flags_keeps_brief_only_behavior(self) -> None:
+    def test_omitting_record_flags_is_rejected(self) -> None:
         with self.make_workspace() as temporary:
             workspace = Path(temporary)
-            result = self.run_validator(self.valid_brief(), workspace)
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+            result = self.run_validator(self.valid_brief(), workspace, brief_only=True)
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("--record", result.stderr)
 
     def test_valid_brief_passes_and_matches_one_done_command(self) -> None:
         with self.make_workspace() as temporary:
