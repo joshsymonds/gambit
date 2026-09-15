@@ -380,7 +380,9 @@ def parse_judge_output(
     if not isinstance(items, list) or len(items) != len(criteria):
         raise JudgeParseError("judge output must contain every criterion")
     parsed: list[dict[str, object]] = []
-    normalized_subject = " ".join(subject_response.split())
+    normalized_subject = " ".join(
+        re.sub(r"[*_`]", "", subject_response).split()
+    )
     for expected, item in zip(criteria, items):
         if not isinstance(item, dict) or set(item) != {"item", "verdict", "evidence"}:
             raise JudgeParseError(
@@ -399,7 +401,9 @@ def parse_judge_output(
         evidence = item["evidence"]
         if not isinstance(evidence, str):
             raise JudgeParseError("judge evidence must be a string")
-        normalized_evidence = " ".join(evidence.split())
+        normalized_evidence = " ".join(
+            re.sub(r"[*_`]", "", evidence).split()
+        )
         if verdict in {"pass", "fail"} and not normalized_evidence:
             raise JudgeParseError(f"{verdict} verdicts require evidence")
         if verdict in {"pass", "fail"} and normalized_evidence not in normalized_subject:

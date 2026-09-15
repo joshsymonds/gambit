@@ -446,6 +446,56 @@ class TrialRunnerTest(unittest.TestCase):
         with self.assertRaisesRegex(trials.JudgeParseError, "pass"):
             trials.parse_judge_output(raw, criteria, "states the result")
 
+    def test_pass_evidence_accepts_response_span_with_markdown_emphasis(self) -> None:
+        criteria = ("states the result",)
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "pass", "evidence": "Obtain authoritative confirmation from the harness."},
+            ]
+        })
+        parsed = trials.parse_judge_output(
+            raw,
+            criteria,
+            "Obtain **authoritative** confirmation from the harness.",
+        )
+        self.assertEqual("pass", parsed[0]["verdict"])
+
+    def test_fail_evidence_accepts_response_span_with_markdown_code_marks(self) -> None:
+        criteria = ("states the result",)
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "fail", "evidence": "run make check before opening"},
+            ]
+        })
+        parsed = trials.parse_judge_output(
+            raw,
+            criteria,
+            "run `make check` before opening",
+        )
+        self.assertEqual("fail", parsed[0]["verdict"])
+
+    def test_normalized_missing_evidence_names_its_verdict(self) -> None:
+        criteria = ("states the result",)
+        for verdict in ("pass", "fail"):
+            with self.subTest(verdict=verdict):
+                raw = json.dumps({
+                    "items": [
+                        {"item": criteria[0], "verdict": verdict, "evidence": "missing span"},
+                    ]
+                })
+                with self.assertRaisesRegex(trials.JudgeParseError, verdict):
+                    trials.parse_judge_output(raw, criteria, "**states the result**")
+
+    def test_markdown_only_evidence_is_rejected_as_empty(self) -> None:
+        criteria = ("states the result",)
+        raw = json.dumps({
+            "items": [
+                {"item": criteria[0], "verdict": "pass", "evidence": "**"},
+            ]
+        })
+        with self.assertRaisesRegex(trials.JudgeParseError, "pass"):
+            trials.parse_judge_output(raw, criteria, "**states the result**")
+
     def test_verbatim_pass_and_fail_evidence_are_accepted(self) -> None:
         criteria = ("states the result", "End state: does not invent facts")
         subject_response = "states the result; does not invent facts"
