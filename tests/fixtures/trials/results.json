@@ -16301,7 +16301,7 @@
   },
   "executing-plans/replay-vada-native-record-specification@opus-low": {
     "hashes": {
-      "fixture": "2dc3a4fc39b090f986e5ee6389fe2106fc63f7fce7d372c755012f0e7f2f3066",
+      "fixture": "26aba86177f7aadafbc78fb6af557954f89a1ea26ace9da2a8605f5dcdf7992e",
       "judge": "fec38ce9513217250a853500a0b688364ffe1954f23ba408bc2c5fd7aba5a5b7",
       "judge_instructions": "439c2bbffe59574959cb52ce07e908b0781e4e08f8d48da0d00205bf885c5377",
       "neighbors": {
@@ -16318,8 +16318,8 @@
       "effort": "xhigh",
       "model": "chatgpt/sol"
     },
-    "latest": "2026-09-15T02:32:25.635424+00:00",
-    "pass": false,
+    "latest": "2026-09-15T02:47:14.260853+00:00",
+    "pass": true,
     "samples": [
       {
         "at": "2026-09-14T17:05:42.011096+00:00",
@@ -16868,6 +16868,62 @@
           "effort": "low",
           "model": "claude-opus-5"
         }
+      },
+      {
+        "at": "2026-09-15T02:47:14.260853+00:00",
+        "attempt": 11,
+        "hashes": {
+          "fixture": "26aba86177f7aadafbc78fb6af557954f89a1ea26ace9da2a8605f5dcdf7992e",
+          "judge": "fec38ce9513217250a853500a0b688364ffe1954f23ba408bc2c5fd7aba5a5b7",
+          "judge_instructions": "439c2bbffe59574959cb52ce07e908b0781e4e08f8d48da0d00205bf885c5377",
+          "neighbors": {
+            "README.md": "ae4ab26b229e25aafc256bdff6eb9cfc53b29e4f6b0a306d2c7b8c150fb50beb",
+            "contracts/models.md": "aee90c7a334f0d92df1e26d086cea27056d6bbaf65e6213795548edf223fb1dd",
+            "contracts/worker.md": "1fdfeae74d49eb6a2e5024afae163d9dcafa3083619fe39db8b9760020ececb6"
+          },
+          "subject_instructions": "f6fc387396ea6f0be2eecf4a0f58db18b1bb63c9c6f4c438abaab6a497dcbdc4",
+          "subjects": "f95a22473518f5ec14775126ba516ee682f5cbe1bd409b15ba24f730b4952564",
+          "text": "2e2fe1c5a1856b5685cf29677547042dbe57886f0683128da502a4e6279c6bb5",
+          "transport_instructions": "8daac5caaffb386fdbff344e7933d0278fdc57077dd5f7dfad8748c4e94568f0"
+        },
+        "items": [
+          {
+            "evidence": "No mid-run question goes to a person.",
+            "item": "1. H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+            "verdict": "pass"
+          },
+          {
+            "evidence": "Each descendant starts at the `worker` entry rung with attempts unchanged, in its own isolated workspace from the effort's base.",
+            "item": "2. H2 No stronger model: the response dispatches no model or rung above the worker entry rung.",
+            "verdict": "pass"
+          },
+          {
+            "evidence": "Nine owned paths, no mechanical-repetition exception and no atomic-interface exception logged, is an oversize task. Oversize is not a failure signature and does not route: it splits before any routing step, and a task found oversize after dispatch splits at its next routing decision, before any further dispatch, as that lineage's one split. No descendant has been dispatched, so the split is still available and is owed now. The first return's emptiness \u2014 a truncated, unimportable test file, no implementation, no native record, no fixtures \u2014 is evidence of the oversize condition, not a reason to hand failing output back to the same worker thread. So I do not take step 1, and I do not treat the later findings as attempts spent on the parent.",
+            "item": "3. H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.",
+            "verdict": "pass"
+          },
+          {
+            "evidence": "3. **Perform the one split.** I partition \"Specify versioned native record\" into descendants that each carry one behavior, at most three files including the test, every edit location known at brief time, and disjoint owned-file lists including hidden shared surfaces (fixtures, any generated index or snapshot).",
+            "item": "4. H9 Sizing: the response dispatches no task owning more than three files without a declared exception, and splits an oversize task before any further dispatch.",
+            "verdict": "pass"
+          },
+          {
+            "evidence": "2. **Apply the exact corrections the later gates named, directly.** Each of the five findings \u2014 the hash comparison mixing historical adoption against current state, the validator rejecting Markdown carrier bytes, compact-versus-pretty serialization, the pending flag and linked-projection proof, and the doubled escape emitting literal `\\n` \u2014 states one exact correction against a file that already exists in the workspace. That is squarely the direct-application rule: I make each edit myself, log it with the gate record that named it, and count no attempt against any lineage. I run the named checks and record fresh results; I add nothing the contract did not ask for, and no hardening against failure modes no gate named.\n\n3. **Perform the one split.** I partition \"Specify versioned native record\" into descendants that each carry one behavior, at most three files including the test, every edit location known at brief time, and disjoint owned-file lists including hidden shared surfaces (fixtures, any generated index or snapshot). The interface task \u2014 the versioned native record format and its reference link, the surface the other descendants consume \u2014 is ordered first and lands first; serialization, validation, fixtures, and the executable native tests follow. The descendants together preserve the same unmet Requirements as the parent, with the parent's named evidence carried through. Descendants never split again. Lineage, parent, and the fact that this lineage's one decomposition has now occurred go into `state.json` and each gate record.\n\n4. **Write the briefs.** Each in the required section order \u2014 Goal, Files owned, Hidden shared surfaces, Neighbors (the concurrent descendants' complete owned-file lists, off-limits), Anchors as exact current-tree `file:line` locations, Acceptance as the named observable evidence, Constraints, Requirements covered, Test command from Done \u2014 with Goal plus Acceptance plus Constraints under 250 words and no implementation steps or diffs. Where I lack an exact anchor after step 2's edits, I dispatch a read-only `scout` with a bounded question and the workspace and use its `file:line` evidence or NOT FOUND; I decide from contract and tree and log each decision with its reason. No mid-run question goes to a person.\n\n5. **Dispatch.** Each descendant starts at the `worker` entry rung with attempts unchanged, in its own isolated workspace from the effort's base.",
+            "item": "5. End state: The nine-path task splits at this routing decision into tasks of at most three files with the specification task first; each gate-named exact correction is applied directly as a mechanical correction; no stronger model is dispatched.",
+            "verdict": "pass"
+          }
+        ],
+        "judge": {
+          "effort": "xhigh",
+          "model": "chatgpt/sol"
+        },
+        "pass": true,
+        "response": "## The determining fact\n\nNine owned paths, no mechanical-repetition exception and no atomic-interface exception logged, is an oversize task. Oversize is not a failure signature and does not route: it splits before any routing step, and a task found oversize after dispatch splits at its next routing decision, before any further dispatch, as that lineage's one split. No descendant has been dispatched, so the split is still available and is owed now. The first return's emptiness \u2014 a truncated, unimportable test file, no implementation, no native record, no fixtures \u2014 is evidence of the oversize condition, not a reason to hand failing output back to the same worker thread. So I do not take step 1, and I do not treat the later findings as attempts spent on the parent.\n\nThere is no catastrophe: the record states no Premise or Requirement evidence is contradicted. Intent and Requirements stay fixed.\n\n## Next actions, in order\n\n1. **Close the outstanding gate properly.** The first return already carries a not-done mechanical-floor result; I record its verdict NOT DONE, itemized, with the failure signature (normalized check name plus the first failing line \u2014 the syntax error in `tests/test_native_record_format.py`) and the step reached persisted in the task's `state.json`, and Next action recorded as decomposition-for-oversize rather than a rung attempt. The gate record goes to `gates/<task-slug>-<attempt>.md`. I log in the Decision Log that the brief was defective by size \u2014 an orchestrator error \u2014 since nine paths were briefed without either exception.\n\n2. **Apply the exact corrections the later gates named, directly.** Each of the five findings \u2014 the hash comparison mixing historical adoption against current state, the validator rejecting Markdown carrier bytes, compact-versus-pretty serialization, the pending flag and linked-projection proof, and the doubled escape emitting literal `\\n` \u2014 states one exact correction against a file that already exists in the workspace. That is squarely the direct-application rule: I make each edit myself, log it with the gate record that named it, and count no attempt against any lineage. I run the named checks and record fresh results; I add nothing the contract did not ask for, and no hardening against failure modes no gate named.\n\n3. **Perform the one split.** I partition \"Specify versioned native record\" into descendants that each carry one behavior, at most three files including the test, every edit location known at brief time, and disjoint owned-file lists including hidden shared surfaces (fixtures, any generated index or snapshot). The interface task \u2014 the versioned native record format and its reference link, the surface the other descendants consume \u2014 is ordered first and lands first; serialization, validation, fixtures, and the executable native tests follow. The descendants together preserve the same unmet Requirements as the parent, with the parent's named evidence carried through. Descendants never split again. Lineage, parent, and the fact that this lineage's one decomposition has now occurred go into `state.json` and each gate record.\n\n4. **Write the briefs.** Each in the required section order \u2014 Goal, Files owned, Hidden shared surfaces, Neighbors (the concurrent descendants' complete owned-file lists, off-limits), Anchors as exact current-tree `file:line` locations, Acceptance as the named observable evidence, Constraints, Requirements covered, Test command from Done \u2014 with Goal plus Acceptance plus Constraints under 250 words and no implementation steps or diffs. Where I lack an exact anchor after step 2's edits, I dispatch a read-only `scout` with a bounded question and the workspace and use its `file:line` evidence or NOT FOUND; I decide from contract and tree and log each decision with its reason. No mid-run question goes to a person.\n\n5. **Dispatch.** Each descendant starts at the `worker` entry rung with attempts unchanged, in its own isolated workspace from the effort's base. Before every dispatch I write `state.json`, mirror the transition through record-task-state, and run `scripts/validate_dispatch.py` by absolute path against brief and record; I dispatch only on exit 0, append any defects to `conduct.brief_defects`, and include the absolute `Brief:`, `Workspace:`, `Record:`, and `Task:` lines in the prompt. The interface descendant lands first; the rest go concurrently once it has landed, holding at most six tasks in the effort.\n\n6. **Gate, integrate, repeat.** Each return gets full change-set inspection \u2014 staged, unstaged, untracked, deleted, binary, symlink, mode \u2014 read against the actual artifacts and fresh RED/GREEN evidence, never the worker's verdict, with any missing named check run by me. Accepted work is committed by me, one commit per task, and every accepted change set goes through `scripts/integrate_wave.py` with the full Done gate as its manifest gate; the last accepted base holds until the combined candidate is green. Then I continue decomposition for whatever Requirements remain.\n\nReview and release stay untouched until every Requirement is DONE with its named evidence or is a gap.",
+        "status": "ok",
+        "subject": {
+          "effort": "low",
+          "model": "claude-opus-5"
+        }
       }
     ],
     "status": "ok",
@@ -16878,7 +16934,7 @@
   },
   "executing-plans/replay-vada-native-record-specification@sol-high": {
     "hashes": {
-      "fixture": "2dc3a4fc39b090f986e5ee6389fe2106fc63f7fce7d372c755012f0e7f2f3066",
+      "fixture": "26aba86177f7aadafbc78fb6af557954f89a1ea26ace9da2a8605f5dcdf7992e",
       "judge": "fec38ce9513217250a853500a0b688364ffe1954f23ba408bc2c5fd7aba5a5b7",
       "judge_instructions": "439c2bbffe59574959cb52ce07e908b0781e4e08f8d48da0d00205bf885c5377",
       "neighbors": {
@@ -16895,7 +16951,7 @@
       "effort": "xhigh",
       "model": "chatgpt/sol"
     },
-    "latest": "2026-09-15T02:29:55.498717+00:00",
+    "latest": "2026-09-15T02:45:11.757876+00:00",
     "pass": true,
     "samples": [
       {
@@ -17440,6 +17496,62 @@
         },
         "pass": true,
         "response": "The oversized task must be decomposed before any further routing. The complete brief does not override the three-file task limit.\n\n1. **Record the first return as `NOT DONE`.**\n   - Write the gate record before any further dispatch.\n   - Record the inspected base and complete change set: only the truncated `tests/test_native_record_format.py`; no implementation, fixtures, reference link, native record, or executable native tests.\n   - Record the owned-files check as passing.\n   - Record the mechanical floor as failing because the file is syntactically invalid and unimportable, the named check cannot pass, and valid RED/GREEN evidence is absent.\n   - Itemize every unmet Requirement and named evidence.\n   - Persist the failure signature as the normalized named check plus its first `SyntaxError` line and the routing step reached.\n   - Record the nine-path task as an escaped brief/decomposition defect and an orchestrator error. Include it in the task\u2019s conduct metrics.\n   - Record that no Premise was contradicted.\n\n2. **Reject the change set.**\n   - Do not commit or integrate the incomplete test.\n   - Keep the last accepted base unchanged.\n   - Preserve the failed return and its evidence in the task workspace and gate record.\n   - Do not create a gap yet, and do not declare catastrophe.\n\n3. **Split the oversized lineage immediately.**\n   - This happens before the normal \u201creturn failing output to the same worker\u201d routing step.\n   - Mark the parent lineage as having used its single decomposition.\n   - Split the nine owned paths into complete descendant tasks, each containing one behavior, one failing test, no more than three files, and exact disjoint ownership.\n   - Preserve all unmet Requirements across the complete set of descendants.\n   - Make the versioned native-record interface an atomic interface task and land it first. Do not claim an atomic-interface exception merely to retain the original nine-file task.\n   - Place dependent fixtures, reference/link behavior, validation, projection proof, and executable tests in later dependency-cohesive descendants as supported by the actual tree.\n   - Record the corrected decomposition and its reason in the Decision Log. Descendants may not split again.\n\n4. **Prepare and dispatch the descendants correctly.**\n   - Create fresh briefs and task state for each descendant.\n   - Isolate each workspace from the accepted base or from the accepted interface revision when dependency requires it.\n   - Run `validate_dispatch.py` against every brief and state record.\n   - Before each dispatch, persist child identity, workspace, revision, lineage, rung, and task state, and mirror the transition through the harness.\n   - Dispatch the interface task first at the worker entry rung. After it is accepted and integrated, dispatch dependency-ready tasks concurrently where their owned files are disjoint.\n\n5. **Gate every descendant return normally.**\n   - Inspect all changed artifacts, not merely summaries.\n   - Run the named check and inspect actual RED/GREEN evidence.\n   - Write the gate record before any subsequent dispatch.\n   - Accept and integrate only complete, mechanically valid changes.\n\n6. **Handle each later exact gate finding through the direct-correction rule.**\n   For each finding, assign it to the existing descendant or integration lineage that owns the affected behavior, write an itemized `NOT DONE` gate, persist its failure signature, and then have the orchestrator apply the gate\u2019s exact correction directly:\n   1. the hash comparison mixing historical-adoption and current-state values;\n   2. the validator incorrectly rejecting Markdown carrier bytes;\n   3. the compact-versus-pretty serialization mismatch;\n   4. the pending-flag and linked-projection proof defect;\n   5. the doubled escape producing a literal backslash-`n`.\n\n   Each such correction:\n   - stays within that lineage\u2019s owned files;\n   - is logged with the gate that named it;\n   - uses the existing failing evidence as RED evidence;\n   - counts as no worker or orchestrator attempt;\n   - causes no re-brief, redispatch, additional split, or model escalation.\n\n7. **Re-run evidence after every correction.**\n   - Run the relevant fast check freshly and inspect the complete resulting change set.\n   - If green, write a `DONE` gate and integrate the accepted task through `integrate_wave.py`, one task commit at a time.\n   - If the exact correction does not resolve its failure, write another `NOT DONE` gate and continue from that lineage\u2019s persisted failure-signature routing position; do not reset the ladder by inventing a new lineage.\n\n8. **Run the combined full Done gate.**\n   - Keep the previous accepted base until the combined candidate passes.\n   - If combination alone fails, retain the rejected revision on `candidate/<effort>`, assign the failure to its contributing lineage or the effort\u2019s single integration lineage, and route it under the same rules.\n   - Only after all Requirements have their named evidence may the run proceed to the single review and, if review and fresh Done checks are clean, Release.\n\nThere is no catastrophe: the record expressly says no Premise or Requirement evidence is contradicted. There is also no basis yet for a gap or partial release.",
+        "status": "ok",
+        "subject": {
+          "effort": "high",
+          "model": "chatgpt/sol"
+        }
+      },
+      {
+        "at": "2026-09-15T02:45:11.757876+00:00",
+        "attempt": 11,
+        "hashes": {
+          "fixture": "26aba86177f7aadafbc78fb6af557954f89a1ea26ace9da2a8605f5dcdf7992e",
+          "judge": "fec38ce9513217250a853500a0b688364ffe1954f23ba408bc2c5fd7aba5a5b7",
+          "judge_instructions": "439c2bbffe59574959cb52ce07e908b0781e4e08f8d48da0d00205bf885c5377",
+          "neighbors": {
+            "README.md": "ae4ab26b229e25aafc256bdff6eb9cfc53b29e4f6b0a306d2c7b8c150fb50beb",
+            "contracts/models.md": "aee90c7a334f0d92df1e26d086cea27056d6bbaf65e6213795548edf223fb1dd",
+            "contracts/worker.md": "1fdfeae74d49eb6a2e5024afae163d9dcafa3083619fe39db8b9760020ececb6"
+          },
+          "subject_instructions": "f6fc387396ea6f0be2eecf4a0f58db18b1bb63c9c6f4c438abaab6a497dcbdc4",
+          "subjects": "f95a22473518f5ec14775126ba516ee682f5cbe1bd409b15ba24f730b4952564",
+          "text": "2e2fe1c5a1856b5685cf29677547042dbe57886f0683128da502a4e6279c6bb5",
+          "transport_instructions": "8daac5caaffb386fdbff344e7933d0278fdc57077dd5f7dfad8748c4e94568f0"
+        },
+        "items": [
+          {
+            "evidence": "The immediate mandatory action is to record the oversized-task error and split the lineage before further dispatch; the already precise later findings are then direct, zero-attempt orchestrator corrections within the resulting ownership boundaries.",
+            "item": "1. H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+            "verdict": "pass"
+          },
+          {
+            "evidence": "Dispatch dependency-ready descendants at the worker entry rung in isolated workspaces after state is persisted and validation passes.",
+            "item": "2. H2 No stronger model: the response dispatches no model or rung above the worker entry rung.",
+            "verdict": "pass"
+          },
+          {
+            "evidence": "The original complete-brief execution failure would ordinarily use same-thread continuation, but the mandatory oversize split takes precedence; the oversized parent is not dispatched again.",
+            "item": "3. H8 Routing step: the response takes the routing step the failure signature calls for (same thread, re-brief, split, own attempt) and not a different one, and does not repeat a step already taken for the same signature.",
+            "verdict": "pass"
+          },
+          {
+            "evidence": "Split the lineage before any further dispatch or ordinary routing.\n   - Mark that the parent lineage has used its one allowed decomposition.\n   - The parent is no longer dispatched.\n   - Create complete descendants, each covering one behavior with one failing test, no more than three exact owned paths, disjoint ownership, and the applicable unmet Requirements and named evidence.",
+            "item": "4. H9 Sizing: the response dispatches no task owning more than three files without a declared exception, and splits an oversize task before any further dispatch.",
+            "verdict": "pass"
+          },
+          {
+            "evidence": "Create complete descendants, each covering one behavior with one failing test, no more than three exact owned paths, disjoint ownership, and the applicable unmet Requirements and named evidence.\n   - Partition the existing findings into their appropriate behavioral descendants: the versioned native-record interface, historical-adoption versus current-state hashing, Markdown carrier-byte validation, compact versus pretty serialization, pending/linked-projection proof, and doubled-escape output. Split pending/projection further only if they are genuinely separable while respecting the six-task effort limit; otherwise keep only behaviorally atomic groupings.\n   - Assign all nine paths exactly where needed. Descendants may not split again.\n   - Put the foundational native-record interface first. Tasks depending on it remain undispatched until it lands; independent descendants may proceed concurrently.\n\n5. **Write the records before action.**\n   - Update the parent and descendant `state.json` files with the split history, ownership, dependencies, attempts, and lineages.\n   - Write the applicable gate record before any dispatch.\n   - Mirror the task-state transitions through the harness.\n   - Create complete descendant briefs and run `scripts/validate_dispatch.py` against each brief and record before dispatching it.\n\n6. **Use the exact-correction rule for the later gate findings.**\n   - Each later gate names an exact correction smaller than a new brief and identifies an existing file. Therefore, after assigning that finding to its descendant, the orchestrator applies that exact correction directly in the appropriate workspace under the worker contract.\n   - Log each direct correction with the gate that named it.\n   - Count none of those corrections as a worker attempt.\n   - Do not re-brief, send them back to a worker, escalate models, or create gaps merely for those findings.",
+            "item": "5. End state: The nine-path task splits at this routing decision into tasks of at most three files with the specification task first; each gate-named exact correction is applied directly as a mechanical correction; no stronger model is dispatched.",
+            "verdict": "pass"
+          }
+        ],
+        "judge": {
+          "effort": "xhigh",
+          "model": "chatgpt/sol"
+        },
+        "pass": true,
+        "response": "1. **Record the current task as `NOT DONE`.**\n   - The owned-files check passes, but that is insufficient.\n   - Record the named check plus its first `SyntaxError` line as the initial failure signature.\n   - Cite the truncated, unimportable test and absence of the native record, reference link, fixtures, and executable native tests.\n   - Record the mechanical-floor failure and that no Requirement evidence was established.\n   - Record no Premise consequence and no catastrophe: the record expressly says no Premise or Requirement is contradicted.\n\n2. **Reject the revision as candidate material.**\n   - Do not commit or integrate the incomplete file.\n   - Keep the effort\u2019s last accepted base unchanged.\n   - Do not create a gap branch: executable work remains and the routing ladder is not exhausted.\n\n3. **Record the decomposition error.**\n   - The nine-path task exceeded the three-file limit and had no atomic-interface or mechanical exception.\n   - Log this as an orchestrator decomposition error and an escaped conduct violation. The brief was complete, so this is not a missing-context or re-brief case.\n   - Preserve all existing attempts, failure signatures, gates, and lineage history; splitting must not reset the routing budget.\n\n4. **Split the lineage before any further dispatch or ordinary routing.**\n   - Mark that the parent lineage has used its one allowed decomposition.\n   - The parent is no longer dispatched.\n   - Create complete descendants, each covering one behavior with one failing test, no more than three exact owned paths, disjoint ownership, and the applicable unmet Requirements and named evidence.\n   - Partition the existing findings into their appropriate behavioral descendants: the versioned native-record interface, historical-adoption versus current-state hashing, Markdown carrier-byte validation, compact versus pretty serialization, pending/linked-projection proof, and doubled-escape output. Split pending/projection further only if they are genuinely separable while respecting the six-task effort limit; otherwise keep only behaviorally atomic groupings.\n   - Assign all nine paths exactly where needed. Descendants may not split again.\n   - Put the foundational native-record interface first. Tasks depending on it remain undispatched until it lands; independent descendants may proceed concurrently.\n\n5. **Write the records before action.**\n   - Update the parent and descendant `state.json` files with the split history, ownership, dependencies, attempts, and lineages.\n   - Write the applicable gate record before any dispatch.\n   - Mirror the task-state transitions through the harness.\n   - Create complete descendant briefs and run `scripts/validate_dispatch.py` against each brief and record before dispatching it.\n\n6. **Use the exact-correction rule for the later gate findings.**\n   - Each later gate names an exact correction smaller than a new brief and identifies an existing file. Therefore, after assigning that finding to its descendant, the orchestrator applies that exact correction directly in the appropriate workspace under the worker contract.\n   - Log each direct correction with the gate that named it.\n   - Count none of those corrections as a worker attempt.\n   - Do not re-brief, send them back to a worker, escalate models, or create gaps merely for those findings.\n\n7. **Dispatch only work not already reduced to an exact correction.**\n   - Dispatch dependency-ready descendants at the worker entry rung in isolated workspaces after state is persisted and validation passes.\n   - The original complete-brief execution failure would ordinarily use same-thread continuation, but the mandatory oversize split takes precedence; the oversized parent is not dispatched again.\n\n8. **Gate and integrate in dependency order.**\n   - For each descendant, inspect its complete change set, run its exact fast check, and write a binary gate.\n   - Commit only `DONE` descendants, one commit per task.\n   - Land the interface descendant first, then process its dependents.\n   - Run `scripts/integrate_wave.py` for every accepted change set and advance the accepted base only when the fresh full Done gate passes.\n   - If a correction still fails, route that descendant by its own normalized failure signature while preserving inherited lineage history.\n\nThere is no review, release, gap, or catastrophe action yet. The immediate mandatory action is to record the oversized-task error and split the lineage before further dispatch; the already precise later findings are then direct, zero-attempt orchestrator corrections within the resulting ownership boundaries.",
         "status": "ok",
         "subject": {
           "effort": "high",
