@@ -1,4 +1,4 @@
-"""Review text structure; behavioral evidence comes from the review trials."""
+"""Review text structure."""
 
 from __future__ import annotations
 

@@ -16,7 +16,7 @@ Edit files in `skills/<name>/` and `contracts/` directly. Run `just check` befor
 
 **The tests pin structure and forbidden content, never phrasings.** `tests/` pins substrings from skill prose such as role and rung resolution, agent versus model dispatch shape, and scout dispatch shape. Read the assertion before rewording guarded prose.
 
-`just trials` runs the behavioral trials. `just scan` runs the normative-prose scan.
+`just scan` runs the normative-prose scan.
 
 ## Releasing
 
@@ -24,7 +24,6 @@ Edit files in `skills/<name>/` and `contracts/` directly. Run `just check` befor
 
 ## Where things are owned
 
-- Skill authoring is validated by `just trials` against fixtures under `tests/fixtures/trials/` as documented in `tests/fixtures/trials/README.md`.
 - `executing-plans` owns the orchestrator/worker architecture.
 - `contracts/README.md` owns the agent-class and role enum.
 - `contracts/models.md` owns rungs, roles, and ladders. No concrete model ID belongs in any skill.

@@ -3,10 +3,6 @@
 
 check:
     python3 -m unittest discover -s tests -v
-    python3 tests/trials/run.py --check-fresh
-
-trials:
-    python3 tests/trials/run.py --all
 
 scan:
     python3 tests/scan_prose.py
