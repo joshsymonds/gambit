@@ -109,6 +109,15 @@ class BrainstormingStructureTest(unittest.TestCase):
         self.assertIn("becomes `max_efforts` in the head", section)
         self.assertIn("at most forty lines", section)
 
+    def test_proportionality_is_a_named_failure_in_drafting_and_steelman(self) -> None:
+        design = self.text.split("## Approaches and design\n", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("Proportionality failure is a contract-drafting failure", design)
+        self.assertIn("audience, stakes, scale, and constraints", design)
+        steelman = (ROOT / "contracts/steelman.md").read_text(encoding="utf-8")
+        discovery = steelman.split("## Discovery\n", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("Proportionality failure is a steelman finding", discovery)
+        self.assertIn("security or data-loss", discovery)
+
     def test_brief_code_block_has_no_implementation_heading(self) -> None:
         blocks = re.findall(r"```[^\n]*\n(.*?)\n```", self.templates, re.DOTALL)
         self.assertTrue(blocks)

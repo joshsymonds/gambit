@@ -31,6 +31,8 @@ Discovery receives the Design Packet and no prior steelman output. First present
 
 Do not manufacture objections. Do not reopen a rejected approach without new evidence against its stated rejection reason. Do not expand scope or turn a mechanism into a requirement. Separate evidence from inference and label unverified assumptions.
 
+Proportionality failure is a steelman finding, including when your proposed remedy creates it. In both passes, judge safeguards and verification against Intent's grounded audience, stakes, scale, and constraints. State the material benefit and burden of each proposed addition; prefer the least elaborate adequate remedy without weakening protection against reachable security or data-loss failures.
+
 Number findings `D1`, `D2`, and onward. Each finding states its impact, evidence, and the smallest packet change that resolves or records it. Name every decision the caller must make. Findings must be material to the supplied packet.
 
 Status is exactly one of:

@@ -48,6 +48,8 @@ Present the design in digestible sections covering the relevant components, inte
 
 Decompose for isolation: each unit has a clear purpose, known interfaces, and independently testable behavior. Cut features, abstractions, and hardening the Requirements do not demand. Chosen mechanisms belong in Approach unless the request explicitly requires them. Never add a Requirement to justify a preferred task.
 
+Proportionality failure is a contract-drafting failure: overdesign, excess robustness, nitpicking, or added features without material benefit to the requested product. Ground the standard of care in the user's stated audience, stakes, scale, and constraints, carried into Intent; identify inferred stakes as assumptions. Apply this before drafting and when adopting steelman findings. Preserve explicit requirements and the fixed Quality Bar.
+
 ## Steelman
 
 Run exactly one discovery pass on the agreed design, before accepting the contract or creating its executable tasks. Read `contracts/steelman.md`. Dispatch the `steelman` role fresh and read-only under that contract, resolved through `contracts/models.md`.
