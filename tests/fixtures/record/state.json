@@ -6,6 +6,8 @@
   "accepted_base": "9d31ba7",
   "candidate_revision": null,
   "effort": 2,
+  "max_efforts": 4,
+  "efforts_admitted": 2,
   "done": [
     "python3 -m unittest discover -s tests"
   ],

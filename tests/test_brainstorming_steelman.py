@@ -32,7 +32,8 @@ class BrainstormingStructureTest(unittest.TestCase):
         self.assertEqual(
             re.findall(r"^## (.+)$", self.text, re.MULTILINE),
             ["Inputs", "Research", "Questions in prose", "Approaches and design",
-             "Steelman", "The contract", "The first effort", "Handoff"],
+             "Steelman", "The contract", "Acceptance sheet", "The first effort",
+             "Handoff"],
         )
 
     def test_first_effort_brief_fields_acceptance_and_constraints(self) -> None:
@@ -76,19 +77,37 @@ class BrainstormingStructureTest(unittest.TestCase):
 
     def test_templates_contain_exact_contract_and_brief_sections(self) -> None:
         blocks = re.findall(r"```[^\n]*\n(.*?)\n```", self.templates, re.DOTALL)
-        self.assertEqual(len(blocks), 3)
+        self.assertEqual(len(blocks), 4)
         self.assertEqual(
             tuple(re.findall(r"^## (.+)$", blocks[0], re.MULTILINE)),
             CONTRACT_SECTIONS,
         )
         self.assertEqual(
             tuple(re.findall(r"^## (.+)$", blocks[1], re.MULTILINE)),
+            ("Acceptance sheet",),
+        )
+        for line in ("Intent:", "Traced:", "PROPOSED:", "Size:", "max_efforts"):
+            with self.subTest(line=line):
+                self.assertIn(line, blocks[1])
+        done = blocks[0].split("## Done\n", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("max_efforts", done)
+        self.assertEqual(
+            tuple(re.findall(r"^## (.+)$", blocks[2], re.MULTILINE)),
             BRIEF_SECTIONS,
         )
         self.assertEqual(
-            tuple(re.findall(r"^## (.+)$", blocks[2], re.MULTILINE)),
+            tuple(re.findall(r"^## (.+)$", blocks[3], re.MULTILINE)),
             EFFORT_BRIEF_SECTIONS,
         )
+
+    def test_acceptance_sheet_decides_each_proposal_before_acceptance(self) -> None:
+        section = self.text.split("## Acceptance sheet\n", 1)[1].split("\n## ", 1)[0]
+        for phrase in ("PROPOSED", "max_efforts", "Decision Log", "goal file"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, section)
+        self.assertIn("written into the contract's Done section", section)
+        self.assertIn("becomes `max_efforts` in the head", section)
+        self.assertIn("at most forty lines", section)
 
     def test_brief_code_block_has_no_implementation_heading(self) -> None:
         blocks = re.findall(r"```[^\n]*\n(.*?)\n```", self.templates, re.DOTALL)

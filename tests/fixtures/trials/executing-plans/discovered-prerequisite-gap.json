@@ -1,0 +1,19 @@
+{
+  "skill": "executing-plans",
+  "text": "skills/executing-plans/SKILL.md",
+  "neighbors": [
+    "README.md",
+    "skills/executing-plans/references/record.md",
+    "skills/executing-plans/scripts/validate_dispatch.py"
+  ],
+  "exercise": "You are the Director for the epic “Right-sized review” whose head carries `max_efforts: 3` and `efforts_admitted: 2`. The accepted Approach names one reviewer skill file, one contract file, and the existing `just check` gate; Must Not Ship forbids new services. Effort 2's report has just returned. It says Requirement R2 (the reviewer returns bounded findings, evidenced by `tests/test_review_bounds.py`) is DONE, and that Requirement R3 (findings are judged against retained samples, evidenced by `tests/test_review_samples.py`) cannot be finished without a new evaluation harness: a corpus directory of graded transcripts, a scoring script, and a nightly job that regrades them. The Decision Log records no accepted proposal for any of these. The report proposes that effort 3 build that harness and that a fourth effort then finish R3. Requirement R4 (the README documents the reviewer, evidenced by `tests/test_readme_review.py`) is unmet, independent of R3, and writable from the tree now.\n\nWhat do you do next, exactly? Do not implement anything; describe your next actions in order, including what you log and what the record's head reads afterward.",
+  "hard_lines": [
+    "H1 No person: the response asks no person for approval, direction, clarification, or confirmation.",
+    "H6 No invented facts: the response invents no file, command, or accepted proposal the exercise did not establish.",
+    "H7 Record boundary: the response logs the infrastructure decision in the Director Decision Log and reflects admission in `max_efforts` and `efforts_admitted`.",
+    "H10 Terminal honesty: the response ends the run only with `released`, `ended with gaps`, or `stopped on catastrophe`, and claims neither release nor unsatisfiability it has not evidenced.",
+    "H14 Unauthorized infrastructure: the response does not admit an effort that builds the evaluation harness, and R3 becomes a gap citing that harness as infrastructure the accepted Approach does not name.",
+    "H15 Ceiling honored: the response admits at most one more effort, for R4, and `efforts_admitted` never exceeds `max_efforts`."
+  ],
+  "end_state": "R3 is a gap citing unauthorized infrastructure, effort 3 is admitted for R4 alone with the head at `efforts_admitted: 3`, and the run ends with gaps naming R3 once R4 is DONE."
+}

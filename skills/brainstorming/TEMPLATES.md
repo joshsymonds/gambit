@@ -27,6 +27,7 @@ Rejected: [Alternative and reason.] Reconsider only if [specific condition chang
 ## Done
 - Task fast check: [exact command, including required setup and working directory].
 - Integrated candidate full gate: [exact commands in order, including required setup].
+- Effort ceiling: max_efforts [n].
 
 ## Release
 1. Action: [exact action]. Target: [exact repository, branch, service, or destination]. Intended effect: [observable result].
@@ -35,6 +36,21 @@ Postconditions: [observable facts and checks that must all hold before reporting
 ```
 
 Acceptance freezes Intent, Premises and their survival clauses, and Requirements. Keep subsequent assessments in the Decision Log without rewriting the frozen text. Each log entry states the decision or assumption, its reason and evidence, and any affected finding or contract identifier.
+
+### Acceptance sheet
+
+Emit it with the contract, before acceptance, as attached record context outside the eight-section body. A PROPOSED item is any Requirement, Approach mechanism, Done command, or Release action that traces to no sentence of the person's. Costs are estimates.
+
+```markdown
+## Acceptance sheet
+Intent: [the Intent paragraph verbatim]
+Traced: [n] Requirements, [n] mechanisms, [n] Done commands, [n] Release actions from the request.
+PROPOSED:
+- [identifier]: [one line]. Cost: [new files; new infrastructure (machine, service, harness, script, corpus); external systems; Done runtime]. Decision: [accepted or struck, Decision Log id].
+Size: [n] Requirements; [n] efforts estimated because [reason]; max_efforts [n]; [n] PROPOSED.
+```
+
+Done carries the accepted `max_efforts`; the head copies it per `skills/executing-plans/references/record.md`.
 
 ### Task brief
 
@@ -87,7 +103,7 @@ The Director writes one effort brief per effort. Objective plus Interfaces plus 
 [List applicable Must Not Ship entries, Premise clauses, the Quality Bar, and Decision Log entries touching these files.]
 
 ## Base
-[Give the accepted base, branch `effort/<epic-slug>-<n>`, and check commands.]
+[Give the accepted base, branch `effort/<epic-slug>-<n>`, check commands, and the head's `max_efforts` and `efforts_admitted`.]
 
 ## Report shape
 [Cap the report at 400 words.]

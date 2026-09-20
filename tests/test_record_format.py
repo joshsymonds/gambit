@@ -34,6 +34,8 @@ STATE_KEYS = (
     "accepted_base",
     "candidate_revision",
     "effort",
+    "max_efforts",
+    "efforts_admitted",
     "done",
     "tasks",
     "review",

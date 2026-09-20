@@ -90,7 +90,12 @@ class ValidateDispatchTest(unittest.TestCase):
             },
         }
         task.update(updates)
-        return {"done": ["python3 -m unittest"], "tasks": [task]}
+        return {
+            "max_efforts": 3,
+            "efforts_admitted": 1,
+            "done": ["python3 -m unittest"],
+            "tasks": [task],
+        }
 
     def valid_brief(self, *, files: str = "- src/main.py", anchors: str = "- brief.md:1", test_command: str = "python3 -m unittest") -> str:
         return f"""## Goal
@@ -496,6 +501,94 @@ Test command: {test_command}
             self.assertEqual(result.returncode, 1)
             self.assertIn("routing_history[0]", result.stdout)
             self.assertNotIn("Traceback", result.stderr)
+
+    def test_record_missing_ceiling_exits_exhausted(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = revision
+            del record["max_efforts"]
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1"), workspace,
+                record=record, task="validate-record", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+            self.assertIn("max_efforts", result.stdout)
+
+    def test_record_non_positive_ceiling_exits_exhausted(self) -> None:
+        for ceiling in (0, -1, "3", 2.5, True, None):
+            with self.subTest(ceiling=ceiling), self.make_workspace() as temporary:
+                workspace = Path(temporary)
+                revision = self.make_git_base(workspace)
+                record = self.valid_record()
+                record["tasks"][0]["dispatch"]["revision"] = revision
+                record["max_efforts"] = ceiling
+                result = self.run_validator(
+                    self.valid_brief(anchors="- source.py:1"), workspace,
+                    record=record, task="validate-record", entry_rung="luna-low",
+                )
+                self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+                self.assertIn("max_efforts", result.stdout)
+                self.assertIn("positive integer", result.stdout)
+
+    def test_record_missing_admission_count_exits_exhausted(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = revision
+            del record["efforts_admitted"]
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1"), workspace,
+                record=record, task="validate-record", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+            self.assertIn("efforts_admitted", result.stdout)
+
+    def test_record_exhausted_ceiling_exits_exhausted(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = revision
+            record["max_efforts"] = 2
+            record["efforts_admitted"] = 3
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1"), workspace,
+                record=record, task="validate-record", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+            self.assertIn("exhausted", result.stdout)
+            self.assertIn("max_efforts 2", result.stdout)
+
+    def test_record_at_ceiling_still_passes(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = revision
+            record["max_efforts"] = 2
+            record["efforts_admitted"] = 2
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1"), workspace,
+                record=record, task="validate-record", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_exhaustion_outranks_ordinary_defects(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            record = self.valid_record(attempts=0)
+            record["max_efforts"] = 1
+            record["efforts_admitted"] = 2
+            result = self.run_validator(
+                self.valid_brief(), workspace,
+                record=record, task="validate-record", entry_rung="luna-low",
+            )
+            self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
+            self.assertIn("attempts", result.stdout)
+            self.assertIn("exhausted", result.stdout)
 
     def test_valid_record_passes(self) -> None:
         with self.make_workspace() as temporary:
