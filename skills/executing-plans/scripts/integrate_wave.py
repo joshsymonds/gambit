@@ -18,7 +18,7 @@ class IntegrationError(Exception):
 
 
 @dataclass(frozen=True)
-class Worker:
+class Implementer:
     name: str
     worktree: Path
     owned_paths: tuple[str, ...]
@@ -31,12 +31,12 @@ class Manifest:
     epic_worktree: Path
     integration_worktree: Path
     gate: tuple[str, ...]
-    workers: tuple[Worker, ...]
+    implementers: tuple[Implementer, ...]
 
 
 @dataclass(frozen=True)
-class PreparedWorker:
-    worker: Worker
+class PreparedImplementer:
+    implementer: Implementer
     staged_diff_path: Path
     tree: str
     fingerprint: str
@@ -150,21 +150,31 @@ def load_manifest(path: Path) -> Manifest:
     ):
         fail("manifest.gate must be a non-empty argv array of strings")
 
-    workers_value = root.get("workers")
-    if not isinstance(workers_value, list) or not workers_value:
-        fail("manifest.workers must be a non-empty ordered array")
+    has_implementers = "implementers" in root
+    has_legacy_workers = "workers" in root
+    if (
+        has_implementers
+        and has_legacy_workers
+        and root["implementers"] != root["workers"]
+    ):
+        fail("manifest.implementers conflicts with legacy manifest.workers")
+    implementers_value = (
+        root["implementers"] if has_implementers else root.get("workers")
+    )
+    if not isinstance(implementers_value, list) or not implementers_value:
+        fail("manifest.implementers must be a non-empty ordered array")
 
-    workers: list[Worker] = []
+    implementers: list[Implementer] = []
     names: set[str] = set()
     worktrees: set[Path] = set()
-    owned_path_workers: dict[str, str] = {}
-    for index, raw_worker in enumerate(workers_value):
-        label = f"manifest.workers[{index}]"
-        worker_data = require_mapping(raw_worker, label)
-        name = require_string(worker_data, "name", label)
-        worktree = manifest_path(require_string(worker_data, "worktree", label), parent)
-        commit_message = require_string(worker_data, "commit_message", label)
-        owned_value = worker_data.get("owned_paths")
+    owned_path_implementers: dict[str, str] = {}
+    for index, raw_implementer in enumerate(implementers_value):
+        label = f"manifest.implementers[{index}]"
+        implementer_data = require_mapping(raw_implementer, label)
+        name = require_string(implementer_data, "name", label)
+        worktree = manifest_path(require_string(implementer_data, "worktree", label), parent)
+        commit_message = require_string(implementer_data, "commit_message", label)
+        owned_value = implementer_data.get("owned_paths")
         if (
             not isinstance(owned_value, list)
             or not owned_value
@@ -177,30 +187,30 @@ def load_manifest(path: Path) -> Manifest:
         for owned_path in owned_paths:
             validate_owned_path(owned_path, f"{label}.owned_paths")
         if name in names:
-            fail(f"worker name {name!r} appears more than once")
+            fail(f"implementer name {name!r} appears more than once")
         if worktree in worktrees:
-            fail(f"worker worktree {worktree} appears more than once")
+            fail(f"implementer worktree {worktree} appears more than once")
         for owned_path in owned_paths:
-            previous_worker = owned_path_workers.get(owned_path)
-            if previous_worker is not None:
+            previous_implementer = owned_path_implementers.get(owned_path)
+            if previous_implementer is not None:
                 fail(
-                    f"owned path {owned_path!r} appears in more than one worker: "
-                    f"{previous_worker!r} and {name!r}"
+                    f"owned path {owned_path!r} appears in more than one implementer: "
+                    f"{previous_implementer!r} and {name!r}"
                 )
-            owned_path_workers[owned_path] = name
+            owned_path_implementers[owned_path] = name
         names.add(name)
         worktrees.add(worktree)
-        workers.append(Worker(name, worktree, owned_paths, commit_message))
+        implementers.append(Implementer(name, worktree, owned_paths, commit_message))
 
     if epic == integration or epic in worktrees or integration in worktrees:
-        fail("epic, integration, and worker worktree paths must be distinct")
+        fail("epic, integration, and implementer worktree paths must be distinct")
 
     return Manifest(
         base=base,
         epic_worktree=epic,
         integration_worktree=integration,
         gate=tuple(gate_value),
-        workers=tuple(workers),
+        implementers=tuple(implementers),
     )
 
 
@@ -369,65 +379,65 @@ def validate_initial_state(manifest: Manifest, base: str) -> str:
         )
 
     common = common_directory(epic)
-    for worker in manifest.workers:
-        if not worker.worktree.is_dir():
-            fail(f"worker {worker.name} worktree does not exist: {worker.worktree}")
-        if common_directory(worker.worktree) != common:
-            fail(f"worker {worker.name} is not a worktree of the epic repository")
-        worker_snapshot = snapshot(worker.worktree, base)
-        require_snapshot_head(worker_snapshot, base, f"worker {worker.name}")
-        paths = changed_paths(worker_snapshot.status)
+    for implementer in manifest.implementers:
+        if not implementer.worktree.is_dir():
+            fail(f"implementer {implementer.name} worktree does not exist: {implementer.worktree}")
+        if common_directory(implementer.worktree) != common:
+            fail(f"implementer {implementer.name} is not a worktree of the epic repository")
+        implementer_snapshot = snapshot(implementer.worktree, base)
+        require_snapshot_head(implementer_snapshot, base, f"implementer {implementer.name}")
+        paths = changed_paths(implementer_snapshot.status)
         if not paths:
-            fail(f"worker {worker.name} has no changes")
-        outside = sorted(set(paths) - set(worker.owned_paths))
+            fail(f"implementer {implementer.name} has no changes")
+        outside = sorted(set(paths) - set(implementer.owned_paths))
         if outside:
             rendered = ", ".join(repr(path) for path in outside)
             fail(
-                f"worker {worker.name} changed paths outside its exact owned_paths "
+                f"implementer {implementer.name} changed paths outside its exact owned_paths "
                 f"allowlist: {rendered}"
             )
     return epic_snapshot.fingerprint
 
 
-def prepare_worker(worker: Worker, base: str, patch_directory: Path) -> PreparedWorker:
-    before = snapshot(worker.worktree, base)
+def prepare_implementer(implementer: Implementer, base: str, patch_directory: Path) -> PreparedImplementer:
+    before = snapshot(implementer.worktree, base)
     with tempfile.TemporaryDirectory(prefix="gambit-integration-index-") as tempdir:
         env = os.environ.copy()
         env["GIT_INDEX_FILE"] = str(Path(tempdir) / "index")
-        git(worker.worktree, "read-tree", base, env=env)
-        git(worker.worktree, "add", "-A", "--", *worker.owned_paths, env=env)
-        outside = sorted(set(changed_paths(before.status)) - set(worker.owned_paths))
+        git(implementer.worktree, "read-tree", base, env=env)
+        git(implementer.worktree, "add", "-A", "--", *implementer.owned_paths, env=env)
+        outside = sorted(set(changed_paths(before.status)) - set(implementer.owned_paths))
         if outside:
             rendered = ", ".join(repr(path) for path in outside)
             fail(
-                f"worker {worker.name} changed paths outside its exact owned_paths "
+                f"implementer {implementer.name} changed paths outside its exact owned_paths "
                 f"allowlist while being inspected: {rendered}"
             )
-        staged_diff = full_index_diff(worker.worktree, base, env=env)
+        staged_diff = full_index_diff(implementer.worktree, base, env=env)
         if not staged_diff:
-            fail(f"worker {worker.name} has no changes after staging owned_paths")
+            fail(f"implementer {implementer.name} has no changes after staging owned_paths")
         descriptor, raw_patch_path = tempfile.mkstemp(
-            prefix="worker-",
+            prefix="implementer-",
             suffix=".patch",
             dir=patch_directory,
         )
         with os.fdopen(descriptor, "wb") as patch_stream:
             patch_stream.write(staged_diff)
-        tree = output_text(git(worker.worktree, "write-tree", env=env))
-        after = snapshot(worker.worktree, base)
+        tree = output_text(git(implementer.worktree, "write-tree", env=env))
+        after = snapshot(implementer.worktree, base)
         if after.fingerprint != before.fingerprint:
-            fail(f"worker {worker.name} changed while being inspected")
-        return PreparedWorker(
-            worker=worker,
+            fail(f"implementer {implementer.name} changed while being inspected")
+        return PreparedImplementer(
+            implementer=implementer,
             staged_diff_path=Path(raw_patch_path),
             tree=tree,
             fingerprint=after.fingerprint,
         )
 
 
-def expose_diff(prepared: PreparedWorker) -> None:
+def expose_diff(prepared: PreparedImplementer) -> None:
     stream = sys.stdout.buffer
-    stream.write(f"--- staged diff for {prepared.worker.name} ---\n".encode("utf-8"))
+    stream.write(f"--- staged diff for {prepared.implementer.name} ---\n".encode("utf-8"))
     stream.flush()
     last_byte = b""
     with prepared.staged_diff_path.open("rb") as patch_stream:
@@ -436,7 +446,7 @@ def expose_diff(prepared: PreparedWorker) -> None:
             last_byte = chunk[-1:]
     if last_byte != b"\n":
         stream.write(b"\n")
-    stream.write(f"--- end staged diff for {prepared.worker.name} ---\n".encode("utf-8"))
+    stream.write(f"--- end staged diff for {prepared.implementer.name} ---\n".encode("utf-8"))
     stream.flush()
 
 
@@ -444,38 +454,38 @@ def revalidate(
     manifest: Manifest,
     base: str,
     epic_fingerprint: str,
-    prepared_workers: Sequence[PreparedWorker],
+    prepared_implementers: Sequence[PreparedImplementer],
 ) -> None:
     epic_snapshot = snapshot(manifest.epic_worktree, base)
     require_snapshot_head(epic_snapshot, base, "epic worktree")
     if epic_snapshot.fingerprint != epic_fingerprint:
         fail("epic worktree changed after inspection; integration refused")
-    for prepared in prepared_workers:
-        worker = prepared.worker
-        worker_snapshot = snapshot(worker.worktree, base)
-        require_snapshot_head(worker_snapshot, base, f"worker {worker.name}")
-        paths = changed_paths(worker_snapshot.status)
-        outside = sorted(set(paths) - set(worker.owned_paths))
+    for prepared in prepared_implementers:
+        implementer = prepared.implementer
+        implementer_snapshot = snapshot(implementer.worktree, base)
+        require_snapshot_head(implementer_snapshot, base, f"implementer {implementer.name}")
+        paths = changed_paths(implementer_snapshot.status)
+        outside = sorted(set(paths) - set(implementer.owned_paths))
         if outside:
             rendered = ", ".join(repr(path) for path in outside)
             fail(
-                f"worker {worker.name} changed paths outside owned_paths after inspection: "
+                f"implementer {implementer.name} changed paths outside owned_paths after inspection: "
                 f"{rendered}"
             )
-        if worker_snapshot.fingerprint != prepared.fingerprint:
-            fail(f"worker {worker.name} changed after inspection; integration refused")
+        if implementer_snapshot.fingerprint != prepared.fingerprint:
+            fail(f"implementer {implementer.name} changed after inspection; integration refused")
 
 
-def create_worker_commit(prepared: PreparedWorker, base: str) -> str:
+def create_implementer_commit(prepared: PreparedImplementer, base: str) -> str:
     result = git(
-        prepared.worker.worktree,
+        prepared.implementer.worktree,
         "commit-tree",
         prepared.tree,
         "-p",
         base,
         "-F",
         "-",
-        input_bytes=prepared.worker.commit_message.encode("utf-8"),
+        input_bytes=prepared.implementer.commit_message.encode("utf-8"),
     )
     return output_text(result)
 
@@ -495,7 +505,7 @@ def add_integration_worktree(manifest: Manifest, base: str) -> None:
         fail(f"could not create detached integration worktree: {detail}")
 
 
-def cherry_pick(manifest: Manifest, worker: Worker, commit: str) -> None:
+def cherry_pick(manifest: Manifest, implementer: Implementer, commit: str) -> None:
     result = git(
         manifest.integration_worktree,
         "-c",
@@ -513,7 +523,7 @@ def cherry_pick(manifest: Manifest, worker: Worker, commit: str) -> None:
             sys.stderr.buffer.write(result.stderr)
             sys.stderr.buffer.flush()
         fail(
-            f"integration conflict while cherry-picking worker {worker.name}; "
+            f"integration conflict while cherry-picking implementer {implementer.name}; "
             "epic HEAD was not moved and all worktrees were retained"
         )
 
@@ -570,7 +580,7 @@ def fast_forward_epic(manifest: Manifest, base: str, combined_head: str) -> None
 
 def cleanup_worktrees(manifest: Manifest) -> None:
     failures: list[str] = []
-    for path in [*(worker.worktree for worker in manifest.workers), manifest.integration_worktree]:
+    for path in [*(implementer.worktree for implementer in manifest.implementers), manifest.integration_worktree]:
         result = git(
             manifest.epic_worktree,
             "worktree",
@@ -594,29 +604,29 @@ def integrate(manifest: Manifest) -> None:
     epic_fingerprint = validate_initial_state(manifest, base)
     with tempfile.TemporaryDirectory(prefix="gambit-integration-patches-") as tempdir:
         patch_directory = Path(tempdir)
-        prepared_workers = tuple(
-            prepare_worker(worker, base, patch_directory)
-            for worker in manifest.workers
+        prepared_implementers = tuple(
+            prepare_implementer(implementer, base, patch_directory)
+            for implementer in manifest.implementers
         )
-        for prepared in prepared_workers:
+        for prepared in prepared_implementers:
             expose_diff(prepared)
 
-        revalidate(manifest, base, epic_fingerprint, prepared_workers)
+        revalidate(manifest, base, epic_fingerprint, prepared_implementers)
         commits = tuple(
-            create_worker_commit(prepared, base) for prepared in prepared_workers
+            create_implementer_commit(prepared, base) for prepared in prepared_implementers
         )
-        revalidate(manifest, base, epic_fingerprint, prepared_workers)
+        revalidate(manifest, base, epic_fingerprint, prepared_implementers)
 
         add_integration_worktree(manifest, base)
-        for prepared, commit in zip(prepared_workers, commits, strict=True):
-            cherry_pick(manifest, prepared.worker, commit)
+        for prepared, commit in zip(prepared_implementers, commits, strict=True):
+            cherry_pick(manifest, prepared.implementer, commit)
         combined_head = head(manifest.integration_worktree)
 
         run_gate(manifest, combined_head)
-        revalidate(manifest, base, epic_fingerprint, prepared_workers)
+        revalidate(manifest, base, epic_fingerprint, prepared_implementers)
         fast_forward_epic(manifest, base, combined_head)
         cleanup_worktrees(manifest)
-        print(f"Integrated {len(commits)} workers atomically at {combined_head}")
+        print(f"Integrated {len(commits)} implementers atomically at {combined_head}")
 
 
 def main(argv: Sequence[str]) -> int:

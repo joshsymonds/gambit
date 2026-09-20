@@ -18,16 +18,18 @@ class RootSkillsTest(unittest.TestCase):
     def test_contract_catalog_names_roles_and_contract_paths(self) -> None:
         catalog = (CONTRACTS / "README.md").read_text(encoding="utf-8")
         for role in (
-            "worker",
+            "implementer",
             "scout",
             "steelman",
-            "finder",
-            "verifier",
+            "task-reviewer",
+            "conformance-reviewer",
+            "integration-reviewer",
+            "finding-verifier",
             "test-runner",
         ):
             self.assertIn(f"`{role}`", catalog)
         for contract_path in (
-            "contracts/worker.md",
+            "contracts/implementer.md",
             "contracts/scout.md",
             "contracts/steelman.md",
             "skills/review/reviewers/",
@@ -49,8 +51,8 @@ class RootSkillsTest(unittest.TestCase):
         self.assertNotIn("`escalation`", readme)
         self.assertNotIn("| escalation |", readme)
 
-        roles_section = readme.split("## Roles and the Ladder\n", 1)[1]
-        roles_table = roles_section.split("\n\n", 1)[0]
+        roles_section = readme.split("## Stages, roles, and model profiles\n", 1)[1]
+        roles_table = roles_section.split("| Role | Does | Writes? |\n", 1)[1].split("\n\n", 1)[0]
         roles = [
             line.split("|")[1].strip()
             for line in roles_table.splitlines()
@@ -61,11 +63,13 @@ class RootSkillsTest(unittest.TestCase):
         self.assertEqual(
             [
                 "orchestrator",
-                "worker",
+                "implementer",
                 "scout",
                 "steelman",
-                "finder",
-                "verifier",
+                "task-reviewer",
+                "conformance-reviewer",
+                "integration-reviewer",
+                "finding-verifier",
                 "test-runner",
             ],
             roles,

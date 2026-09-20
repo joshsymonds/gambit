@@ -24,16 +24,18 @@ class ContractIndexTest(unittest.TestCase):
             ],
         )
         for role in (
-            "worker",
+            "implementer",
             "scout",
             "steelman",
-            "finder",
-            "verifier",
+            "task-reviewer",
+            "conformance-reviewer",
+            "integration-reviewer",
+            "finding-verifier",
             "test-runner",
         ):
             self.assertIn(f"`{role}`", text)
         for path in (
-            "contracts/worker.md",
+            "contracts/implementer.md",
             "contracts/scout.md",
             "contracts/steelman.md",
             "contracts/models.md",

@@ -6,7 +6,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-WORKER_CONTRACT = ROOT / "contracts" / "worker.md"
+IMPLEMENTER_CONTRACT = ROOT / "contracts" / "implementer.md"
 EXPECTED_SECTIONS = (
     "Your task",
     "Owned files",
@@ -44,9 +44,9 @@ FORBIDDEN_TOKENS = (
 )
 
 
-class WorkerContractTest(unittest.TestCase):
+class ImplementerContractTest(unittest.TestCase):
     def setUp(self) -> None:
-        self.text = WORKER_CONTRACT.read_text(encoding="utf-8")
+        self.text = IMPLEMENTER_CONTRACT.read_text(encoding="utf-8")
 
     def test_has_only_the_required_sections_in_order(self) -> None:
         headings = re.findall(r"^## (.+)$", self.text, flags=re.MULTILINE)

@@ -29,7 +29,7 @@
         ],
         "split_used": true
       },
-      "rung": "entry",
+      "profile": "entry",
       "attempts": 1,
       "status": "split",
       "gate_paths": [
@@ -75,7 +75,7 @@
         "descendants": [],
         "split_used": false
       },
-      "rung": "entry",
+      "profile": "entry",
       "attempts": 1,
       "status": "done",
       "gate_paths": [
@@ -111,7 +111,7 @@
         "descendants": [],
         "split_used": false
       },
-      "rung": "entry",
+      "profile": "entry",
       "attempts": 1,
       "status": "dispatched",
       "gate_paths": [],

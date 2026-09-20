@@ -174,7 +174,7 @@ def self_test(output: TextIO) -> int:
             "gambit:missing-reference\n",
             encoding="utf-8",
         )
-        (root / "contracts/worker.md").write_text(
+        (root / "contracts/implementer.md").write_text(
             "Use gpt-4o.\n", encoding="utf-8"
         )
         expected = {
@@ -186,7 +186,7 @@ def self_test(output: TextIO) -> int:
             "skills/existing/SKILL.md:3: unresolved skill reference debugging",
             "skills/existing/SKILL.md:4: TODO",
             "skills/existing/SKILL.md:5: unresolved skill reference missing-reference",
-            "contracts/worker.md:1: concrete provider model id",
+            "contracts/implementer.md:1: concrete provider model id",
         }
         actual = set(scan(root))
         missing = sorted(expected - actual)

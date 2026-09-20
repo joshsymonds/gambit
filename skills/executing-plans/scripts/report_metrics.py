@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Report conduct metrics from a Gambit record directory."""
+"""Report Implementer/model-profile conduct metrics from a Gambit record directory."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ OUTCOMES = ("pending", "done", "gap", "split", "unknown")
 COLUMNS = (
     "family",
     "tasks",
-    "entry_first_pass",
+    "implementer_first_pass",
     "brief_defects",
     "violations_prevented",
     "violations_escaped",

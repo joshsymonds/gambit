@@ -10,17 +10,19 @@ CONTRACT = ROOT / "contracts" / "models.md"
 INDEX = ROOT / "contracts" / "README.md"
 EXPECTED_SECTIONS = [
     "Roles",
-    "Rungs and ladders",
+    "Model profiles",
     "The registry",
     "Resolving a dispatch",
 ]
 ROLES = (
-    "worker",
+    "implementer",
     "orchestrator",
     "scout",
     "steelman",
-    "finder",
-    "verifier",
+    "task-reviewer",
+    "conformance-reviewer",
+    "integration-reviewer",
+    "finding-verifier",
     "test-runner",
 )
 FORBIDDEN_TOKENS = (
@@ -70,19 +72,19 @@ class ModelsContractTest(unittest.TestCase):
     def test_escalation_is_not_a_role_token(self) -> None:
         self.assertNotRegex(self.text, r"`escalation`")
 
-    def test_contract_index_has_seven_roles_and_worker_is_only_writer(self) -> None:
+    def test_contract_index_has_seven_roles_and_implementer_is_only_writer(self) -> None:
         roles = re.findall(r"(?m)^\| `([^`]+)` \|", self.index_text)
         self.assertEqual(roles, list(ROLES))
-        self.assertIn("Only `worker` may change owned files.", self.index_text)
+        self.assertIn("Only `implementer` may change owned files.", self.index_text)
 
-    def test_worker_ladder_has_no_escalation_language(self) -> None:
+    def test_implementer_ladder_has_no_escalation_language(self) -> None:
         section = re.search(
-            r"(?ms)^## Rungs and ladders\n(.*?)(?=^## |\Z)",
+            r"(?ms)^## Model profiles\n(.*?)(?=^## |\Z)",
             self.text,
         )
         self.assertIsNotNone(section)
         body = section.group(1)
-        self.assertIn("entry rung", body)
+        self.assertIn("entry model profile", body)
         self.assertNotIn("next rung", body)
         self.assertNotIn("one rung", body)
 
