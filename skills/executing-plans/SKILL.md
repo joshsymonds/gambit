@@ -9,7 +9,7 @@ user_invokable: true
 
 ## Start
 
-Find the record directory by the rule in `references/record.md` and read its `epic.md`, all eight sections and the Decision Log. The contract alone authorizes work. Keep the Intent and Requirements fixed; assess defects by the contract's Quality Bar, not a stronger standard.
+Find the record directory by the rule in `references/record.md` and read its `epic.md`, the decision line, all ten sections, and the Decision Log. The contract alone authorizes work. Keep the Intent ("What you asked for") and Requirements ("What will be true when done") fixed; assess defects by the contract's Quality Bar, not a stronger standard. The level of care on the failure table's line and each failure row's What we do are the only guarding work the contract asks for; a rating by itself authorizes none.
 
 Resume the record whose `state.json` names the current epic branch, and only that one; without one, the run is fresh. A terminal run only shows its stored report; it dispatches nothing and repeats no external action. For an active run, recover from `state.json` the accepted base, candidate revision, tasks and lineages, rung positions and attempts used, split history, gate records, review state, and completed Release actions.
 
@@ -32,13 +32,13 @@ Create one effort brief per partition. Store it at `efforts/<n>/brief.md` with e
 - **Objective:** Requirements quoted with their named evidence.
 - **Partition:** exact owned files; concurrent efforts' files are off-limits.
 - **Interfaces and order:** frozen shared interfaces, dependencies, and landing order.
-- **Binding contract:** applicable Must Not Ship entries, Premise clauses, Quality Bar, and Decision Log entries touching its files.
+- **Binding contract:** the level of care with the row that set it, each applicable failure row quoted with its What we do, applicable Must Not Ship entries, Premise clauses, Quality Bar, and Decision Log entries touching its files.
 - **Base:** accepted revision, branch `effort/<epic-slug>-<n>`, workspace, exact check commands, and the head's `max_efforts` and `efforts_admitted`.
 - **Report shape:** required report lines and the `efforts/<n>/report.md` destination.
 
 Admit an effort, whether a partition, a review correction, or a release correction, only while the head's `efforts_admitted` is below `max_efforts`, incrementing `efforts_admitted` before its dispatch; resuming an existing effort admits nothing. Copy both values into the brief's Base field and `efforts/<n>/state.json`. A head lacking `max_efforts` admits none. When the ceiling is spent while Requirements remain unmet, end with gaps naming each unmet Requirement and the ceiling.
 
-Before admitting any effort after the first, and whenever a report names new infrastructure, log one Director decision on whether the work introduces a machine, service, harness, script, corpus, or external system unnamed by the accepted Approach or an accepted proposal in the Decision Log. Unauthorized infrastructure makes its dependent Requirements gaps citing it; repairs of authorized work continue within the remaining ceiling.
+Before admitting any effort after the first, and whenever a report names new infrastructure, log one Director decision on whether the work introduces a machine, service, harness, script, corpus, or external system unnamed by the accepted approach ("How, and why not the other ways"), the accepted additions table ("Things you did not ask for"), or an accepted proposal in the Decision Log. Unauthorized infrastructure makes its dependent Requirements gaps citing it; repairs of authorized work continue within the remaining ceiling.
 
 Dispatch every dependency-ready effort concurrently to a fresh orchestrator in its own worktree; when an effort report reveals a defect in the effort brief, the Director logs its own error, corrects the brief, and dispatches a fresh orchestrator with the corrected brief. Before each dispatch, persist the child identity, workspace, revision, and lineage in the head's efforts entry. Merge finished effort branches in completion order, run the final full Done gate once, fold report lines into the head, and take no other tree action. When the registry resolves no `orchestrator` role, the Director performs each effort itself under the orchestrator rules above, inventing no dispatch target, and owning the effort's record writes.
 
@@ -56,9 +56,9 @@ Each brief carries these sections in order:
 - **Neighbors:** concurrent tasks and their complete owned-file lists, all off-limits.
 - **Anchors:** exact current-tree file and line locations, interfaces, and evidence that ground the task.
 - **Acceptance:** the named observable evidence that establishes the covered Requirements.
-- **Constraints:** applicable contract limits and Must Not Ship entries. Goal plus Acceptance plus Constraints stay under 250 words and contain no implementation steps, code, or diffs.
+- **Constraints:** the level of care with the row that set it, each applicable failure row quoted with its What we do, and the applicable Must Not Ship entries and contract limits. Goal plus Acceptance plus Constraints stay under 250 words and contain no implementation steps, code, or diffs.
 - **Requirements covered:** contract identifiers and their named evidence.
-- **Test command:** the task's exact fast check from Done.
+- **Test command:** the task's exact fast check from "Checks the machines run".
 
 A task is one behavior with one failing test, at most three files including the test, every edit location known at brief time, and no change to an interface consumed by unowned files. Repetitive mechanical multi-file changes lift only the file cap. An atomic interface task may exceed three files when its interface and consumers must change together to stay green, and the exception is logged. Oversize splits before dispatch. Interface tasks land first. A worker that reports a separable second behavior triggers a split. A task found oversize after dispatch splits at its next routing decision, before any further dispatch, interface task first, as that lineage's one split.
 
@@ -80,16 +80,16 @@ Write this gate record relative to the run's record directory, which for an effo
 | Lineage | Parent and descendants, including whether its one decomposition has occurred |
 | Rung | The rung that produced this return |
 | Candidate revision | Inspected base and complete change-set evidence; replace with the committed candidate revision after integration |
-| Contract items checked | Every applicable Requirement, Must Not Ship entry, and minimal-change obligation, each with its command or inspection, result, and cited evidence |
+| Contract items checked | Every applicable Requirement, failure row's What we do, Must Not Ship entry, and minimal-change obligation, each with its command or inspection, result, and cited evidence |
 | Owned-files result | Complete changed-path list checked against the exact allowlist |
 | Mechanical-floor result | Evidence for checks, test quality, live code, error handling, and introduced security or data-loss paths, plus a conduct assessment: files touched against the allowlist, dispatch inputs, state written before dispatch, and prevented and escaped violations appended to the task's conduct |
 | Premises touched | Each relevant Premise, evidence, assessment, and consequence of its clause |
 | Verdict | DONE or NOT DONE, itemized against the contract |
 | Next action | Integration, the next dispatch, decomposition, gap, or catastrophe, with its reason |
 
-The mechanical floor rejects suppressed checks, weakened or tautological tests, dead code, unhandled errors, and reachable security or data-loss failures introduced by the change. Minimal change rejects work the contract did not request, including hardening against unnamed failure modes. Closing an error, security, or data-loss path opened by this change is required. Everything else noticed is a Decision Log observation, not a defect or work item.
+The mechanical floor rejects suppressed checks, weakened or tautological tests, dead code, unhandled errors, and reachable security or data-loss failures introduced by the change. Minimal change rejects work the contract did not request, including hardening against a failure mode no failure row names or beyond what its What we do says. Closing an error, security, or data-loss path opened by this change is required. Everything else noticed is a Decision Log observation, not a defect or work item.
 
-Apply a touched Premise's clause before further building. If false and the Intent survives, record the changed assessment and evidence in the Decision Log, follow the clause's alternative, and revise the affected approach or briefs. Keep the frozen Premise text, its clause, Intent, and Requirements unchanged; continue executable work under the revised design. If the clause says the Intent cannot survive, apply Human boundaries immediately.
+Apply a touched Premise's If-wrong clause ("What I'm assuming") before further building. If false and the Intent survives, record the changed assessment and evidence in the Decision Log, follow the clause's alternative, and revise the affected approach or briefs. Keep the frozen Premise text, its clause, Intent, and Requirements unchanged; continue executable work under the revised design. If the clause says the Intent cannot survive, apply Human boundaries immediately.
 
 Worker returns DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, and BLOCKED are evidence for this gate, not terminal outcomes. Supply missing context from the tree or contract. A concern counts only if evidence establishes a contract defect. An unsatisfied task receives NOT DONE regardless of the worker's return label.
 
@@ -126,7 +126,7 @@ Route each contract defect through the build step's failure-signature routing. C
 
 Release is eligible only when every Requirement is DONE, review is clean, and the fresh Done checks pass. Otherwise execute no Release action and proceed to the report with gaps. A clean review cannot authorize a partial release.
 
-For an eligible candidate, execute the Release section's exact actions in order through the shell, against their named targets and intended effects. Record each completed action and evidence immediately. On resume, inspect postconditions from that record instead of repeating completed external actions.
+For an eligible candidate, execute the exact steps of "What leaves this machine or can't be undone" in order through the shell, against their named targets and intended effects; the postconditions after `Then:` are the Release postconditions. Record each completed action and evidence immediately. On resume, inspect postconditions from that record instead of repeating completed external actions.
 
 An action that fails within the repository's own authority, including its tests, CI configuration, or build, opens a correction effort under the build step's failure-signature routing. Correct the failure, run its check, and Release resumes at the first action whose postcondition no longer holds; when every earlier postcondition still holds, that is the failed action, and no action whose postcondition holds is repeated. An action outside that authority that fails, or whose postcondition cannot be confirmed, is a release gap; a failure not shown to lie outside that authority is corrected as inside it. Record the failure and all actions already completed; execute no later action. Report release only when every Release postcondition holds. Before any external action, apply Human boundaries.
 
@@ -149,7 +149,7 @@ Record exactly one terminal outcome: **released**, **ended with gaps**, or **sto
 Catastrophe ends the run immediately when either condition holds:
 
 - A Premise is false and its frozen clause says the Intent cannot survive.
-- The next action is an irreversible external action that Release does not explicitly authorize by action, target, and intended effect.
+- The next action is an irreversible external action that the release steps do not explicitly authorize by action, target, and intended effect.
 
 Cease building and external actions, record the condition and evidence, report **stopped on catastrophe**, and end the run. Do not continue independent work after catastrophe.
 

@@ -265,7 +265,7 @@ class ExecutingPlansStructureTest(unittest.TestCase):
                 self.assertIn(phrase, report)
 
     def test_word_caps(self) -> None:
-        self.assertLessEqual(len(self.text.split()), 3000)
+        self.assertLessEqual(len(self.text.split()), 3200)
         reference = SKILL_ROOT / "references" / "wave-dispatch.md"
         if reference.exists():
             self.assertLessEqual(len(reference.read_text(encoding="utf-8").split()), 700)

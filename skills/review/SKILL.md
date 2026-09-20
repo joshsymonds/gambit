@@ -11,7 +11,7 @@ Produce the complete ordered actions and result from the supplied facts before e
 
 ## Freeze
 
-Read the epic record. Freeze the candidate revision at entry and identify its base revision and the complete changes between them. Inspect exactly that frozen candidate against its Requirements, Must Not Ship, and fixed Quality Bar.
+Read the epic record. Freeze the candidate revision at entry and identify its base revision and the complete changes between them. Inspect exactly that frozen candidate against its Requirements ("What will be true when done"), Must Not Ship entries ("What we won't do"), and fixed Quality Bar (under "Checks the machines run"). Read the level of care and the failure table ("What could go wrong, and how much we care") as context for what the contract chose to guard.
 
 Do not follow the branch tip. Additional commits landing during review are excluded from inspection and from the correction base. Reviewing those commits would require a later review, which the loop never runs for this epic. The only successor considered here is the corrected candidate produced from the frozen candidate by this review's ledger tasks.
 
@@ -26,13 +26,15 @@ Dispatch the `finder` role once for each dimension, concurrently. Each receives 
 - `skills/review/reviewers/quality.md`: the worker contract's mechanical floor.
 - `skills/review/reviewers/performance.md`: contract-named workload evidence and resource failures covered by the Quality Bar.
 
-Pass the frozen revisions, workspace, change set, task owned-file lists, Requirements with their named evidence, Must Not Ship, Quality Bar, and Done commands as data. Each finder reads its own contract and inspects the frozen candidate without editing it.
+Pass the frozen revisions, workspace, change set, task owned-file lists, Requirements with their named evidence, Must Not Ship entries, Quality Bar, Done commands, the level of care, and the failure table rows with their What we do as data. Each finder reads its own contract and inspects the frozen candidate without editing it.
 
 A candidate finding carries an identifier, a claim, `file:line` on the frozen candidate, an admissibility source, and a concrete verify-by step. Admit it only when it cites one of:
 
 - A Requirement whose named evidence is not met.
 - A Must Not Ship entry present.
 - A Quality Bar defect: a change outside owned files; work the contract did not ask for; a suppressed check, weakened or tautological test, dead code, or unhandled error; or a security or data-loss failure with a reachable precondition introduced by this change.
+
+Admissibility is judged first and alone. Only a finding that cites none of the three sources is then weighed against the level of care and the failure table; one that seems out of proportion to them is a proportion observation, reported with its reason, never a question. A data-loss or security defect with a reachable precondition is admissible whatever the level of care says.
 
 Everything else is an observation. Record it in the Decision Log or report with the reason it is not a defect. Even a verified observation creates no task, Requirement, milestone, or correction work. Cheapness, robustness preferences, and hypothetical future needs do not authorize work or a request for direction.
 

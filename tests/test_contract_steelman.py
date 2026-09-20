@@ -40,21 +40,31 @@ class SteelmanContractTest(unittest.TestCase):
                 self.assertIn(status, self.text)
 
     def test_design_packet_fields_are_present(self) -> None:
-        for field in (
-            "Intent",
-            "Premises",
-            "Requirements",
-            "Must Not Ship",
-            "Approach and Rejected Approaches",
-            "Done",
-            "Release",
-            "Unresolved decisions",
-        ):
+        fields = (
+            "What you asked for",
+            "What could go wrong, and how much we care",
+            "Things you did not ask for",
+            "What will be true when done",
+            "What I'm assuming",
+            "What we won't do",
+            "How, and why not the other ways",
+            "What leaves this machine or can't be undone",
+            "Decisions I need from you",
+            "Checks the machines run",
+        )
+        for number, field in enumerate(fields, start=1):
             with self.subTest(field=field):
-                self.assertRegex(self.text, rf"(?m)^\d+\. \*\*{re.escape(field)}\*\*")
+                self.assertRegex(
+                    self.text, rf"(?m)^{number}\. \*\*{re.escape(field)}\*\*"
+                )
+
+    def test_proportionality_judges_the_failure_table(self) -> None:
+        discovery = self.text.split("## Discovery\n", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("failure table", discovery)
+        self.assertIn('"Things you did not ask for"', discovery)
 
     def test_contract_is_within_word_budget(self) -> None:
-        self.assertLessEqual(len(self.text.split()), 900)
+        self.assertLessEqual(len(self.text.split()), 1000)
 
     def test_forbidden_content_is_absent_case_insensitively(self) -> None:
         for token in (

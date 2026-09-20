@@ -8,8 +8,16 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACT_SECTIONS = (
-    "Intent", "Premises", "Requirements", "Must Not Ship", "Quality Bar",
-    "Approach and Rejected Approaches", "Done", "Release",
+    "What you asked for",
+    "What could go wrong, and how much we care",
+    "Things you did not ask for",
+    "What will be true when done",
+    "What I'm assuming",
+    "What we won't do",
+    "How, and why not the other ways",
+    "What leaves this machine or can't be undone",
+    "Decisions I need from you",
+    "Checks the machines run",
 )
 BRIEF_SECTIONS = (
     "Goal", "Files owned", "Hidden shared surfaces", "Neighbors", "Anchors",
@@ -28,19 +36,24 @@ class BrainstormingStructureTest(unittest.TestCase):
         cls.templates = (ROOT / "skills/brainstorming/TEMPLATES.md").read_text()
         cls.readme = (ROOT / "README.md").read_text()
 
+    def section(self, heading: str) -> str:
+        return self.text.split(f"## {heading}\n", 1)[1].split("\n## ", 1)[0]
+
     def test_stage_sections_in_order(self) -> None:
         self.assertEqual(
             re.findall(r"^## (.+)$", self.text, re.MULTILINE),
             ["Inputs", "Research", "Questions in prose", "Approaches and design",
-             "Steelman", "The contract", "Acceptance sheet", "The first effort",
+             "Steelman", "The contract", "The document", "The first effort",
              "Handoff"],
         )
 
     def test_first_effort_brief_fields_acceptance_and_constraints(self) -> None:
-        section = self.text.split("## The first effort\n", 1)[1].split("\n## ", 1)[0]
+        section = self.section("The first effort")
         self.assertIn(", ".join(BRIEF_SECTIONS), section)
         self.assertIn("250 words", section)
         self.assertNotIn("Implementation,", section)
+        self.assertIn("level of care", section)
+        self.assertIn("no worker receives an id without its text", section)
 
     def test_goal_file_rules_close_all_assumptions_and_findings(self) -> None:
         goal_file_rules = "\n".join(
@@ -77,42 +90,88 @@ class BrainstormingStructureTest(unittest.TestCase):
 
     def test_templates_contain_exact_contract_and_brief_sections(self) -> None:
         blocks = re.findall(r"```[^\n]*\n(.*?)\n```", self.templates, re.DOTALL)
-        self.assertEqual(len(blocks), 4)
+        self.assertEqual(len(blocks), 3)
         self.assertEqual(
             tuple(re.findall(r"^## (.+)$", blocks[0], re.MULTILINE)),
             CONTRACT_SECTIONS,
         )
+        head = blocks[0].split("\n## ", 1)[0]
+        self.assertIn("Level of care:", head)
+        self.assertIn("Decisions needed:", head)
         self.assertEqual(
             tuple(re.findall(r"^## (.+)$", blocks[1], re.MULTILINE)),
-            ("Acceptance sheet",),
-        )
-        for line in ("Intent:", "Traced:", "PROPOSED:", "Size:", "max_efforts"):
-            with self.subTest(line=line):
-                self.assertIn(line, blocks[1])
-        done = blocks[0].split("## Done\n", 1)[1].split("\n## ", 1)[0]
-        self.assertIn("max_efforts", done)
-        self.assertEqual(
-            tuple(re.findall(r"^## (.+)$", blocks[2], re.MULTILINE)),
             BRIEF_SECTIONS,
         )
         self.assertEqual(
-            tuple(re.findall(r"^## (.+)$", blocks[3], re.MULTILINE)),
+            tuple(re.findall(r"^## (.+)$", blocks[2], re.MULTILINE)),
             EFFORT_BRIEF_SECTIONS,
         )
 
-    def test_acceptance_sheet_decides_each_proposal_before_acceptance(self) -> None:
-        section = self.text.split("## Acceptance sheet\n", 1)[1].split("\n## ", 1)[0]
-        for phrase in ("PROPOSED", "max_efforts", "Decision Log", "goal file"):
+    def test_template_tables_carry_the_named_columns(self) -> None:
+        block = re.findall(r"```[^\n]*\n(.*?)\n```", self.templates, re.DOTALL)[0]
+        for heading, header in (
+            ("What could go wrong, and how much we care",
+             "| If this happened | How bad | What we do |"),
+            ("Things you did not ask for", "| Where | What | Why | Cost |"),
+            ("What will be true when done", "| Must be true | How we'll know |"),
+            ("What I'm assuming", "| Assumption | If wrong |"),
+            ("How, and why not the other ways",
+             "| Alternative | Why not | Reconsider when |"),
+            ("What leaves this machine or can't be undone",
+             "| Step | Target | Undo |"),
+            ("Decisions I need from you",
+             "| Question | Options | I recommend | Because |"),
+        ):
+            with self.subTest(heading=heading):
+                section = block.split(f"## {heading}\n", 1)[1].split("\n## ", 1)[0]
+                self.assertIn(header, section)
+        failure = block.split(
+            "## What could go wrong, and how much we care\n", 1
+        )[1].split("\n## ", 1)[0]
+        self.assertRegex(failure, r"(?m)^Level of care: .+ Effort ceiling: ")
+        self.assertIn("prevent, reduce, recover, or accept", failure)
+        self.assertIn("`max_efforts`", self.templates)
+
+    def test_the_document_stage_states_the_rules(self) -> None:
+        section = self.section("The document")
+        for phrase in (
+            "max_efforts", "Decision Log", "goal file",
+            "becomes `max_efforts` in the head",
+            "forty lines", "100 columns",
+            "Limited means", "Serious means", "Severe means",
+            "a rating authorizes no work",
+            "prevent, reduce, recover, or accept",
+            "no likelihood column",
+            "Things you did not ask for",
+            "An empty table means nothing was added",
+            "never trim a Requirement or a failure row to fit",
+        ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, section)
-        self.assertIn("written into the contract's Done section", section)
-        self.assertIn("becomes `max_efforts` in the head", section)
-        self.assertIn("at most forty lines", section)
+
+    def test_questions_ask_use_cases_failure_cases_and_ceiling(self) -> None:
+        section = self.section("Questions in prose")
+        for phrase in ("use cases", "failure cases", "effort ceiling",
+                       "limited, serious, or severe"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, section)
+
+    def test_contract_stage_lists_the_ten_sections_in_order(self) -> None:
+        section = self.section("The contract")
+        items = re.findall(r"(?m)^\d+\. \*\*(.+?):\*\*", section)
+        self.assertEqual(tuple(items), CONTRACT_SECTIONS)
+        self.assertIn("starting `Quality Bar:`", section)
+        self.assertIn("Never customize it", section)
+
+    def test_steelman_packet_uses_the_document_sections(self) -> None:
+        section = self.section("Steelman")
+        self.assertIn("; ".join(CONTRACT_SECTIONS), section)
 
     def test_proportionality_is_a_named_failure_in_drafting_and_steelman(self) -> None:
-        design = self.text.split("## Approaches and design\n", 1)[1].split("\n## ", 1)[0]
+        design = self.section("Approaches and design")
         self.assertIn("Proportionality failure is a contract-drafting failure", design)
         self.assertIn("audience, stakes, scale, and constraints", design)
+        self.assertIn("a rating authorizes no work by itself", design)
         steelman = (ROOT / "contracts/steelman.md").read_text(encoding="utf-8")
         discovery = steelman.split("## Discovery\n", 1)[1].split("\n## ", 1)[0]
         self.assertIn("Proportionality failure is a steelman finding", discovery)
@@ -129,13 +188,28 @@ class BrainstormingStructureTest(unittest.TestCase):
         self.assertIn("250 words", self.templates)
         self.assertIn("400 words", self.templates)
 
+    def test_brief_constraints_quote_failure_rows(self) -> None:
+        block = re.findall(r"```[^\n]*\n(.*?)\n```", self.templates, re.DOTALL)[1]
+        constraints = block.split("## Constraints\n", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("level of care", constraints)
+        self.assertIn("no id arrives without its text", constraints)
+
     def test_quality_bar_matches_readme_verbatim(self) -> None:
         expected = self.readme.split("> Failing,", 1)[1].split("\n\n", 1)[0]
         expected = "Failing," + expected
-        actual = self.templates.split("## Quality Bar\n", 1)[1].split(
-            "\n## ", 1
-        )[0].strip()
-        self.assertEqual(actual, expected)
+        block = re.findall(r"```[^\n]*\n(.*?)\n```", self.templates, re.DOTALL)[0]
+        checks = block.split("## Checks the machines run\n", 1)[1]
+        lines = [line for line in checks.splitlines() if line.startswith("Quality Bar: ")]
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0][len("Quality Bar: "):], expected)
+
+    def test_readme_describes_the_document(self) -> None:
+        for heading in CONTRACT_SECTIONS:
+            with self.subTest(heading=heading):
+                self.assertIn(f"**{heading}.**", self.readme)
+        self.assertIn("limited, serious, or severe", self.readme)
+        self.assertIn("level of care", self.readme)
+        self.assertIn("forty lines", self.readme)
 
     def test_forbidden_content_absent(self) -> None:
         forbidden = (
@@ -146,6 +220,7 @@ class BrainstormingStructureTest(unittest.TestCase):
             r"legacy|migration|compatib|previously",
             r"\b(?:anthropic|openai|claude|codex|haiku|sonnet|opus|fable|astra|sol|luna|terra|gemini)\b",
             r"\bgpt-[\w.-]+|\b(?:scout|steelman)-(?:low|high|xhigh)\b",
+            r"Acceptance sheet|PROPOSED:|\btier\b|read first",
         )
         for name, text in (("skill", self.text), ("templates", self.templates)):
             for pattern in forbidden:
@@ -156,8 +231,8 @@ class BrainstormingStructureTest(unittest.TestCase):
 
     def test_word_caps(self) -> None:
         for name, text, cap in (
-            ("SKILL.md", self.text, 2500),
-            ("TEMPLATES.md", self.templates, 900),
+            ("SKILL.md", self.text, 2800),
+            ("TEMPLATES.md", self.templates, 1200),
         ):
             with self.subTest(file=name):
                 self.assertLessEqual(len(text.split()), cap)

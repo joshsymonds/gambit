@@ -8,7 +8,7 @@ Derive repository-id from the tree: the basename of the parent of `git rev-parse
 
 The directory holds the epic-level files and one directory per effort:
 
-- `epic.md` — the eight contract sections, frozen at acceptance.
+- `epic.md` — the contract: its decision line and ten sections, frozen at acceptance.
 - `decisions.md` — the Director-level Decision Log, append-only.
 - `state.json` — the head: where this epic stands now.
 - `gates/<task-slug>-<attempt>.md` — one gate record per attempt.
@@ -21,7 +21,7 @@ The directory holds the epic-level files and one directory per effort:
 
 ## The three carriers
 
-`epic.md` is frozen. Intent, Premises with their survival clauses, and Requirements do not change after acceptance. A later assessment becomes a Decision Log line and leaves that text intact.
+`epic.md` is frozen. Intent ("What you asked for"), Premises with their If-wrong clauses ("What I'm assuming"), Requirements ("What will be true when done"), and the failure table with its level of care do not change after acceptance. A later assessment becomes a Decision Log line and leaves that text intact.
 
 `state.json` is the head and is rewritten in place. Task status fields flip as work moves, and `next_actions` is rewritten every effort to name what the next reader does first. Keep it under 200 lines; it is the head, not the archive. Detail belongs in the gate and effort files it addresses.
 
@@ -46,7 +46,7 @@ Write `supersedes: none` when the entry reverses nothing.
   "effort": 2,
   "max_efforts": 3,
   "efforts_admitted": 2,
-  "done": ["<each task fast check from the contract's Done section, verbatim>"],
+  "done": ["<each command from the contract's Checks the machines run, verbatim>"],
   "tasks": [
     {
       "id": 11,
@@ -108,7 +108,7 @@ Write `supersedes: none` when the entry reverses nothing.
 }
 ```
 
-Those top-level keys are the whole head, and every task entry carries exactly the keys shown. `max_efforts` is the effort ceiling named in the frozen contract's Done section: a positive integer copied into the head at acceptance, bounding how many effort identities the run may admit; the head carries that value and never changes it. `efforts_admitted` counts every effort identity the Director has admitted so far, including concurrent partitions and review or release correction efforts; resuming an existing effort admits nothing. Both are copied into every effort brief's Base field and every `efforts/<n>/state.json`, and neither changes on resume. A head lacking `max_efforts` admits no effort: the run ends with gaps naming the missing ceiling. Each task's `dispatch` object carries exactly `child`, `workspace`, and `revision`; `child` and `revision` are strings or null, and `workspace` is an absolute path string or null. Write this object before dispatching the task's worker, and keep all three values null until then. Each task's `conduct` object carries exactly `brief_defects`, `violations_prevented`, `violations_escaped`, `routing_history`, `outcome`, and `cost`. The first three are lists of strings from validation and routing; `routing_history` is a list of objects carrying exactly `signature`, `step`, and `attempt`; `outcome` is `pending`, `done`, `gap`, or `split`; and `cost` carries integer or null `turns` and `tokens`. Each effort entry carries exactly `n`, `branch`, `workspace`, `child`, `revision`, `status`, and `report`.
+Those top-level keys are the whole head, and every task entry carries exactly the keys shown. `max_efforts` is the effort ceiling named on the level-of-care line of the frozen contract's failure table ("What could go wrong, and how much we care"): a positive integer copied into the head at acceptance, bounding how many effort identities the run may admit; the head carries that value and never changes it. `efforts_admitted` counts every effort identity the Director has admitted so far, including concurrent partitions and review or release correction efforts; resuming an existing effort admits nothing. Both are copied into every effort brief's Base field and every `efforts/<n>/state.json`, and neither changes on resume. A head lacking `max_efforts` admits no effort: the run ends with gaps naming the missing ceiling. Each task's `dispatch` object carries exactly `child`, `workspace`, and `revision`; `child` and `revision` are strings or null, and `workspace` is an absolute path string or null. Write this object before dispatching the task's worker, and keep all three values null until then. Each task's `conduct` object carries exactly `brief_defects`, `violations_prevented`, `violations_escaped`, `routing_history`, `outcome`, and `cost`. The first three are lists of strings from validation and routing; `routing_history` is a list of objects carrying exactly `signature`, `step`, and `attempt`; `outcome` is `pending`, `done`, `gap`, or `split`; and `cost` carries integer or null `turns` and `tokens`. Each effort entry carries exactly `n`, `branch`, `workspace`, `child`, `revision`, `status`, and `report`.
 
 ## Decomposition
 

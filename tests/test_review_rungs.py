@@ -81,6 +81,17 @@ class ReviewStructureTests(unittest.TestCase):
             with self.subTest(term=term):
                 self.assertIn(term, self.text)
 
+    def test_admissibility_precedes_the_level_of_care(self) -> None:
+        finders = self.text.split("## Finders\n", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("Admissibility is judged first and alone", finders)
+        self.assertIn("proportion observation", finders)
+        self.assertIn("level of care", finders)
+        self.assertIn("failure table", finders)
+        for reviewer in REVIEWERS:
+            with self.subTest(reviewer=reviewer):
+                text = (REVIEW / f"reviewers/{reviewer}.md").read_text(encoding="utf-8")
+                self.assertIn("level of care", text)
+
     def test_reviewer_files_have_role_sections_and_admissibility_sources(self) -> None:
         for reviewer in REVIEWERS:
             with self.subTest(reviewer=reviewer):

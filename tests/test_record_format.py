@@ -75,14 +75,16 @@ EFFORT_KEYS = ("n", "branch", "workspace", "child", "revision", "status", "repor
 DECOMPOSITION_KEYS = ("requirement", "owned_files", "lineage", "split_used")
 DECISION_FIELDS = ("id", "timestamp", "decision", "reason", "evidence", "supersedes")
 CONTRACT_SECTIONS = (
-    "Intent",
-    "Premises",
-    "Requirements",
-    "Must Not Ship",
-    "Quality Bar",
-    "Approach and Rejected Approaches",
-    "Done",
-    "Release",
+    "What you asked for",
+    "What could go wrong, and how much we care",
+    "Things you did not ask for",
+    "What will be true when done",
+    "What I'm assuming",
+    "What we won't do",
+    "How, and why not the other ways",
+    "What leaves this machine or can't be undone",
+    "Decisions I need from you",
+    "Checks the machines run",
 )
 HEAD_LINE_CAP = 200
 
@@ -263,10 +265,54 @@ class FixtureRecordTest(unittest.TestCase):
                     self.assertEqual(match.group("slug"), task["slug"])
                     self.assertLessEqual(int(match.group("attempt")), task["attempts"])
 
-    def test_epic_has_the_eight_sections_in_template_order(self) -> None:
+    def test_epic_has_the_ten_sections_in_template_order(self) -> None:
         self.assertEqual(
             tuple(re.findall(r"(?m)^## (.+)$", self.epic)), CONTRACT_SECTIONS
         )
+
+    def test_epic_decision_line_precedes_the_sections(self) -> None:
+        head = self.epic.split("\n## ", 1)[0]
+        self.assertRegex(head, r"Level of care: (?:limited|serious|severe)\.")
+        self.assertRegex(head, r"Decisions needed: (?:\d+|none)\.")
+
+    def test_epic_failure_table_sets_level_of_care_and_ceiling(self) -> None:
+        section = self.epic.split(
+            "## What could go wrong, and how much we care\n", 1
+        )[1].split("\n## ", 1)[0]
+        rows = re.findall(r"(?m)^\| F\d+ .+\| (limited|serious|severe) \| (.+?) \|$", section)
+        self.assertTrue(rows, "fixture names no failure row")
+        for rating, action in rows:
+            with self.subTest(rating=rating):
+                self.assertRegex(action, r"^(?:prevent|reduce|recover|accept):")
+        line = re.search(
+            r"(?m)^Level of care: (?:limited|serious|severe), set by F\d+\. "
+            r"Effort ceiling: (\d+)\.$",
+            section,
+        )
+        if line is None:
+            self.fail("no level-of-care line")
+        self.assertEqual(int(line.group(1)), self.state["max_efforts"])
+
+    def test_epic_quality_bar_is_verbatim_on_one_line(self) -> None:
+        readme = read(ROOT / "README.md")
+        expected = "Failing," + readme.split("> Failing,", 1)[1].split("\n\n", 1)[0]
+        checks = self.epic.split("## Checks the machines run\n", 1)[1]
+        lines = [line for line in checks.splitlines() if line.startswith("Quality Bar: ")]
+        self.assertEqual(len(lines), 1)
+        self.assertEqual(lines[0][len("Quality Bar: "):], expected)
+
+    def test_epic_content_fits_forty_lines_at_100_columns(self) -> None:
+        body = self.epic.split("\n## ", 1)[1].split("\n## Checks the machines run", 1)[0]
+        lines = [line.strip() for line in body.splitlines()]
+        rule = re.compile(r"^\|(?:\s*:?-+:?\s*\|)+$")
+        counted = 0
+        for index, line in enumerate(lines):
+            following = lines[index + 1] if index + 1 < len(lines) else ""
+            header_row = line.startswith("|") and rule.match(following) is not None
+            if not line or line.startswith("## ") or rule.match(line) or header_row:
+                continue
+            counted += -(-len(line) // 100)
+        self.assertLessEqual(counted, 40)
 
     def test_every_decision_line_matches_the_field_pattern(self) -> None:
         entries = [

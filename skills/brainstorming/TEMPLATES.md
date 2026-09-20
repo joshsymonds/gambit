@@ -1,56 +1,69 @@
 # Epic and task templates
 
-Use the record-task-state operation. Fill every field from the goal, decisions, and research before creating executable work. The epic body contains exactly the eight sections below. Its Decision Log is attached record context, outside that body. The Design Ledger stays in the design transcript. The epic body, its Decision Log, and the task state are also written to the epic's record directory as `skills/executing-plans/references/record.md` specifies.
+Use the record-task-state operation. Fill every field from the goal, decisions, and research before creating executable work. The epic body is one document: the decision line, then exactly the ten sections below in this order. Its Decision Log is attached record context, outside that body. The Design Ledger stays in the design transcript. The epic body, its Decision Log, and the task state are also written to the epic's record directory as `skills/executing-plans/references/record.md` specifies.
+
+Rows in "What will be true when done" are the Requirements (R ids). Rows in "What I'm assuming" are the Premises (P ids). Rows in "What could go wrong" are the failure cases (F ids). Entries under "What we won't do" are the Must Not Ship entries. Those names are how every later stage refers to the contents.
 
 ### Epic record
 
 ```markdown
-## Intent
-[One paragraph stating the desired end state and why it is wanted, without prescribing a solution.]
+# [Epic name]
 
-## Premises
-- P1: [Falsifiable fact, with evidence.] If false, the Intent [survives with the stated design consequence / cannot survive, for this reason].
+[One sentence: what is approved.] Level of care: [limited, serious, or severe]. Decisions needed: [n, or none].
 
-## Requirements
-- R1: [Atomic, testable outcome or explicit constraint.] Evidence: [named test or observable result and exact command that establishes it].
+## What you asked for
+[One to three plain sentences: the desired end state and why it is wanted, in the person's own terms. Never a solution.]
 
-## Must Not Ship
-- [Forbidden outcome or non-goal.] Reason: [why it must be excluded].
+## What could go wrong, and how much we care
+| If this happened | How bad | What we do |
+|---|---|---|
+| F1 [A failure in the past tense, as the person would experience it] | [limited, serious, or severe] | [prevent, reduce, recover, or accept]: [the one thing done about it] |
+Level of care: [the worst row's rating], set by [Fn]. Effort ceiling: [n].
 
-## Quality Bar
-Failing, low-quality, or bad code is unacceptable, but failure to meet a mythic platonic ideal of code or cover literally every imaginable edge case is NOT itself a defect. This bar is FIXED for every epic; write it verbatim — never elicit it, strengthen it, or make it a per-project preference. A defect is exactly one of: a Requirement's named evidence not met; a Must Not Ship entry present; a change outside the task's owned files; a change the contract did not ask for; a violation of the worker contract's mechanical floor (a suppressed check, a weakened or tautological test, dead code, an unhandled error); or a security or data-loss failure with a reachable precondition that the change itself introduces. Everything else the orchestrator or a reviewer notices is an observation — it may be recorded in the Decision Log and the report; it never becomes work during the run. The craftsmanship asked of the worker is one line: simple, foundational, secure; match the surrounding code.
+## Things you did not ask for
+| Where | What | Why | Cost |
+|---|---|---|---|
+| [R, P, or F id; a mechanism; a check; or a release step] | [the addition beyond the person's words] | [why it is there] | [new files, infrastructure, external systems, or check runtime] |
 
-## Approach and Rejected Approaches
-Chosen: [Shape, interfaces, data flow, and reason, grounded in cited research.]
-Rejected: [Alternative and reason.] Reconsider only if [specific condition changes that reason].
+## What will be true when done
+| Must be true | How we'll know |
+|---|---|
+| R1 [Atomic, testable outcome] | [named test or observable result, and the exact command] |
 
-## Done
-- Task fast check: [exact command, including required setup and working directory].
-- Integrated candidate full gate: [exact commands in order, including required setup].
-- Effort ceiling: max_efforts [n].
+## What I'm assuming
+| Assumption | If wrong |
+|---|---|
+| P1 [Falsifiable fact, with evidence] | Intent [survives; the design consequence / cannot survive; the reason] |
 
-## Release
-1. Action: [exact action]. Target: [exact repository, branch, service, or destination]. Intended effect: [observable result].
-2. [Next action with its target and effect, if needed.]
-Postconditions: [observable facts and checks that must all hold before reporting release].
+## What we won't do
+- [Forbidden outcome or non-goal]. [Why it is excluded.]
+
+## How, and why not the other ways
+[One paragraph: the chosen shape, interfaces, data flow, and reason, grounded in cited research.]
+| Alternative | Why not | Reconsider when |
+|---|---|---|
+| [Alternative] | [the reason it loses] | [the specific condition that changes that reason, or never] |
+
+## What leaves this machine or can't be undone
+| Step | Target | Undo |
+|---|---|---|
+| 1 [Exact action], so [intended effect] | [exact repository, branch, service, or destination] | [how to reverse it, or none] |
+Then: [the observable facts that must all hold before reporting release].
+
+## Decisions I need from you
+| Question | Options | I recommend | Because |
+|---|---|---|---|
+| [Open choice] | [realistic options] | [one option] | [the reason] |
+
+## Checks the machines run
+Done: [exact task fast check with its setup and working directory]; [the integrated candidate's full gate, in order].
+Evidence: [the tests and observable results named under How we'll know].
+Quality Bar: Failing, low-quality, or bad code is unacceptable, but failure to meet a mythic platonic ideal of code or cover literally every imaginable edge case is NOT itself a defect. This bar is FIXED for every epic; write it verbatim — never elicit it, strengthen it, or make it a per-project preference. A defect is exactly one of: a Requirement's named evidence not met; a Must Not Ship entry present; a change outside the task's owned files; a change the contract did not ask for; a violation of the worker contract's mechanical floor (a suppressed check, a weakened or tautological test, dead code, an unhandled error); or a security or data-loss failure with a reachable precondition that the change itself introduces. Everything else the orchestrator or a reviewer notices is an observation — it may be recorded in the Decision Log and the report; it never becomes work during the run. The craftsmanship asked of the worker is one line: simple, foundational, secure; match the surrounding code.
 ```
 
-Acceptance freezes Intent, Premises and their survival clauses, and Requirements. Keep subsequent assessments in the Decision Log without rewriting the frozen text. Each log entry states the decision or assumption, its reason and evidence, and any affected finding or contract identifier.
+After acceptance, "Decisions I need from you" reads `None`, followed by the settled decisions by id. Acceptance freezes What you asked for, the assumptions with their If-wrong clauses, and the Requirements. Keep subsequent assessments in the Decision Log without rewriting the frozen text. Each log entry states the decision or assumption, its reason and evidence, and any affected finding or contract identifier.
 
-### Acceptance sheet
-
-Emit it with the contract, before acceptance, as attached record context outside the eight-section body. A PROPOSED item is any Requirement, Approach mechanism, Done command, or Release action that traces to no sentence of the person's. Costs are estimates.
-
-```markdown
-## Acceptance sheet
-Intent: [the Intent paragraph verbatim]
-Traced: [n] Requirements, [n] mechanisms, [n] Done commands, [n] Release actions from the request.
-PROPOSED:
-- [identifier]: [one line]. Cost: [new files; new infrastructure (machine, service, harness, script, corpus); external systems; Done runtime]. Decision: [accepted or struck, Decision Log id].
-Size: [n] Requirements; [n] efforts estimated because [reason]; max_efforts [n]; [n] PROPOSED.
-```
-
-Done carries the accepted `max_efforts`; the head copies it per `skills/executing-plans/references/record.md`.
+The effort ceiling on the level-of-care line is the accepted `max_efforts`; the head copies it per `skills/executing-plans/references/record.md`.
 
 ### Task brief
 
@@ -76,13 +89,13 @@ Supply the task's workspace, base revision, and applicable contract clauses alon
 [Name an existing test or reproduction with its expected result, or state behavioral criteria for the failing test written first.]
 
 ## Constraints
-[State the applicable contract, scope, and safety limits.]
+[The level of care with the row that set it. Each applicable failure row quoted with its What we do, so no id arrives without its text. The applicable What we won't do entries and scope and safety limits.]
 
 ## Requirements covered
 - R1: [Requirement text and its named satisfying evidence.]
 
 ## Test command
-Test command: [exact task fast check from Done].
+Test command: [exact task fast check from Checks the machines run].
 ```
 
 ### Effort brief
@@ -100,7 +113,7 @@ The Director writes one effort brief per effort. Objective plus Interfaces plus 
 [List interfaces published or consumed, in their order.]
 
 ## Binding contract
-[List applicable Must Not Ship entries, Premise clauses, the Quality Bar, and Decision Log entries touching these files.]
+[The level of care with the row that set it, each applicable failure row with its What we do, the applicable What we won't do entries, assumption If-wrong clauses, the Quality Bar, and Decision Log entries touching these files.]
 
 ## Base
 [Give the accepted base, branch `effort/<epic-slug>-<n>`, check commands, and the head's `max_efforts` and `efforts_admitted`.]

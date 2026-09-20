@@ -24,16 +24,20 @@ A person is present at exactly three moments: writing the contract, reading the 
 
 ## The Contract
 
-The contract is the epic record, eight sections. Everything after it is measured against it.
+The contract is the epic record: one document a person reads in a sitting, in the order they need it. A decision line opens it, naming what is approved, the level of care, and how many decisions are still open. Ten sections follow, each headed by the question it answers. Everything after it is measured against it.
 
-- **Intent.** One paragraph: the desired end state and the reason it is wanted. Never a solution. *"Users can sign in with a passkey, because password resets are a third of support load."*
-- **Premises.** The facts the Intent depends on. Each is falsifiable and says whether the Intent survives if it is false. Both are frozen at acceptance; a changed assessment goes to the Decision Log. *"P1: the auth service owns session issuance. If false, the Intent survives; the design changes."*
-- **Requirements.** Immutable, atomic, testable. Each names the evidence that satisfies it. *"R1: a registered passkey signs in without a password. Evidence: `test_passkey_login` green."*
-- **Must Not Ship.** Anti-patterns and non-goals, each with its reason. *"No password fallback on the passkey path (reason: it reopens the reset load)."*
-- **Quality Bar.** The fixed defect definition below.
-- **Approach and Rejected Approaches.** The chosen shape, and each rejected alternative with the condition for revisiting it.
-- **Done.** The exact commands whose green output means done: a task's fast check and the integrated candidate's full gate.
-- **Release.** The exact actions in order, each naming its target and intended effect, and the postconditions that must hold before release is reported; from *open a pull request* to *tag, publish, deploy*.
+- **What you asked for.** The Intent: the desired end state and the reason it is wanted, in the person's terms. Never a solution. *"Users can sign in with a passkey, because password resets are a third of support load."*
+- **What could go wrong, and how much we care.** A table of failures as the person would experience them, each rated limited, serious, or severe, with the one thing done about it. The worst row sets the level of care that every brief and reviewer receives, and the effort ceiling sits on the same line. *"F1 A passkey signed in on someone else's account | severe | prevent: challenge bound to the credential id."*
+- **Things you did not ask for.** Every Requirement, mechanism, check, or release step that traces to no sentence of the person's, with why and its cost. The person decides each row before accepting; an empty table means nothing was added.
+- **What will be true when done.** The Requirements: immutable, atomic, testable, each with the evidence that satisfies it. *"R1 A registered passkey signs in without a password | `test_passkey_login` green."*
+- **What I'm assuming.** The Premises: the facts the Intent depends on. Each is falsifiable and says whether the Intent survives if it is false. Both are frozen at acceptance; a changed assessment goes to the Decision Log. *"P1 The auth service owns session issuance | Intent survives; the design changes."*
+- **What we won't do.** The Must Not Ship entries: anti-patterns and non-goals, each with its reason. *"No password fallback on the passkey path. It reopens the reset load."*
+- **How, and why not the other ways.** The chosen shape in one paragraph, then each alternative with why it loses and when to reconsider it.
+- **What leaves this machine or can't be undone.** The release steps in order, each naming the action and its effect, its target, and how to undo it; a step with no undo is the irreversible one. Then the postconditions that must hold before release is reported; from *open a pull request* to *tag, publish, deploy*.
+- **Decisions I need from you.** Every open choice with options and a recommendation, or `None` once accepted.
+- **Checks the machines run.** The exact commands whose green output means done, a task's fast check and the integrated candidate's full gate, the evidence named above, and the fixed Quality Bar below.
+
+The content above the checks fits forty lines at 100 columns. An epic that needs more is two epics.
 
 The Quality Bar, verbatim in every contract:
 
@@ -62,7 +66,7 @@ Artifacts: the epic record with its Decision Log, briefs, gate records, the bran
 **Catastrophe.** The orchestrator stops the run, writes the report, and names one of two conditions:
 
 - a Premise is false and its clause says the Intent cannot survive; or
-- the next action is an irreversible external action that the Release section does not explicitly authorize by action, target, and intended effect.
+- the next action is an irreversible external action that the release steps do not explicitly authorize by action, target, and intended effect.
 
 No other external action the contract does not name is taken either: a task that needs one is NOT DONE and becomes a gap. Only the irreversible case stops the run.
 
