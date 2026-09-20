@@ -57,7 +57,7 @@ class RootTreeIsFreeOfExecutorMachineryTest(unittest.TestCase):
                 / "skills"
                 / "executing-plans"
                 / "references"
-                / "configured-workers.md"
+                / "configured-implementers.md"
             ).exists()
         )
 
@@ -74,14 +74,14 @@ class SkillDispatchSitesResolveThroughModelsTest(unittest.TestCase):
     def test_execution_dispatch_names_roles_and_registry(self) -> None:
         executing = self.skill("executing-plans")
         self.assertIn("contracts/models.md", executing)
-        for role in ("worker", "scout", "orchestrator"):
+        for role in ("implementer", "scout", "orchestrator"):
             with self.subTest(role=role):
                 self.assertRegex(executing, rf"\b{role}\b")
 
-    def test_review_resolves_finder_and_verifier_roles(self) -> None:
+    def test_review_resolves_final_review_and_finding_verification_roles(self) -> None:
         review = self.skill("review")
         self.assertIn("contracts/models.md", review)
-        for role in ("finder", "verifier"):
+        for role in ("conformance-reviewer", "integration-reviewer", "finding-verifier"):
             with self.subTest(role=role):
                 self.assertRegex(review, rf"\b{role}\b")
 
@@ -91,7 +91,7 @@ class SkillDispatchSitesResolveThroughModelsTest(unittest.TestCase):
             with self.subTest(path=path.name):
                 self.assertNotRegex(
                     text,
-                    r"(?:scout|worker|finder|verifier|test-runner|steelman|"
+                    r"(?:scout|implementer|finder|verifier|test-runner|steelman|"
                     r"wrapper|escalation) tier",
                 )
 
@@ -102,7 +102,7 @@ class SkillDispatchSitesResolveThroughModelsTest(unittest.TestCase):
                 self.assertNotRegex(
                     text,
                     r"(?:cheap|standard|most-capable) tier|tier alias"
-                    r"|configured (?:worker|executor|Codex)",
+                    r"|configured (?:implementer|executor|Codex)",
                 )
 
 

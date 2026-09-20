@@ -63,8 +63,8 @@ class ProseScanTest(unittest.TestCase):
         (self.root / "skills/brainstorming/SKILL.md").write_text(
             "Discovery prose.\n", encoding="utf-8"
         )
-        (self.root / "contracts/worker.md").write_text(
-            "Worker prose.\n", encoding="utf-8"
+        (self.root / "contracts/implementer.md").write_text(
+            "Implementer prose.\n", encoding="utf-8"
         )
 
     def tearDown(self) -> None:
@@ -90,7 +90,7 @@ class ProseScanTest(unittest.TestCase):
                 )
 
     def test_contract_only_provider_model_regex_is_reused(self) -> None:
-        (self.root / "contracts/worker.md").write_text(
+        (self.root / "contracts/implementer.md").write_text(
             "Use claude-3-7-sonnet or GPT-4o or o3-mini or codex-mini.\n",
             encoding="utf-8",
         )
@@ -99,7 +99,7 @@ class ProseScanTest(unittest.TestCase):
         )
         findings = scan_prose.scan(self.root)
         self.assertEqual(
-            ["contracts/worker.md:1: concrete provider model id"], findings
+            ["contracts/implementer.md:1: concrete provider model id"], findings
         )
 
     def test_deleted_readme_line_exempts_only_deleted_skill_tokens(self) -> None:
@@ -136,7 +136,7 @@ class ProseScanTest(unittest.TestCase):
             "gambit:absent.\n",
             encoding="utf-8",
         )
-        (self.root / "contracts/worker.md").write_text(
+        (self.root / "contracts/implementer.md").write_text(
             "A catastrophe may STOP and report using gpt-4o.\n",
             encoding="utf-8",
         )
@@ -149,7 +149,7 @@ class ProseScanTest(unittest.TestCase):
                 "README.md:6: migration",
                 "README.md:6: TBD",
                 "README.md:6: unresolved skill reference absent",
-                "contracts/worker.md:1: concrete provider model id",
+                "contracts/implementer.md:1: concrete provider model id",
             ],
             findings,
         )
@@ -176,11 +176,11 @@ class ProseScanTest(unittest.TestCase):
         )
 
     def test_planted_forbidden_line_reports_file_and_line(self) -> None:
-        (self.root / "contracts/worker.md").write_text(
+        (self.root / "contracts/implementer.md").write_text(
             "clean\nstill clean\nA TODO remains.\n", encoding="utf-8"
         )
         self.assertEqual(
-            ["contracts/worker.md:3: TODO"], scan_prose.scan(self.root)
+            ["contracts/implementer.md:3: TODO"], scan_prose.scan(self.root)
         )
 
     def test_clean_tree_exits_zero_and_dirty_tree_exits_one(self) -> None:
@@ -188,10 +188,10 @@ class ProseScanTest(unittest.TestCase):
         self.assertEqual(0, scan_prose.main([], root=self.root, output=output))
         self.assertEqual("", output.getvalue())
 
-        (self.root / "contracts/worker.md").write_text("legacy\n", encoding="utf-8")
+        (self.root / "contracts/implementer.md").write_text("legacy\n", encoding="utf-8")
         output = io.StringIO()
         self.assertEqual(1, scan_prose.main([], root=self.root, output=output))
-        self.assertEqual("contracts/worker.md:1: legacy\n", output.getvalue())
+        self.assertEqual("contracts/implementer.md:1: legacy\n", output.getvalue())
 
     def test_self_test_covers_each_violation_class(self) -> None:
         output = io.StringIO()

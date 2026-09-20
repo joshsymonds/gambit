@@ -69,34 +69,35 @@ class WaveRepository:
         self.base = git(self.epic, "rev-parse", "HEAD").stdout.strip()
         self.integration = root / "integration"
         self.manifest = root / "wave.json"
-        self.workers: dict[str, Path] = {}
+        self.implementers: dict[str, Path] = {}
 
-    def add_worker(self, name: str) -> Path:
+    def add_implementer(self, name: str) -> Path:
         worktree = self.root / name
         git(self.epic, "worktree", "add", "--detach", str(worktree), self.base)
-        self.workers[name] = worktree
+        self.implementers[name] = worktree
         return worktree
 
     def write_manifest(
         self,
-        workers: list[tuple[str, list[str], str]],
+        implementers: list[tuple[str, list[str], str]],
         gate: list[str],
         *,
         base: str | None = None,
+        collection_key: str = "implementers",
     ) -> None:
         payload = {
             "base": self.base if base is None else base,
             "epic_worktree": str(self.epic),
             "integration_worktree": str(self.integration),
             "gate": gate,
-            "workers": [
+            collection_key: [
                 {
                     "name": name,
-                    "worktree": str(self.workers[name]),
+                    "worktree": str(self.implementers[name]),
                     "owned_paths": owned_paths,
                     "commit_message": commit_message,
                 }
-                for name, owned_paths, commit_message in workers
+                for name, owned_paths, commit_message in implementers
             ],
         }
         self.manifest.write_text(json.dumps(payload), encoding="utf-8")
@@ -125,6 +126,64 @@ class WaveIntegrationTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.tempdir.cleanup()
 
+    def test_legacy_workers_manifest_still_integrates(self) -> None:
+        implementer = self.repo.add_implementer("legacy-implementer")
+        (implementer / "tracked.txt").write_text("legacy manifest\n", encoding="utf-8")
+        self.repo.write_manifest(
+            [("legacy-implementer", ["tracked.txt"], "legacy manifest")],
+            [sys.executable, "-c", "pass"],
+            collection_key="workers",
+        )
+
+        result = self.repo.integrate()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertIn("Integrated 1 implementer", result.stdout)
+        self.assertEqual(
+            (self.repo.epic / "tracked.txt").read_text(encoding="utf-8"),
+            "legacy manifest\n",
+        )
+
+    def test_conflicting_implementers_and_legacy_workers_are_rejected(self) -> None:
+        implementer = self.repo.add_implementer("conflicting-implementer")
+        (implementer / "tracked.txt").write_text("candidate\n", encoding="utf-8")
+        self.repo.write_manifest(
+            [("conflicting-implementer", ["tracked.txt"], "candidate")],
+            [sys.executable, "-c", "pass"],
+        )
+        payload = json.loads(self.repo.manifest.read_text(encoding="utf-8"))
+        payload["workers"] = []
+        self.repo.manifest.write_text(json.dumps(payload), encoding="utf-8")
+
+        result = self.repo.integrate()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("implementers", result.stderr)
+        self.assertIn("workers", result.stderr)
+        self.assertIn("conflict", result.stderr.lower())
+        self.assertEqual(self.repo.head(), self.repo.base)
+        self.assertFalse(self.repo.integration.exists())
+
+    def test_manifest_requires_implementers_or_legacy_workers(self) -> None:
+        self.repo.manifest.write_text(
+            json.dumps(
+                {
+                    "base": self.repo.base,
+                    "epic_worktree": str(self.repo.epic),
+                    "integration_worktree": str(self.repo.integration),
+                    "gate": [sys.executable, "-c", "pass"],
+                }
+            ),
+            encoding="utf-8",
+        )
+
+        result = self.repo.integrate()
+
+        self.assertNotEqual(result.returncode, 0)
+        self.assertIn("manifest.implementers", result.stderr)
+        self.assertIn("non-empty ordered array", result.stderr)
+        self.assertFalse(self.repo.integration.exists())
+
     def assert_untracked_rewrite_fails_closed(
         self,
         artifact_name: str,
@@ -133,19 +192,19 @@ class WaveIntegrationTest(unittest.TestCase):
         inspect_artifact: Callable[[Path], object],
         expected_artifact: object,
     ) -> None:
-        worker = self.repo.add_worker("rewritten-artifact-worker")
-        witness = self.repo.add_worker("witness-worker")
-        artifact = worker / artifact_name
+        implementer = self.repo.add_implementer("rewritten-artifact-implementer")
+        witness = self.repo.add_implementer("witness-implementer")
+        artifact = implementer / artifact_name
         initialize(artifact)
         (witness / "tracked.txt").write_text("witness\n", encoding="utf-8")
         self.repo.write_manifest(
             [
                 (
-                    "rewritten-artifact-worker",
+                    "rewritten-artifact-implementer",
                     [artifact_name],
                     "add artifact",
                 ),
-                ("witness-worker", ["tracked.txt"], "add witness"),
+                ("witness-implementer", ["tracked.txt"], "add witness"),
             ],
             [sys.executable, "-c", gate_code],
         )
@@ -153,16 +212,16 @@ class WaveIntegrationTest(unittest.TestCase):
         result = self.repo.integrate()
 
         self.assertNotEqual(result.returncode, 0, result.stdout)
-        self.assertIn("rewritten-artifact-worker", result.stderr)
+        self.assertIn("rewritten-artifact-implementer", result.stderr)
         self.assertIn("after inspection", result.stderr)
         self.assertEqual(self.repo.head(), self.repo.base)
-        self.assertTrue(worker.exists())
+        self.assertTrue(implementer.exists())
         self.assertTrue(witness.exists())
         self.assertTrue(self.repo.integration.exists())
         self.assertEqual(inspect_artifact(artifact), expected_artifact)
 
     def test_same_path_untracked_text_rewrite_fails_closed(self) -> None:
-        artifact = self.root / "rewritten-artifact-worker" / "artifact.txt"
+        artifact = self.root / "rewritten-artifact-implementer" / "artifact.txt"
 
         def initialize(path: Path) -> None:
             path.write_text("initial text\n", encoding="utf-8")
@@ -179,7 +238,7 @@ class WaveIntegrationTest(unittest.TestCase):
         )
 
     def test_same_path_untracked_binary_rewrite_fails_closed(self) -> None:
-        artifact = self.root / "rewritten-artifact-worker" / "artifact.bin"
+        artifact = self.root / "rewritten-artifact-implementer" / "artifact.bin"
 
         def initialize(path: Path) -> None:
             path.write_bytes(b"\x00initial\xff")
@@ -196,7 +255,7 @@ class WaveIntegrationTest(unittest.TestCase):
         )
 
     def test_same_path_untracked_symlink_rewrite_fails_closed(self) -> None:
-        artifact = self.root / "rewritten-artifact-worker" / "artifact-link"
+        artifact = self.root / "rewritten-artifact-implementer" / "artifact-link"
 
         def initialize(path: Path) -> None:
             os.symlink("tracked.txt", path)
@@ -213,17 +272,17 @@ class WaveIntegrationTest(unittest.TestCase):
             "conflict.txt",
         )
 
-    def test_prepared_workers_spill_binary_patches_to_files(self) -> None:
+    def test_prepared_implementers_spill_binary_patches_to_files(self) -> None:
         integrator = load_integrator()
-        workers = []
+        implementers = []
         for index in range(2):
-            worker_path = self.repo.add_worker(f"binary-worker-{index}")
+            implementer_path = self.repo.add_implementer(f"binary-implementer-{index}")
             artifact_name = f"artifact-{index}.bin"
-            (worker_path / artifact_name).write_bytes(os.urandom(256 * 1024))
-            workers.append(
-                integrator.Worker(
-                    f"binary-worker-{index}",
-                    worker_path,
+            (implementer_path / artifact_name).write_bytes(os.urandom(256 * 1024))
+            implementers.append(
+                integrator.Implementer(
+                    f"binary-implementer-{index}",
+                    implementer_path,
                     (artifact_name,),
                     f"add binary artifact {index}",
                 )
@@ -231,12 +290,12 @@ class WaveIntegrationTest(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as tempdir:
             patch_directory = Path(tempdir)
-            prepared_workers = tuple(
-                integrator.prepare_worker(worker, self.repo.base, patch_directory)
-                for worker in workers
+            prepared_implementers = tuple(
+                integrator.prepare_implementer(implementer, self.repo.base, patch_directory)
+                for implementer in implementers
             )
 
-            for prepared in prepared_workers:
+            for prepared in prepared_implementers:
                 self.assertFalse(
                     any(isinstance(value, bytes) for value in vars(prepared).values())
                 )
@@ -245,11 +304,11 @@ class WaveIntegrationTest(unittest.TestCase):
 
     def test_revalidation_reuses_one_head_and_status_read_per_worktree(self) -> None:
         integrator = load_integrator()
-        worker_path = self.repo.add_worker("snapshot-worker")
-        (worker_path / "tracked.txt").write_text("candidate\n", encoding="utf-8")
-        worker = integrator.Worker(
-            "snapshot-worker",
-            worker_path,
+        implementer_path = self.repo.add_implementer("snapshot-implementer")
+        (implementer_path / "tracked.txt").write_text("candidate\n", encoding="utf-8")
+        implementer = integrator.Implementer(
+            "snapshot-implementer",
+            implementer_path,
             ("tracked.txt",),
             "snapshot candidate",
         )
@@ -258,12 +317,12 @@ class WaveIntegrationTest(unittest.TestCase):
             self.repo.epic,
             self.repo.integration,
             (sys.executable, "-c", "pass"),
-            (worker,),
+            (implementer,),
         )
 
         with tempfile.TemporaryDirectory() as tempdir:
-            prepared = integrator.prepare_worker(
-                worker,
+            prepared = integrator.prepare_implementer(
+                implementer,
                 self.repo.base,
                 Path(tempdir),
             )
@@ -294,10 +353,10 @@ class WaveIntegrationTest(unittest.TestCase):
         self.assertEqual(status_spy.call_count, 2)
 
     def test_integrates_all_git_change_types_atomically_and_cleans_up(self) -> None:
-        first = self.repo.add_worker("worker-one")
-        second = self.repo.add_worker("worker-two")
+        first = self.repo.add_implementer("implementer-one")
+        second = self.repo.add_implementer("implementer-two")
 
-        (first / "tracked.txt").write_text("worker one\n", encoding="utf-8")
+        (first / "tracked.txt").write_text("implementer one\n", encoding="utf-8")
         (first / "new.txt").write_text("new text\n", encoding="utf-8")
         (first / "binary.bin").write_bytes(b"\x00changed\xfe")
         (first / "new-binary.bin").write_bytes(b"\x00new\xfd")
@@ -318,7 +377,7 @@ class WaveIntegrationTest(unittest.TestCase):
                 "from pathlib import Path; import subprocess; "
                 f"count=Path({str(gate_count)!r}); "
                 "count.write_text(count.read_text()+'x' if count.exists() else 'x'); "
-                "assert Path('tracked.txt').read_text() == 'worker one\\n'; "
+                "assert Path('tracked.txt').read_text() == 'implementer one\\n'; "
                 "assert Path('space name.txt').read_text() == 'space\\n'; "
                 f"Path({str(tested_head)!r}).write_text("
                 "subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip())"
@@ -335,8 +394,8 @@ class WaveIntegrationTest(unittest.TestCase):
         second_owned = ["tracked link", "space name.txt", "unicodé-雪.txt"]
         self.repo.write_manifest(
             [
-                ("worker-one", first_owned, "integrate worker one"),
-                ("worker-two", second_owned, "integrate worker two"),
+                ("implementer-one", first_owned, "integrate implementer one"),
+                ("implementer-two", second_owned, "integrate implementer two"),
             ],
             gate,
         )
@@ -353,11 +412,11 @@ class WaveIntegrationTest(unittest.TestCase):
             "--format=%s",
             f"{self.repo.base}..HEAD",
         ).stdout.splitlines()
-        self.assertEqual(subjects, ["integrate worker one", "integrate worker two"])
+        self.assertEqual(subjects, ["integrate implementer one", "integrate implementer two"])
 
         self.assertEqual(
             (self.repo.epic / "tracked.txt").read_text(encoding="utf-8"),
-            "worker one\n",
+            "implementer one\n",
         )
         self.assertEqual(
             (self.repo.epic / "new.txt").read_text(encoding="utf-8"),
@@ -382,30 +441,30 @@ class WaveIntegrationTest(unittest.TestCase):
         self.assertFalse(second.exists())
         self.assertFalse(self.repo.integration.exists())
 
-    def test_rejects_an_empty_worker_before_creating_integration_worktree(self) -> None:
-        worker = self.repo.add_worker("empty-worker")
+    def test_rejects_an_empty_implementer_before_creating_integration_worktree(self) -> None:
+        implementer = self.repo.add_implementer("empty-implementer")
         gate_count = self.root / "gate-count"
         self.repo.write_manifest(
-            [("empty-worker", ["tracked.txt"], "empty")],
+            [("empty-implementer", ["tracked.txt"], "empty")],
             [sys.executable, "-c", f"open({str(gate_count)!r}, 'a').write('x')"],
         )
 
         result = self.repo.integrate()
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("empty-worker", result.stderr)
+        self.assertIn("empty-implementer", result.stderr)
         self.assertIn("no changes", result.stderr.lower())
         self.assertEqual(self.repo.head(), self.repo.base)
-        self.assertTrue(worker.exists())
+        self.assertTrue(implementer.exists())
         self.assertFalse(self.repo.integration.exists())
         self.assertFalse(gate_count.exists())
 
     def test_rejects_every_out_of_allowlist_path_before_integration(self) -> None:
-        worker = self.repo.add_worker("scoped-worker")
-        (worker / "tracked.txt").write_text("allowed\n", encoding="utf-8")
-        (worker / "rogue.bin").write_bytes(b"\x00rogue")
+        implementer = self.repo.add_implementer("scoped-implementer")
+        (implementer / "tracked.txt").write_text("allowed\n", encoding="utf-8")
+        (implementer / "rogue.bin").write_bytes(b"\x00rogue")
         self.repo.write_manifest(
-            [("scoped-worker", ["tracked.txt"], "scoped")],
+            [("scoped-implementer", ["tracked.txt"], "scoped")],
             [sys.executable, "-c", "raise SystemExit('gate must not run')"],
         )
 
@@ -415,12 +474,12 @@ class WaveIntegrationTest(unittest.TestCase):
         self.assertIn("rogue.bin", result.stderr)
         self.assertIn("owned_paths", result.stderr)
         self.assertEqual(self.repo.head(), self.repo.base)
-        self.assertTrue(worker.exists())
+        self.assertTrue(implementer.exists())
         self.assertFalse(self.repo.integration.exists())
 
-    def test_rejects_overlapping_worker_allowlists_before_inspection(self) -> None:
-        first = self.repo.add_worker("overlap-one")
-        second = self.repo.add_worker("overlap-two")
+    def test_rejects_overlapping_implementer_allowlists_before_inspection(self) -> None:
+        first = self.repo.add_implementer("overlap-one")
+        second = self.repo.add_implementer("overlap-two")
         (first / "tracked.txt").write_text("first\n", encoding="utf-8")
         (second / "binary.bin").write_bytes(b"\x00second")
         gate_count = self.root / "gate-count"
@@ -444,7 +503,7 @@ class WaveIntegrationTest(unittest.TestCase):
 
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("conflict.txt", result.stderr)
-        self.assertIn("more than one worker", result.stderr)
+        self.assertIn("more than one implementer", result.stderr)
         self.assertEqual(self.repo.head(), self.repo.base)
         self.assertTrue(first.exists())
         self.assertTrue(second.exists())
@@ -454,8 +513,8 @@ class WaveIntegrationTest(unittest.TestCase):
     def test_git_integration_conflict_leaves_epic_unmoved_and_evidence_intact(
         self,
     ) -> None:
-        first = self.repo.add_worker("conflict-one")
-        second = self.repo.add_worker("conflict-two")
+        first = self.repo.add_implementer("conflict-one")
+        second = self.repo.add_implementer("conflict-two")
         (first / "collision").write_text("file\n", encoding="utf-8")
         (second / "collision").mkdir()
         (second / "collision" / "child.txt").write_text("child\n", encoding="utf-8")
@@ -480,8 +539,8 @@ class WaveIntegrationTest(unittest.TestCase):
         self.assertIn("collision", git(self.repo.integration, "status", "--short").stdout)
 
     def test_gate_failure_runs_once_and_retains_every_worktree(self) -> None:
-        worker = self.repo.add_worker("gate-worker")
-        (worker / "tracked.txt").write_text("candidate\n", encoding="utf-8")
+        implementer = self.repo.add_implementer("gate-implementer")
+        (implementer / "tracked.txt").write_text("candidate\n", encoding="utf-8")
         gate_count = self.root / "gate-count"
         gate = [
             sys.executable,
@@ -494,7 +553,7 @@ class WaveIntegrationTest(unittest.TestCase):
             ),
         ]
         self.repo.write_manifest(
-            [("gate-worker", ["tracked.txt"], "candidate")],
+            [("gate-implementer", ["tracked.txt"], "candidate")],
             gate,
         )
 
@@ -504,21 +563,21 @@ class WaveIntegrationTest(unittest.TestCase):
         self.assertIn("gate", result.stderr.lower())
         self.assertEqual(gate_count.read_text(encoding="utf-8"), "x")
         self.assertEqual(self.repo.head(), self.repo.base)
-        self.assertTrue(worker.exists())
+        self.assertTrue(implementer.exists())
         self.assertTrue(self.repo.integration.exists())
 
-    def test_gate_failure_preserves_partially_staged_worker_diffs_byte_exactly(
+    def test_gate_failure_preserves_partially_staged_implementer_diffs_byte_exactly(
         self,
     ) -> None:
-        worker = self.repo.add_worker("partially-staged-worker")
-        (worker / "tracked.txt").write_text("staged version\n", encoding="utf-8")
-        git(worker, "add", "--", "tracked.txt")
-        (worker / "tracked.txt").write_text("unstaged version\n", encoding="utf-8")
+        implementer = self.repo.add_implementer("partially-staged-implementer")
+        (implementer / "tracked.txt").write_text("staged version\n", encoding="utf-8")
+        git(implementer, "add", "--", "tracked.txt")
+        (implementer / "tracked.txt").write_text("unstaged version\n", encoding="utf-8")
 
         def diff_bytes(*args: str) -> bytes:
             return subprocess.run(
                 ["git", *args],
-                cwd=worker,
+                cwd=implementer,
                 check=True,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.PIPE,
@@ -555,7 +614,7 @@ class WaveIntegrationTest(unittest.TestCase):
             ),
         ]
         self.repo.write_manifest(
-            [("partially-staged-worker", ["tracked.txt"], "candidate")],
+            [("partially-staged-implementer", ["tracked.txt"], "candidate")],
             gate,
         )
 
@@ -566,17 +625,17 @@ class WaveIntegrationTest(unittest.TestCase):
         self.assertEqual(diff_bytes(*cached_args), cached_before)
         self.assertEqual(diff_bytes(*unstaged_args), unstaged_before)
         self.assertEqual(self.repo.head(), self.repo.base)
-        self.assertTrue(worker.exists())
+        self.assertTrue(implementer.exists())
         self.assertTrue(self.repo.integration.exists())
 
     def test_gate_untracked_artifact_fails_closed_and_retains_every_worktree(
         self,
     ) -> None:
-        worker = self.repo.add_worker("artifact-worker")
-        (worker / "tracked.txt").write_text("candidate\n", encoding="utf-8")
+        implementer = self.repo.add_implementer("artifact-implementer")
+        (implementer / "tracked.txt").write_text("candidate\n", encoding="utf-8")
         artifact_name = "gate-artifact.txt"
         self.repo.write_manifest(
-            [("artifact-worker", ["tracked.txt"], "candidate")],
+            [("artifact-implementer", ["tracked.txt"], "candidate")],
             [
                 sys.executable,
                 "-c",
@@ -593,7 +652,7 @@ class WaveIntegrationTest(unittest.TestCase):
         self.assertIn("integration worktree", result.stderr)
         self.assertIn("dirty", result.stderr)
         self.assertEqual(self.repo.head(), self.repo.base)
-        self.assertTrue(worker.exists())
+        self.assertTrue(implementer.exists())
         self.assertTrue(self.repo.integration.exists())
         self.assertEqual(
             (self.repo.integration / artifact_name).read_text(encoding="utf-8"),
@@ -601,12 +660,12 @@ class WaveIntegrationTest(unittest.TestCase):
         )
 
     def test_rejects_dirty_epic_without_moving_its_head(self) -> None:
-        worker = self.repo.add_worker("worker")
-        (worker / "tracked.txt").write_text("worker\n", encoding="utf-8")
+        implementer = self.repo.add_implementer("implementer")
+        (implementer / "tracked.txt").write_text("implementer\n", encoding="utf-8")
         (self.repo.epic / "tracked.txt").write_text("epic dirt\n", encoding="utf-8")
         original_head = self.repo.head()
         self.repo.write_manifest(
-            [("worker", ["tracked.txt"], "worker")],
+            [("implementer", ["tracked.txt"], "implementer")],
             [sys.executable, "-c", "pass"],
         )
 
@@ -616,17 +675,17 @@ class WaveIntegrationTest(unittest.TestCase):
         self.assertIn("epic", result.stderr.lower())
         self.assertIn("clean", result.stderr.lower())
         self.assertEqual(self.repo.head(), original_head)
-        self.assertTrue(worker.exists())
+        self.assertTrue(implementer.exists())
 
     def test_rejects_epic_at_a_different_head_without_moving_it(self) -> None:
-        worker = self.repo.add_worker("worker")
-        (worker / "tracked.txt").write_text("worker\n", encoding="utf-8")
+        implementer = self.repo.add_implementer("implementer")
+        (implementer / "tracked.txt").write_text("implementer\n", encoding="utf-8")
         (self.repo.epic / "epic-only.txt").write_text("new head\n", encoding="utf-8")
         git(self.repo.epic, "add", "--", "epic-only.txt")
         git(self.repo.epic, "commit", "-m", "move epic")
         original_head = self.repo.head()
         self.repo.write_manifest(
-            [("worker", ["tracked.txt"], "worker")],
+            [("implementer", ["tracked.txt"], "implementer")],
             [sys.executable, "-c", "pass"],
         )
 
@@ -635,32 +694,32 @@ class WaveIntegrationTest(unittest.TestCase):
         self.assertNotEqual(result.returncode, 0)
         self.assertIn("base", result.stderr.lower())
         self.assertEqual(self.repo.head(), original_head)
-        self.assertTrue(worker.exists())
+        self.assertTrue(implementer.exists())
 
-    def test_rejects_worker_at_a_different_head(self) -> None:
-        worker = self.repo.add_worker("worker")
-        (worker / "tracked.txt").write_text("committed by worker\n", encoding="utf-8")
-        git(worker, "add", "--", "tracked.txt")
-        git(worker, "commit", "-m", "worker must not commit")
+    def test_rejects_implementer_at_a_different_head(self) -> None:
+        implementer = self.repo.add_implementer("implementer")
+        (implementer / "tracked.txt").write_text("committed by implementer\n", encoding="utf-8")
+        git(implementer, "add", "--", "tracked.txt")
+        git(implementer, "commit", "-m", "implementer must not commit")
         self.repo.write_manifest(
-            [("worker", ["tracked.txt"], "worker")],
+            [("implementer", ["tracked.txt"], "implementer")],
             [sys.executable, "-c", "pass"],
         )
 
         result = self.repo.integrate()
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("worker", result.stderr.lower())
+        self.assertIn("implementer", result.stderr.lower())
         self.assertIn("base", result.stderr.lower())
         self.assertEqual(self.repo.head(), self.repo.base)
-        self.assertTrue(worker.exists())
+        self.assertTrue(implementer.exists())
 
-    def test_worker_change_during_gate_fails_closed_and_retains_evidence(self) -> None:
-        worker = self.repo.add_worker("late-writing-worker")
-        (worker / "tracked.txt").write_text("candidate\n", encoding="utf-8")
-        late_artifact = worker / "late-artifact.txt"
+    def test_implementer_change_during_gate_fails_closed_and_retains_evidence(self) -> None:
+        implementer = self.repo.add_implementer("late-writing-implementer")
+        (implementer / "tracked.txt").write_text("candidate\n", encoding="utf-8")
+        late_artifact = implementer / "late-artifact.txt"
         self.repo.write_manifest(
-            [("late-writing-worker", ["tracked.txt"], "candidate")],
+            [("late-writing-implementer", ["tracked.txt"], "candidate")],
             [
                 sys.executable,
                 "-c",
@@ -674,10 +733,10 @@ class WaveIntegrationTest(unittest.TestCase):
         result = self.repo.integrate()
 
         self.assertNotEqual(result.returncode, 0)
-        self.assertIn("late-writing-worker", result.stderr)
+        self.assertIn("late-writing-implementer", result.stderr)
         self.assertIn("after inspection", result.stderr)
         self.assertEqual(self.repo.head(), self.repo.base)
-        self.assertTrue(worker.exists())
+        self.assertTrue(implementer.exists())
         self.assertTrue(self.repo.integration.exists())
         self.assertEqual(late_artifact.read_text(encoding="utf-8"), "late evidence\n")
 
@@ -715,27 +774,27 @@ class WaveIntegrationDocumentationTest(unittest.TestCase):
         self.assertIn("scripts/integrate_wave.py", dispatch)
         self.assertLessEqual(len(dispatch.split()), 700)
 
-    def test_manifest_and_worker_brief_fields_have_exact_structure(self) -> None:
+    def test_manifest_and_implementer_brief_fields_have_exact_structure(self) -> None:
         dispatch = (
             ROOT / "skills" / "executing-plans" / "references" / "wave-dispatch.md"
         ).read_text(encoding="utf-8")
         templates = (ROOT / "skills" / "brainstorming" / "TEMPLATES.md").read_text(
             encoding="utf-8"
         )
-        worker = (ROOT / "contracts" / "worker.md").read_text(encoding="utf-8")
+        implementer = (ROOT / "contracts" / "implementer.md").read_text(encoding="utf-8")
 
         manifest_text = dispatch.split("```json\n", 1)[1].split("\n```", 1)[0]
         manifest = json.loads(manifest_text)
         self.assertEqual(
             tuple(manifest),
-            ("base", "epic_worktree", "integration_worktree", "gate", "workers"),
+            ("base", "epic_worktree", "integration_worktree", "gate", "implementers"),
         )
         self.assertIsInstance(manifest["gate"], list)
         self.assertEqual(
-            tuple(manifest["workers"][0]),
+            tuple(manifest["implementers"][0]),
             ("name", "worktree", "owned_paths", "commit_message"),
         )
-        self.assertIsInstance(manifest["workers"][0]["owned_paths"], list)
+        self.assertIsInstance(manifest["implementers"][0]["owned_paths"], list)
 
         brief = templates.split("### Task brief", 1)[1]
         self.assert_appears_in_order(
@@ -755,7 +814,7 @@ class WaveIntegrationDocumentationTest(unittest.TestCase):
         )
 
         self.assertRegex(
-            worker,
+            implementer,
             r"(?is)leave\b.{0,80}\buncommitted\b.{0,100}\borchestrator\b.{0,80}\bcommits?\b",
         )
 

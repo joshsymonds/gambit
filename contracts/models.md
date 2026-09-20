@@ -1,47 +1,45 @@
-# Roles and rungs
+# Roles and model profiles
 
 ## Roles
 
 | Role | Does | Writes? | Contract |
 |---|---|---|---|
-| `worker` | Implements one task under the worker contract and a brief, test first. | Yes, owned files only. | `contracts/worker.md` |
-| `orchestrator` | Runs one effort, review, or release from the record. | Yes, record and candidate. | `skills/executing-plans/SKILL.md` |
+| `implementer` | Implements one task under its contract and brief, test first. | Yes, owned files only. | `contracts/implementer.md` |
+| `orchestrator` | Runs one effort, final review, or release from the record. | Yes, record and candidate. | `skills/executing-plans/SKILL.md` |
 | `scout` | Finds facts in the tree and returns `file:line` evidence or NOT FOUND. | No. | `contracts/scout.md` |
 | `steelman` | Runs one discovery pass and at most one closure pass on an agreed design. | No. | `contracts/steelman.md` |
-| `finder` | Reviews one dimension of the frozen candidate. | No. | The assigned file under `skills/review/reviewers/`. |
-| `verifier` | Adversarially confirms or drops each finding. | No. | `skills/review/reviewers/verifier.md` |
+| `task-reviewer` | Reviews one task's complete change against its brief and contract. | No. | `skills/review/reviewers/task-reviewer.md` |
+| `conformance-reviewer` | Reviews the final candidate against the overall contract. | No. | `skills/review/reviewers/conformance-reviewer.md` |
+| `integration-reviewer` | Reviews cross-task interactions and shared interfaces in the final candidate. | No. | `skills/review/reviewers/integration-reviewer.md` |
+| `finding-verifier` | Independently confirms or drops a reported defect, or checks its closure. | No. | `skills/review/reviewers/finding-verifier.md` |
 | `test-runner` | Executes a command needing writable scratch state in an isolated workspace. | Yes, scratch only. | The command it is given. |
 
-## Rungs and ladders
+The Director is the session coordinating the epic, not another dispatch role. The Orchestrator coordinates an effort. Stage names describe when work happens; role names describe responsibility; model profiles describe execution settings.
 
-A rung is a model at an effort level, with a writing and a read-only variant. Every role has an entry rung. The `worker` role has no rung above its entry.
+## Model profiles
 
-Every dispatch starts at the role's entry rung. A rung gets at most two attempts at a task; the second only when the gate record names what the first lacked: an owned path the brief omitted, a value or decision it left out, or the named check and its failing output handed back to the same thread. That attempt carries the corrected brief, the gate record, and the current work. Routing between attempts is owned by `skills/executing-plans/SKILL.md`.
+A model profile selects a model and reasoning effort. Its writing and read-only agent variants select tool access; read-only instructions are not operating-system containment. Every role has one entry model profile. Profiles are not an escalation ladder.
 
-A task never moves to another rung. A gate finding the task too large splits it at once, at any rung; a lineage splits once, and descendants never split. A task never moves down, and an agent never selects or changes its own rung. No role enters above its entry rung.
+Every dispatch uses the role's entry profile. An implementer gets at most two attempts at a task; the second carries the exact missing context or failing evidence from its gate record. Routing between attempts belongs to `skills/executing-plans/SKILL.md`. An agent never changes its own profile. Splitting preserves the lineage and its spent attempts; it does not select a stronger model.
 
-After the worker's entry-rung attempts are spent, the orchestrator makes one final attempt itself, in the task's workspace under the worker contract, gated like any return. If that fails, the lineage is a gap.
+After the implementer's attempts are spent, the Orchestrator makes one final attempt itself under `contracts/implementer.md`, gated like any return. If it fails, the lineage is a gap.
 
 ## The registry
 
-Rungs are named in exactly one place, shared by both harnesses: `~/.claude/gambit/models.json`, rendered by harness configuration.
+Model profiles are named in one place shared by both harnesses: `~/.claude/gambit/models.json`, rendered by harness configuration.
 
-`rungs` maps each rung name to one of these shapes:
+`profiles` maps each profile name to one of these shapes:
 
 - `{"agent": <name>, "readonly_agent": <name>}` names dispatch targets the harness resolves by name.
 - `{"model": <alias>}` names a model alias for the dispatch operation.
 
-`roles` maps each role name to `{"entry": <rung>, "ladder": [<rungs>]?, "readonly": true?}`, where `?` marks an optional key.
-
-No contract or skill names a rung, model, or provider; skills name roles and resolve them here.
+`roles` maps each role name to `{"entry": <profile>, "readonly": true?}`, where `?` marks an optional key. Skills and contracts name roles, never concrete models or profile identifiers.
 
 ## Resolving a dispatch
 
-To dispatch a role:
-
 1. Look up the role in the registry.
-2. Select its entry rung, or the same rung for a second attempt when a NOT DONE gate record names an exact fix.
-3. Select the rung's agent, its read-only variant for a read-only role, or its model alias.
-4. Invoke the harness's dispatch operation with the role's contract by path and its brief as text.
+2. Select its entry model profile.
+3. Select that profile's agent, its read-only variant for a read-only role, or its model alias.
+4. Dispatch with the role's contract by absolute path and its brief as text.
 
-Nothing is supplied implicitly. If the registry is missing or cannot resolve a role, record the unresolved role in the Decision Log. Every task that needs that role becomes a gap citing it. Independent work continues. The run ends with gaps only when no executable work remains. Without an `orchestrator` role, the loading session performs the effort itself.
+Nothing is supplied implicitly. If the registry is missing or cannot resolve a role, record it in the Decision Log. Every task needing that role becomes a gap citing it. Independent work continues. The run ends with gaps only when no executable work remains. Without an `orchestrator` role, the loading session performs the effort itself.

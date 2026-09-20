@@ -53,7 +53,7 @@ class BrainstormingStructureTest(unittest.TestCase):
         self.assertIn("250 words", section)
         self.assertNotIn("Implementation,", section)
         self.assertIn("level of care", section)
-        self.assertIn("no worker receives an id without its text", section)
+        self.assertIn("no implementer receives an id without its text", section)
 
     def test_goal_file_rules_close_all_assumptions_and_findings(self) -> None:
         goal_file_rules = "\n".join(

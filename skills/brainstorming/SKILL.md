@@ -21,7 +21,7 @@ Collect decisions and their reasons for the epic's attached Decision Log. Keep i
 
 ## Research
 
-Read `contracts/models.md`. Resolve each role through its registry, starting at the role's entry rung and selecting the read-only variant for read-only roles. Pass the role's contract by absolute path and its complete brief as text through the dispatch operation. Resolve paths from the installed tree. Follow the registry contract when a role cannot be resolved; never invent a dispatch target.
+Read `contracts/models.md`. Resolve each role through its registry, starting at the role's entry model profile and selecting the read-only variant for read-only roles. Pass the role's contract by absolute path and its complete brief as text through the dispatch operation. Resolve paths from the installed tree. Follow the registry contract when a role cannot be resolved; never invent a dispatch target.
 
 Dispatch a read-only `scout` under `contracts/scout.md` with the repository root and bounded questions. Establish existing implementation patterns, interfaces, tests, contribution commands, release conventions, constraints, and scale. Require `file:line` evidence or `NOT FOUND`, with coverage limitations. Inspect enough to choose between approaches, not merely list them. Research supplies facts; it cannot add requirements.
 
@@ -30,7 +30,7 @@ For a bug, make this evidence chain explicit and complete:
 1. Give the scout the report and observed failure as clues to verify. Have it return the exact reproduction command as a command line and trace the root cause with causal `file:line` evidence, including what would falsify that cause. A suspected file or stack frame is not a verified diagnosis.
 2. If reproduction writes build artifacts, fixtures, a cache, or other state, dispatch `test-runner` with the exact command in an isolated workspace. It writes scratch state only and returns the command and output. The scout does not execute writable reproduction.
 3. Reconcile that output with the scout's causal evidence. Turn the verified root cause into a falsifiable Premise with its explicit Intent-survival clause.
-4. Make the verified reproduction the first task's failing test. Name that same reproduction and its expected corrected result as a Requirement's satisfying evidence, with the exact check. Carry the observed failure into the brief so the worker begins from RED.
+4. Make the verified reproduction the first task's failing test. Name that same reproduction and its expected corrected result as a Requirement's satisfying evidence, with the exact check. Carry the observed failure into the brief so the implementer begins from RED.
 
 This is research for a fix, not the fix itself. Do not patch the bug, write implementation, or hand the investigation to another stage.
 
@@ -87,7 +87,7 @@ At acceptance, also write the epic's record directory `~/.gambit/<repository-id>
 
 ## The document
 
-The contract is one document the person reads in a sitting, in the order they need it. The decision line comes first: what is approved, the level of care, and how many decisions are still open. Write every section in plain language for the person, not the worker: one idea per sentence, no term a reader outside the repository would need explained, tables where rows compare.
+The contract is one document the person reads in a sitting, in the order they need it. The decision line comes first: what is approved, the level of care, and how many decisions are still open. Write every section in plain language for the person, not the implementer: one idea per sentence, no term a reader outside the repository would need explained, tables where rows compare.
 
 Rate each failure row before any mitigation is chosen, as the person would experience it. Limited means they recover in minutes and lose nothing but time. Serious means recovery takes real effort or money, or someone else is affected. Severe means the loss cannot be undone, harms someone else, or exposes a secret or a system. The worst row sets the level of care; a rating authorizes no work, and each row's What we do, starting prevent, reduce, recover, or accept, is the only work the row adds. The table has no likelihood column. The effort ceiling on that line is the maximum the run may admit, not a time or spend estimate, and becomes `max_efforts` in the head at acceptance; the head copies that value and never changes it.
 
@@ -101,13 +101,13 @@ The content above "Checks the machines run" fits forty lines when wrapped at 100
 
 Create every task writable from the tree now for the first effort, with complete briefs. Cover each unmet Requirement that has executable work now; leave work needing unfinished interfaces for later decomposition. Never produce a full future task tree or split one behavior just to create parallel work.
 
-Use the task template's fields in order: Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, Acceptance, Constraints, Requirements covered, Test command. Supply the workspace, base revision, applicable contract clauses, verified `path:symbol:line` anchors, and the acceptance condition (an existing test or reproduction with its expected result, or the behavioral criteria for the failing test the worker writes first). Keep Goal plus Acceptance plus Constraints under 250 words total. Constraints carries the level of care with the row that set it and each applicable failure row quoted with its What we do, so no worker receives an id without its text. This brief carries no implementation steps, code, or diffs. Each brief must be executable without conversation history or questions.
+Use the task template's fields in order: Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, Acceptance, Constraints, Requirements covered, Test command. Supply the workspace, base revision, applicable contract clauses, verified `path:symbol:line` anchors, and the acceptance condition (an existing test or reproduction with its expected result, or the behavioral criteria for the failing test the implementer writes first). Keep Goal plus Acceptance plus Constraints under 250 words total. Constraints carries the level of care with the row that set it and each applicable failure row quoted with its What we do, so no implementer receives an id without its text. This brief carries no implementation steps, code, or diffs. Each brief must be executable without conversation history or questions.
 
 Give every concurrent task a disjoint exact owned-file list, including tests, additions, deletions, and implicit writes. Hidden shared surfaces and neighbors grant no ownership. Put work with overlapping files into one coherent task or leave it for a later effort. For bugs, the first brief carries the verified reproduction as its failing test and maps it to the Requirement's evidence.
 
 Record tasks as pending and ready, associated with the epic as their contract container, never as a blocker that must complete first. State the task state left behind and keep the Decision Log attached to the epic.
 
-Write that same task state into the record's `state.json` before handing off: each task's id, slug, subject, requirement, owned_files, lineage, rung, attempts, status, and gate_paths, with `next_actions` naming what the next reader does first and `never_drop` carrying the acceptance criteria, observed error signatures, and commands still needed.
+Write that same task state into the record's `state.json` before handing off: each task's id, slug, subject, requirement, owned_files, lineage, profile, attempts, status, and gate_paths, with `next_actions` naming what the next reader does first and `never_drop` carrying the acceptance criteria, observed error signatures, and commands still needed.
 
 ## Handoff
 

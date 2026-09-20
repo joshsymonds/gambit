@@ -9,8 +9,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REVIEW = ROOT / "skills/review"
-FINDERS = ("conformance", "security", "quality", "performance")
-REVIEWERS = (*FINDERS, "verifier")
+FINAL_REVIEWERS = ("conformance-reviewer", "integration-reviewer")
+REVIEWERS = (*FINAL_REVIEWERS, "task-reviewer", "finding-verifier")
 FORBIDDEN = (
     r"gambit:(?:finishing-branch|verification|test-driven-development|debugging)",
     r"success criteria|anti-patterns|validation strategy|delivery constraints|scope boundaries",
@@ -41,7 +41,7 @@ class ReviewStructureTests(unittest.TestCase):
     def test_stage_sections_follow_the_six_review_steps(self) -> None:
         self.assertEqual(
             headings(self.text),
-            ["Freeze", "Finders", "Verifier", "Correction", "Closure", "Return"],
+            ["Freeze", "Final review", "Finding verification", "Correction", "Closure", "Return"],
         )
 
     def test_correction_repeats_until_closure(self) -> None:
@@ -62,19 +62,19 @@ class ReviewStructureTests(unittest.TestCase):
         self.assertIn("failure signature", correction)
 
     def test_role_and_contract_references_are_present(self) -> None:
-        for role in ("finder", "verifier"):
+        for role in (*FINAL_REVIEWERS, "finding-verifier"):
             with self.subTest(role=role):
                 self.assertRegex(self.text, rf"\b{role}\b")
         for reference in (
             "contracts/models.md",
-            "skills/review/reviewers/verifier.md",
+            "skills/review/reviewers/finding-verifier.md",
             "skills/executing-plans/SKILL.md",
         ):
             with self.subTest(reference=reference):
                 self.assertIn(reference, self.text)
                 self.assertTrue((ROOT / reference).is_file())
-        for finder in FINDERS:
-            self.assertIn(f"reviewers/{finder}.md", self.text)
+        for reviewer in FINAL_REVIEWERS:
+            self.assertIn(f"reviewers/{reviewer}.md", self.text)
 
     def test_admissibility_sources_and_review_gap_are_named(self) -> None:
         for term in ("Requirements", "Must Not Ship", "Quality Bar", "review gap"):
@@ -82,11 +82,11 @@ class ReviewStructureTests(unittest.TestCase):
                 self.assertIn(term, self.text)
 
     def test_admissibility_precedes_the_level_of_care(self) -> None:
-        finders = self.text.split("## Finders\n", 1)[1].split("\n## ", 1)[0]
-        self.assertIn("Admissibility is judged first and alone", finders)
-        self.assertIn("proportion observation", finders)
-        self.assertIn("level of care", finders)
-        self.assertIn("failure table", finders)
+        final_review = self.text.split("## Final review\n", 1)[1].split("\n## ", 1)[0]
+        self.assertIn("Admissibility is judged first and alone", final_review)
+        self.assertIn("proportion observation", final_review)
+        self.assertIn("level of care", final_review)
+        self.assertIn("failure table", final_review)
         for reviewer in REVIEWERS:
             with self.subTest(reviewer=reviewer):
                 text = (REVIEW / f"reviewers/{reviewer}.md").read_text(encoding="utf-8")
@@ -100,7 +100,7 @@ class ReviewStructureTests(unittest.TestCase):
                 text = path.read_text(encoding="utf-8")
                 expected = (
                     ["Freeze", "Verify", "Closure", "Return"]
-                    if reviewer == "verifier"
+                    if reviewer == "finding-verifier"
                     else ["Freeze", "Findings", "Return"]
                 )
                 self.assertEqual(headings(text), expected)

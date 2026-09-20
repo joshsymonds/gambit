@@ -51,7 +51,7 @@ TASK_KEYS = (
     "requirement",
     "owned_files",
     "lineage",
-    "rung",
+    "profile",
     "attempts",
     "status",
     "gate_paths",

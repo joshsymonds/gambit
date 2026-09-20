@@ -20,6 +20,7 @@ class ValidateDispatchTest(unittest.TestCase):
         *done: str,
         record: dict[str, object] | None = None,
         task: str | int | None = None,
+        entry_profile: str | None = None,
         entry_rung: str | None = None,
         brief_only: bool = False,
     ) -> subprocess.CompletedProcess[str]:
@@ -36,7 +37,7 @@ class ValidateDispatchTest(unittest.TestCase):
             record = self.valid_record()
             record["tasks"][0]["dispatch"]["revision"] = revision
             task = "validate-record"
-            entry_rung = "luna-low"
+            entry_profile = "luna-low"
         command = [sys.executable, str(SCRIPT), "--brief", str(brief_path), "--workspace", str(workspace)]
         for item in done:
             command.extend(["--done", item])
@@ -46,6 +47,8 @@ class ValidateDispatchTest(unittest.TestCase):
             command.extend(["--record", str(record_path)])
         if task is not None:
             command.extend(["--task", str(task)])
+        if entry_profile is not None:
+            command.extend(["--entry-profile", entry_profile])
         if entry_rung is not None:
             command.extend(["--entry-rung", entry_rung])
         return subprocess.run(command, text=True, capture_output=True)
@@ -75,17 +78,17 @@ class ValidateDispatchTest(unittest.TestCase):
         task: dict[str, object] = {
             "id": 7,
             "slug": "validate-record",
-            "rung": "luna-low",
+            "profile": "luna-low",
             "attempts": 1,
             "lineage": {"parent": None, "descendants": [], "split_used": False},
             "dispatch": {
-                "child": "worker-7",
+                "child": "implementer-7",
                 "workspace": "/workspace/7",
                 "revision": "abc123",
             },
             "conduct": {
                 "routing_history": [
-                    {"signature": "luna-low:worker", "step": "dispatch", "attempt": 1}
+                    {"signature": "luna-low:implementer", "step": "dispatch", "attempt": 1}
                 ]
             },
         }
@@ -226,7 +229,7 @@ Test command: {test_command}
                 workspace,
                 record=record,
                 task="validate-record",
-                entry_rung="luna-low",
+                entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("source.py:2", result.stdout)
@@ -264,7 +267,7 @@ Test command: {test_command}
                 workspace,
                 record=record,
                 task="validate-record",
-                entry_rung="luna-low",
+                entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -280,7 +283,7 @@ Test command: {test_command}
                 workspace,
                 record=record,
                 task="validate-record",
-                entry_rung="luna-low",
+                entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("new.py:1", result.stdout)
@@ -297,7 +300,7 @@ Test command: {test_command}
                 workspace,
                 record=record,
                 task="validate-record",
-                entry_rung="luna-low",
+                entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("revision", result.stdout.lower())
@@ -316,13 +319,25 @@ Test command: {test_command}
             self.assertIn("Test command", result.stdout)
             self.assertIn("match", result.stdout.lower())
 
-    def test_record_task_and_entry_rung_are_required(self) -> None:
+    def test_record_and_task_are_required(self) -> None:
         with self.make_workspace() as temporary:
             workspace = Path(temporary)
             result = self.run_validator(self.valid_brief(), workspace, brief_only=True)
             self.assertEqual(result.returncode, 2)
             self.assertIn("--record", result.stderr)
             self.assertIn("--task", result.stderr)
+
+    def test_entry_profile_or_legacy_entry_rung_is_required(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            result = self.run_validator(
+                self.valid_brief(),
+                workspace,
+                record=self.valid_record(),
+                task="validate-record",
+            )
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("--entry-profile", result.stderr)
             self.assertIn("--entry-rung", result.stderr)
 
     def test_record_done_accepts_cd_prefixed_and_exact_test_commands(self) -> None:
@@ -332,7 +347,7 @@ Test command: {test_command}
             record = self.valid_record(
                 done=["python3 -m unittest"],
                 dispatch={
-                    "child": "worker-7",
+                    "child": "implementer-7",
                     "workspace": "/workspace/7",
                     "revision": revision,
                 },
@@ -347,7 +362,7 @@ Test command: {test_command}
                         workspace,
                         record=record,
                         task="validate-record",
-                        entry_rung="luna-low",
+                        entry_profile="luna-low",
                     )
                     self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -358,7 +373,7 @@ Test command: {test_command}
             record = self.valid_record(
                 done=["python3 -m unittest"],
                 dispatch={
-                    "child": "worker-7",
+                    "child": "implementer-7",
                     "workspace": "/workspace/7",
                     "revision": revision,
                 },
@@ -369,7 +384,7 @@ Test command: {test_command}
                 workspace,
                 record=record,
                 task="validate-record",
-                entry_rung="luna-low",
+                entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("Test command", result.stdout)
@@ -382,7 +397,7 @@ Test command: {test_command}
             revision = self.make_git_base(workspace)
             record = self.valid_record(
                 dispatch={
-                    "child": "worker-7",
+                    "child": "implementer-7",
                     "workspace": "/workspace/7",
                     "revision": revision,
                 },
@@ -393,7 +408,7 @@ Test command: {test_command}
                 workspace,
                 record=record,
                 task="validate-record",
-                entry_rung="luna-low",
+                entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("record.done", result.stdout)
@@ -405,7 +420,7 @@ Test command: {test_command}
             record = self.valid_record(
                 done=["python3 -m unittest"],
                 dispatch={
-                    "child": "worker-7",
+                    "child": "implementer-7",
                     "workspace": "/workspace/7",
                     "revision": revision,
                 },
@@ -417,7 +432,7 @@ Test command: {test_command}
                 command,
                 record=record,
                 task="validate-record",
-                entry_rung="luna-low",
+                entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -426,7 +441,7 @@ Test command: {test_command}
             workspace = Path(temporary)
             result = self.run_validator(
                 self.valid_brief(), workspace,
-                record=self.valid_record(), task="missing", entry_rung="luna-low",
+                record=self.valid_record(), task="missing", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("task", result.stdout)
@@ -438,27 +453,100 @@ Test command: {test_command}
                 record = self.valid_record(dispatch={field: None})
                 result = self.run_validator(
                     self.valid_brief(), workspace,
-                    record=record, task="validate-record", entry_rung="luna-low",
+                    record=record, task="validate-record", entry_profile="luna-low",
                 )
                 self.assertEqual(result.returncode, 1)
                 self.assertIn(f"dispatch.{field}", result.stdout)
 
-    def test_record_wrong_rung_is_rejected(self) -> None:
+    def test_record_wrong_profile_is_rejected(self) -> None:
         with self.make_workspace() as temporary:
             workspace = Path(temporary)
             result = self.run_validator(
                 self.valid_brief(), workspace,
-                record=self.valid_record(), task="validate-record", entry_rung="sol-low",
+                record=self.valid_record(), task="validate-record", entry_profile="sol-low",
             )
             self.assertEqual(result.returncode, 1)
+            self.assertIn("profile", result.stdout)
+
+    def test_legacy_rung_record_and_entry_option_still_pass(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record()
+            legacy_task = record["tasks"][0]
+            legacy_task["rung"] = legacy_task.pop("profile")
+            legacy_task["dispatch"]["revision"] = revision
+
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1"),
+                workspace,
+                record=record,
+                task="validate-record",
+                entry_rung="luna-low",
+            )
+
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_conflicting_profile_and_legacy_rung_are_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            record = self.valid_record(rung="sol-low")
+
+            result = self.run_validator(
+                self.valid_brief(),
+                workspace,
+                record=record,
+                task="validate-record",
+                entry_profile="luna-low",
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("profile", result.stdout)
             self.assertIn("rung", result.stdout)
+            self.assertIn("conflict", result.stdout.lower())
+
+    def test_missing_profile_and_legacy_rung_are_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            record = self.valid_record()
+            del record["tasks"][0]["profile"]
+
+            result = self.run_validator(
+                self.valid_brief(),
+                workspace,
+                record=record,
+                task="validate-record",
+                entry_profile="luna-low",
+            )
+
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("task.profile", result.stdout)
+            self.assertIn("missing", result.stdout.lower())
+
+    def test_conflicting_entry_profile_and_legacy_option_are_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+
+            result = self.run_validator(
+                self.valid_brief(),
+                workspace,
+                record=self.valid_record(),
+                task="validate-record",
+                entry_profile="luna-low",
+                entry_rung="sol-low",
+            )
+
+            self.assertEqual(result.returncode, 2)
+            self.assertIn("--entry-profile", result.stderr)
+            self.assertIn("--entry-rung", result.stderr)
+            self.assertIn("conflict", result.stderr.lower())
 
     def test_record_zero_attempts_are_rejected(self) -> None:
         with self.make_workspace() as temporary:
             workspace = Path(temporary)
             result = self.run_validator(
                 self.valid_brief(), workspace,
-                record=self.valid_record(attempts=0), task="validate-record", entry_rung="luna-low",
+                record=self.valid_record(attempts=0), task="validate-record", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("attempts", result.stdout)
@@ -469,7 +557,7 @@ Test command: {test_command}
             result = self.run_validator(
                 self.valid_brief(), workspace,
                 record=self.valid_record(lineage={"parent": None, "descendants": []}),
-                task="validate-record", entry_rung="luna-low",
+                task="validate-record", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("lineage.split_used", result.stdout)
@@ -485,7 +573,7 @@ Test command: {test_command}
             }
             result = self.run_validator(
                 self.valid_brief(), workspace,
-                record=self.valid_record(conduct=conduct), task="validate-record", entry_rung="luna-low",
+                record=self.valid_record(conduct=conduct), task="validate-record", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("routing_history", result.stdout)
@@ -496,7 +584,7 @@ Test command: {test_command}
             conduct = {"routing_history": [{"signature": [], "step": "dispatch"}]}
             result = self.run_validator(
                 self.valid_brief(), workspace,
-                record=self.valid_record(conduct=conduct), task="validate-record", entry_rung="luna-low",
+                record=self.valid_record(conduct=conduct), task="validate-record", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 1)
             self.assertIn("routing_history[0]", result.stdout)
@@ -511,7 +599,7 @@ Test command: {test_command}
             del record["max_efforts"]
             result = self.run_validator(
                 self.valid_brief(anchors="- source.py:1"), workspace,
-                record=record, task="validate-record", entry_rung="luna-low",
+                record=record, task="validate-record", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
             self.assertIn("max_efforts", result.stdout)
@@ -526,7 +614,7 @@ Test command: {test_command}
                 record["max_efforts"] = ceiling
                 result = self.run_validator(
                     self.valid_brief(anchors="- source.py:1"), workspace,
-                    record=record, task="validate-record", entry_rung="luna-low",
+                    record=record, task="validate-record", entry_profile="luna-low",
                 )
                 self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
                 self.assertIn("max_efforts", result.stdout)
@@ -541,7 +629,7 @@ Test command: {test_command}
             del record["efforts_admitted"]
             result = self.run_validator(
                 self.valid_brief(anchors="- source.py:1"), workspace,
-                record=record, task="validate-record", entry_rung="luna-low",
+                record=record, task="validate-record", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
             self.assertIn("efforts_admitted", result.stdout)
@@ -556,7 +644,7 @@ Test command: {test_command}
             record["efforts_admitted"] = 3
             result = self.run_validator(
                 self.valid_brief(anchors="- source.py:1"), workspace,
-                record=record, task="validate-record", entry_rung="luna-low",
+                record=record, task="validate-record", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
             self.assertIn("exhausted", result.stdout)
@@ -572,7 +660,7 @@ Test command: {test_command}
             record["efforts_admitted"] = 2
             result = self.run_validator(
                 self.valid_brief(anchors="- source.py:1"), workspace,
-                record=record, task="validate-record", entry_rung="luna-low",
+                record=record, task="validate-record", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
@@ -584,7 +672,7 @@ Test command: {test_command}
             record["efforts_admitted"] = 2
             result = self.run_validator(
                 self.valid_brief(), workspace,
-                record=record, task="validate-record", entry_rung="luna-low",
+                record=record, task="validate-record", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 3, result.stdout + result.stderr)
             self.assertIn("attempts", result.stdout)
@@ -598,7 +686,7 @@ Test command: {test_command}
             record["tasks"][0]["dispatch"]["revision"] = revision
             result = self.run_validator(
                 self.valid_brief(anchors="- source.py:1"), workspace,
-                record=record, task="validate-record", entry_rung="luna-low",
+                record=record, task="validate-record", entry_profile="luna-low",
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout, "")

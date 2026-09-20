@@ -29,11 +29,12 @@ RECORD_PATHS_BY_SECTION = {
 GATE_FIELDS = (
     "Task",
     "Lineage",
-    "Rung",
+    "Model profile",
     "Candidate revision",
     "Contract items checked",
     "Owned-files result",
     "Mechanical-floor result",
+    "Task review",
     "Premises touched",
     "Verdict",
     "Next action",
@@ -74,12 +75,12 @@ class ExecutingPlansStructureTest(unittest.TestCase):
             self.assertRegex(frontmatter, rf"(?m)^{field}: [^\n]+$")
 
     def test_dispatch_names_roles_and_registry_contract(self) -> None:
-        for role in ("worker", "scout"):
+        for role in ("implementer", "scout"):
             with self.subTest(role=role):
                 self.assertRegex(self.text, rf"\b{role}\b")
         self.assertNotIn("`escalation`", self.text)
         self.assertNotRegex(self.text, r"(?i)\b(?:next|top) rung\b")
-        for path in ("contracts/models.md", "contracts/worker.md", "contracts/scout.md"):
+        for path in ("contracts/models.md", "contracts/implementer.md", "contracts/scout.md"):
             with self.subTest(path=path):
                 self.assertIn(path, self.text)
 
@@ -148,7 +149,7 @@ class ExecutingPlansStructureTest(unittest.TestCase):
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
         build = sections["Build each task until good"].lower()
         self.assertIn("failure signature", build)
-        self.assertIn("same worker", build)
+        self.assertIn("same implementer", build)
         self.assertIn("exact edit smaller than the brief", build)
         self.assertIn("counts no attempt", build)
 
@@ -214,7 +215,7 @@ class ExecutingPlansStructureTest(unittest.TestCase):
 
     def test_report_measures_entry_rung_first_pass_and_routing(self) -> None:
         report = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))["Report and end"]
-        for phrase in ("first-pass", "entry rung", "80%"):
+        for phrase in ("first-pass", "entry model profile", "80%"):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, report)
         self.assertNotIn("ladder action", self.text)
@@ -244,11 +245,13 @@ class ExecutingPlansStructureTest(unittest.TestCase):
                 with self.subTest(path=path.relative_to(ROOT), pattern=pattern):
                     self.assertIsNone(re.search(pattern, text, re.IGNORECASE), pattern)
 
-    def test_build_section_has_no_review_role_dispatch(self) -> None:
+    def test_build_dispatches_task_review_not_final_review(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
         build = sections.get("Build each task until good", "")
-        self.assertTrue(build)
-        self.assertNotRegex(build, r"(?i)\b(?:reviewer|judge|finder|verifier)\b")
+        self.assertIn("`task-reviewer`", build)
+        self.assertIn("`finding-verifier` per admissible candidate", build)
+        self.assertNotIn("`conformance-reviewer`", build)
+        self.assertNotIn("`integration-reviewer`", build)
 
     def test_dispatch_integration_and_conduct_metrics_are_explicit(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
