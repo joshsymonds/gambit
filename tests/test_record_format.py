@@ -34,7 +34,6 @@ STATE_KEYS = (
     "accepted_base",
     "candidate_revision",
     "effort",
-    "max_efforts",
     "efforts_admitted",
     "done",
     "tasks",
@@ -275,7 +274,7 @@ class FixtureRecordTest(unittest.TestCase):
         self.assertRegex(head, r"Level of care: (?:limited|serious|severe)\.")
         self.assertRegex(head, r"Decisions needed: (?:\d+|none)\.")
 
-    def test_epic_failure_table_sets_level_of_care_and_ceiling(self) -> None:
+    def test_epic_failure_table_sets_level_of_care_without_a_ceiling(self) -> None:
         section = self.epic.split(
             "## What could go wrong, and how much we care\n", 1
         )[1].split("\n## ", 1)[0]
@@ -284,14 +283,12 @@ class FixtureRecordTest(unittest.TestCase):
         for rating, action in rows:
             with self.subTest(rating=rating):
                 self.assertRegex(action, r"^(?:prevent|reduce|recover|accept):")
-        line = re.search(
-            r"(?m)^Level of care: (?:limited|serious|severe), set by F\d+\. "
-            r"Effort ceiling: (\d+)\.$",
-            section,
+        self.assertRegex(
+            section, r"(?m)^Level of care: (?:limited|serious|severe), set by F\d+\.$"
         )
-        if line is None:
-            self.fail("no level-of-care line")
-        self.assertEqual(int(line.group(1)), self.state["max_efforts"])
+        self.assertNotIn("ceiling", section)
+        self.assertNotIn("max_efforts", self.state)
+        self.assertIsInstance(self.state["efforts_admitted"], int)
 
     def test_epic_quality_bar_is_verbatim_on_one_line(self) -> None:
         readme = read(ROOT / "README.md")

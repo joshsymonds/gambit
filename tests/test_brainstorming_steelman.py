@@ -128,15 +128,17 @@ class BrainstormingStructureTest(unittest.TestCase):
         failure = block.split(
             "## What could go wrong, and how much we care\n", 1
         )[1].split("\n## ", 1)[0]
-        self.assertRegex(failure, r"(?m)^Level of care: .+ Effort ceiling: ")
+        self.assertRegex(failure, r"(?m)^Level of care: .+, set by \[Fn\]\.$")
+        self.assertNotIn("ceiling", failure)
         self.assertIn("prevent, reduce, recover, or accept", failure)
-        self.assertIn("`max_efforts`", self.templates)
+        self.assertNotIn("max_efforts", self.templates)
+        self.assertIn("`efforts_admitted`", self.templates)
 
     def test_the_document_stage_states_the_rules(self) -> None:
         section = self.section("The document")
         for phrase in (
-            "max_efforts", "Decision Log", "goal file",
-            "becomes `max_efforts` in the head",
+            "Decision Log", "goal file",
+            "carries no effort ceiling",
             "forty lines", "100 columns",
             "Limited means", "Serious means", "Severe means",
             "a rating authorizes no work",
@@ -149,12 +151,14 @@ class BrainstormingStructureTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, section)
 
-    def test_questions_ask_use_cases_failure_cases_and_ceiling(self) -> None:
+    def test_questions_ask_use_cases_and_failure_cases_but_no_ceiling(self) -> None:
         section = self.section("Questions in prose")
-        for phrase in ("use cases", "failure cases", "effort ceiling",
-                       "limited, serious, or severe"):
+        for phrase in ("use cases", "failure cases",
+                       "limited, serious, or severe",
+                       "Never ask how many efforts to admit"):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, section)
+        self.assertNotIn("max_efforts", self.text)
 
     def test_contract_stage_lists_the_ten_sections_in_order(self) -> None:
         section = self.section("The contract")

@@ -13,7 +13,7 @@ Running sundial in a container requires editing a file baked into the image, so 
 | F1 A malformed timeout was silently accepted and a deployment ran with the default | serious | prevent: a malformed value exits nonzero naming the field (R2) |
 | F2 An unset key vanished when an override merged | serious | prevent: the merge case in `tests/test_config.py` asserts every default survives (R3) |
 | F3 A deployment kept editing the packaged file after release | limited | accept: `deploy/README.md:41` names the environment as the surface |
-Level of care: serious, set by F1. Effort ceiling: 4.
+Level of care: serious, set by F1.
 
 ## Things you did not ask for
 | Where | What | Why | Cost |

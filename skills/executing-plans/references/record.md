@@ -14,7 +14,7 @@ The directory holds the epic-level files and one directory per effort:
 - `gates/<task-slug>-<attempt>.md` — one gate record per attempt.
 - `efforts/<n>/` — one directory per effort. Each effort directory contains:
   - `efforts/<n>/brief.md` — the accepted brief for that effort.
-  - `efforts/<n>/state.json` — that effort's tasks, dispatched child identity, workspace, revision, lineage, and the head's `max_efforts` and `efforts_admitted` at admission.
+  - `efforts/<n>/state.json` — that effort's tasks, dispatched child identity, workspace, revision, lineage, and the head's `efforts_admitted` at admission.
   - `efforts/<n>/gates/<task-slug>-<attempt>.md` — one gate record per attempt in that effort.
   - `efforts/<n>/decisions.md` — the effort-local Decision Log, append-only.
   - `efforts/<n>/report.md` — what the effort built, integrated, and left open.
@@ -44,7 +44,6 @@ Write `supersedes: none` when the entry reverses nothing.
   "accepted_base": "<revision the current effort started from>",
   "candidate_revision": "<integrated candidate, or null>",
   "effort": 2,
-  "max_efforts": 3,
   "efforts_admitted": 2,
   "done": ["<each command from the contract's Checks the machines run, verbatim>"],
   "tasks": [
@@ -108,7 +107,7 @@ Write `supersedes: none` when the entry reverses nothing.
 }
 ```
 
-Those top-level keys are the whole head, and every task entry carries exactly the keys shown. `max_efforts` is the effort ceiling named on the level-of-care line of the frozen contract's failure table ("What could go wrong, and how much we care"): a positive integer copied into the head at acceptance, bounding how many effort identities the run may admit; the head carries that value and never changes it. `efforts_admitted` counts every effort identity the Director has admitted so far, including concurrent partitions and review or release correction efforts; resuming an existing effort admits nothing. Both are copied into every effort brief's Base field and every `efforts/<n>/state.json`, and neither changes on resume. A head lacking `max_efforts` admits no effort: the run ends with gaps naming the missing ceiling. Each task's `dispatch` object carries exactly `child`, `workspace`, and `revision`; `child` and `revision` are strings or null, and `workspace` is an absolute path string or null. Write this object before dispatching the task's implementer, and keep all three values null until then. Each task's `conduct` object carries exactly `brief_defects`, `violations_prevented`, `violations_escaped`, `routing_history`, `outcome`, and `cost`. The first three are lists of strings from validation and routing; `routing_history` is a list of objects carrying exactly `signature`, `step`, and `attempt`; `outcome` is `pending`, `done`, `gap`, or `split`; and `cost` carries integer or null `turns` and `tokens`. Each effort entry carries exactly `n`, `branch`, `workspace`, `child`, `revision`, `status`, and `report`.
+Those top-level keys are the whole head, and every task entry carries exactly the keys shown. `efforts_admitted` counts every effort identity the Director has admitted so far, including concurrent partitions and review or release correction efforts; resuming an existing effort admits nothing. It starts at zero at acceptance, is copied into every effort brief's Base field and every `efforts/<n>/state.json`, and does not change on resume. Nothing bounds it: efforts are admitted while executable work remains, and the run ends only when every Requirement is released or every remaining lineage is exhausted. Each task's `dispatch` object carries exactly `child`, `workspace`, and `revision`; `child` and `revision` are strings or null, and `workspace` is an absolute path string or null. Write this object before dispatching the task's implementer, and keep all three values null until then. Each task's `conduct` object carries exactly `brief_defects`, `violations_prevented`, `violations_escaped`, `routing_history`, `outcome`, and `cost`. The first three are lists of strings from validation and routing; `routing_history` is a list of objects carrying exactly `signature`, `step`, and `attempt`; `outcome` is `pending`, `done`, `gap`, or `split`; and `cost` carries integer or null `turns` and `tokens`. Each effort entry carries exactly `n`, `branch`, `workspace`, `child`, `revision`, `status`, and `report`.
 
 New task entries use `profile`. The validator also reads an existing `rung` field as the same assignment and accepts `--entry-rung` as an alias for `--entry-profile`. Conflicting values are rejected. Do not rewrite frozen records, evidence, attempt counts, or lineage merely to update terminology.
 
@@ -120,7 +119,7 @@ A split parent stays in `tasks` with `split_used` set and its descendants named.
 
 ## Gates and efforts
 
-Gate records and effort history are addressed by path, never inlined into the head. A gate record is written for every attempt at `gates/<task-slug>-<attempt>.md`, and the task's `gate_paths` lists what exists. Each effort directory has its own `brief.md`, `state.json`, `gates/<task-slug>-<attempt>.md`, `decisions.md`, and `report.md` under `efforts/<n>/`. Its `state.json` carries the effort's tasks, dispatched child identity, workspace, revision, lineage, `max_efforts`, and `efforts_admitted`. Its `report.md` records what was built, what integrated, and what the effort left open.
+Gate records and effort history are addressed by path, never inlined into the head. A gate record is written for every attempt at `gates/<task-slug>-<attempt>.md`, and the task's `gate_paths` lists what exists. Each effort directory has its own `brief.md`, `state.json`, `gates/<task-slug>-<attempt>.md`, `decisions.md`, and `report.md` under `efforts/<n>/`. Its `state.json` carries the effort's tasks, dispatched child identity, workspace, revision, lineage, and `efforts_admitted`. Its `report.md` records what was built, what integrated, and what the effort left open.
 
 The top-level `decisions.md` is Director-level only. Effort-local decisions are appended to `efforts/<n>/decisions.md`. Reopen history files by path and read only the needed section; never read a history file whole.
 

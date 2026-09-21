@@ -18,7 +18,7 @@ Rows in "What will be true when done" are the Requirements (R ids). Rows in "Wha
 | If this happened | How bad | What we do |
 |---|---|---|
 | F1 [A failure in the past tense, as the person would experience it] | [limited, serious, or severe] | [prevent, reduce, recover, or accept]: [the one thing done about it] |
-Level of care: [the worst row's rating], set by [Fn]. Effort ceiling: [n].
+Level of care: [the worst row's rating], set by [Fn].
 
 ## Things you did not ask for
 | Where | What | Why | Cost |
@@ -62,8 +62,6 @@ Quality Bar: Failing, low-quality, or bad code is unacceptable, but failure to m
 ```
 
 After acceptance, "Decisions I need from you" reads `None`, followed by the settled decisions by id. Acceptance freezes What you asked for, the assumptions with their If-wrong clauses, and the Requirements. Keep subsequent assessments in the Decision Log without rewriting the frozen text. Each log entry states the decision or assumption, its reason and evidence, and any affected finding or contract identifier.
-
-The effort ceiling on the level-of-care line is the accepted `max_efforts`; the head copies it per `skills/executing-plans/references/record.md`.
 
 ### Task brief
 
@@ -116,7 +114,7 @@ The Director writes one effort brief per effort. Objective plus Interfaces plus 
 [The level of care with the row that set it, each applicable failure row with its What we do, the applicable What we won't do entries, assumption If-wrong clauses, the Quality Bar, and Decision Log entries touching these files.]
 
 ## Base
-[Give the accepted base, branch `effort/<epic-slug>-<n>`, check commands, and the head's `max_efforts` and `efforts_admitted`.]
+[Give the accepted base, branch `effort/<epic-slug>-<n>`, check commands, and the head's `efforts_admitted`.]
 
 ## Report shape
 [Cap the report at 400 words.]

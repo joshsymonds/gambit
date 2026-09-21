@@ -15,7 +15,7 @@ The caller is the orchestrator, working in conversation with the person present 
 The caller supplies the draft contract document: its decision line and exactly these fields, in order:
 
 1. **What you asked for** — the Intent: the desired end state and the reason it is wanted.
-2. **What could go wrong, and how much we care** — the failure rows with their ratings, the level of care and the row that set it, and the effort ceiling.
+2. **What could go wrong, and how much we care** — the failure rows with their ratings, and the level of care and the row that set it.
 3. **Things you did not ask for** — every addition beyond the person's words, with its reason and cost, or an empty table.
 4. **What will be true when done** — each Requirement with the evidence that satisfies it.
 5. **What I'm assuming** — each Premise, falsifiable, with whether the Intent survives if it is false.

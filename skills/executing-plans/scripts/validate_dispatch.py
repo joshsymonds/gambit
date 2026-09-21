@@ -1,8 +1,7 @@
 #!/usr/bin/env python3
 """Validate a template-shaped Gambit task brief.
 
-Exit 0 when the brief and record pass, 1 for ordinary defects, and
-EXHAUSTED_EXIT when the record's effort ceiling is missing or spent.
+Exit 0 when the brief and record pass and 1 for any defect.
 """
 
 from __future__ import annotations
@@ -34,7 +33,6 @@ ANCHOR_RE = re.compile(
     r"(?![A-Za-z0-9_./-])"
 )
 TEST_COMMAND_RE = re.compile(r"^\s*Test command:\s*(.*?)\s*$", re.MULTILINE)
-EXHAUSTED_EXIT = 3
 
 
 def section_map(text: str) -> tuple[list[str], dict[str, str]]:
@@ -257,30 +255,6 @@ def validate(
     return defects
 
 
-def validate_ceiling(record_path: Path) -> list[str]:
-    """Report a missing or exhausted effort ceiling; these end the run rather than the dispatch."""
-    try:
-        record = json.loads(record_path.read_text(encoding="utf-8"))
-    except (OSError, UnicodeError, json.JSONDecodeError):
-        return []
-    if not isinstance(record, dict):
-        return []
-    defects: list[str] = []
-    ceiling = record.get("max_efforts")
-    admitted = record.get("efforts_admitted")
-    valid_ceiling = isinstance(ceiling, int) and not isinstance(ceiling, bool) and ceiling >= 1
-    valid_admitted = isinstance(admitted, int) and not isinstance(admitted, bool) and admitted >= 0
-    if not valid_ceiling:
-        defects.append(f"record.max_efforts: {ceiling!r} is not a positive integer")
-    if not valid_admitted:
-        defects.append(f"record.efforts_admitted: {admitted!r} is not a non-negative integer")
-    if isinstance(ceiling, int) and isinstance(admitted, int) and not defects and admitted > ceiling:
-        defects.append(
-            f"record.efforts_admitted: {admitted} exceeds max_efforts {ceiling}; the ceiling is exhausted"
-        )
-    return defects
-
-
 def validate_record(record_path: Path, task_selector: str, entry_profile: str) -> list[str]:
     try:
         record = json.loads(record_path.read_text(encoding="utf-8"))
@@ -288,6 +262,11 @@ def validate_record(record_path: Path, task_selector: str, entry_profile: str) -
         return [f"record: could not read {record_path}: {error}"]
     except json.JSONDecodeError as error:
         return [f"record: could not parse {record_path}: {error}"]
+
+    defects: list[str] = []
+    admitted = record.get("efforts_admitted") if isinstance(record, dict) else None
+    if not isinstance(admitted, int) or isinstance(admitted, bool) or admitted < 0:
+        defects.append(f"record.efforts_admitted: {admitted!r} is not a non-negative integer")
 
     tasks = record.get("tasks", []) if isinstance(record, dict) else []
     task = next(
@@ -303,9 +282,8 @@ def validate_record(record_path: Path, task_selector: str, entry_profile: str) -
         None,
     ) if isinstance(tasks, list) else None
     if task is None:
-        return [f"task: no entry matches id or slug {task_selector!r}"]
+        return defects + [f"task: no entry matches id or slug {task_selector!r}"]
 
-    defects: list[str] = []
     dispatch = task.get("dispatch")
     if not isinstance(dispatch, dict):
         dispatch = {}
@@ -418,11 +396,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     )
     defects.extend(record_done_defects)
     defects.extend(validate_record(args.record, args.task, entry_profile))
-    ceiling_defects = validate_ceiling(args.record)
-    for defect in defects + ceiling_defects:
+    for defect in defects:
         print(defect)
-    if ceiling_defects:
-        return EXHAUSTED_EXIT
     return 1 if defects else 0
 
 
