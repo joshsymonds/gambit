@@ -21,7 +21,6 @@ class ValidateDispatchTest(unittest.TestCase):
         record: dict[str, object] | None = None,
         task: str | int | None = None,
         entry_profile: str | None = None,
-        entry_rung: str | None = None,
         brief_only: bool = False,
     ) -> subprocess.CompletedProcess[str]:
         brief_path = workspace / "brief.md"
@@ -49,8 +48,6 @@ class ValidateDispatchTest(unittest.TestCase):
             command.extend(["--task", str(task)])
         if entry_profile is not None:
             command.extend(["--entry-profile", entry_profile])
-        if entry_rung is not None:
-            command.extend(["--entry-rung", entry_rung])
         return subprocess.run(command, text=True, capture_output=True)
 
     def make_workspace(self) -> tempfile.TemporaryDirectory[str]:
@@ -326,7 +323,7 @@ Test command: {test_command}
             self.assertIn("--record", result.stderr)
             self.assertIn("--task", result.stderr)
 
-    def test_entry_profile_or_legacy_entry_rung_is_required(self) -> None:
+    def test_entry_profile_is_required(self) -> None:
         with self.make_workspace() as temporary:
             workspace = Path(temporary)
             result = self.run_validator(
@@ -337,7 +334,6 @@ Test command: {test_command}
             )
             self.assertEqual(result.returncode, 2)
             self.assertIn("--entry-profile", result.stderr)
-            self.assertIn("--entry-rung", result.stderr)
 
     def test_record_done_accepts_cd_prefixed_and_exact_test_commands(self) -> None:
         with self.make_workspace() as temporary:
@@ -467,44 +463,7 @@ Test command: {test_command}
             self.assertEqual(result.returncode, 1)
             self.assertIn("profile", result.stdout)
 
-    def test_legacy_rung_record_and_entry_option_still_pass(self) -> None:
-        with self.make_workspace() as temporary:
-            workspace = Path(temporary)
-            revision = self.make_git_base(workspace)
-            record = self.valid_record()
-            legacy_task = record["tasks"][0]
-            legacy_task["rung"] = legacy_task.pop("profile")
-            legacy_task["dispatch"]["revision"] = revision
-
-            result = self.run_validator(
-                self.valid_brief(anchors="- source.py:1"),
-                workspace,
-                record=record,
-                task="validate-record",
-                entry_rung="luna-low",
-            )
-
-            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-
-    def test_conflicting_profile_and_legacy_rung_are_rejected(self) -> None:
-        with self.make_workspace() as temporary:
-            workspace = Path(temporary)
-            record = self.valid_record(rung="sol-low")
-
-            result = self.run_validator(
-                self.valid_brief(),
-                workspace,
-                record=record,
-                task="validate-record",
-                entry_profile="luna-low",
-            )
-
-            self.assertEqual(result.returncode, 1)
-            self.assertIn("profile", result.stdout)
-            self.assertIn("rung", result.stdout)
-            self.assertIn("conflict", result.stdout.lower())
-
-    def test_missing_profile_and_legacy_rung_are_rejected(self) -> None:
+    def test_missing_profile_is_rejected(self) -> None:
         with self.make_workspace() as temporary:
             workspace = Path(temporary)
             record = self.valid_record()
@@ -521,24 +480,6 @@ Test command: {test_command}
             self.assertEqual(result.returncode, 1)
             self.assertIn("task.profile", result.stdout)
             self.assertIn("missing", result.stdout.lower())
-
-    def test_conflicting_entry_profile_and_legacy_option_are_rejected(self) -> None:
-        with self.make_workspace() as temporary:
-            workspace = Path(temporary)
-
-            result = self.run_validator(
-                self.valid_brief(),
-                workspace,
-                record=self.valid_record(),
-                task="validate-record",
-                entry_profile="luna-low",
-                entry_rung="sol-low",
-            )
-
-            self.assertEqual(result.returncode, 2)
-            self.assertIn("--entry-profile", result.stderr)
-            self.assertIn("--entry-rung", result.stderr)
-            self.assertIn("conflict", result.stderr.lower())
 
     def test_record_zero_attempts_are_rejected(self) -> None:
         with self.make_workspace() as temporary:

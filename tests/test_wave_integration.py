@@ -83,14 +83,13 @@ class WaveRepository:
         gate: list[str],
         *,
         base: str | None = None,
-        collection_key: str = "implementers",
     ) -> None:
         payload = {
             "base": self.base if base is None else base,
             "epic_worktree": str(self.epic),
             "integration_worktree": str(self.integration),
             "gate": gate,
-            collection_key: [
+            "implementers": [
                 {
                     "name": name,
                     "worktree": str(self.implementers[name]),
@@ -126,45 +125,7 @@ class WaveIntegrationTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.tempdir.cleanup()
 
-    def test_legacy_workers_manifest_still_integrates(self) -> None:
-        implementer = self.repo.add_implementer("legacy-implementer")
-        (implementer / "tracked.txt").write_text("legacy manifest\n", encoding="utf-8")
-        self.repo.write_manifest(
-            [("legacy-implementer", ["tracked.txt"], "legacy manifest")],
-            [sys.executable, "-c", "pass"],
-            collection_key="workers",
-        )
-
-        result = self.repo.integrate()
-
-        self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertIn("Integrated 1 implementer", result.stdout)
-        self.assertEqual(
-            (self.repo.epic / "tracked.txt").read_text(encoding="utf-8"),
-            "legacy manifest\n",
-        )
-
-    def test_conflicting_implementers_and_legacy_workers_are_rejected(self) -> None:
-        implementer = self.repo.add_implementer("conflicting-implementer")
-        (implementer / "tracked.txt").write_text("candidate\n", encoding="utf-8")
-        self.repo.write_manifest(
-            [("conflicting-implementer", ["tracked.txt"], "candidate")],
-            [sys.executable, "-c", "pass"],
-        )
-        payload = json.loads(self.repo.manifest.read_text(encoding="utf-8"))
-        payload["workers"] = []
-        self.repo.manifest.write_text(json.dumps(payload), encoding="utf-8")
-
-        result = self.repo.integrate()
-
-        self.assertNotEqual(result.returncode, 0)
-        self.assertIn("implementers", result.stderr)
-        self.assertIn("workers", result.stderr)
-        self.assertIn("conflict", result.stderr.lower())
-        self.assertEqual(self.repo.head(), self.repo.base)
-        self.assertFalse(self.repo.integration.exists())
-
-    def test_manifest_requires_implementers_or_legacy_workers(self) -> None:
+    def test_manifest_requires_implementers(self) -> None:
         self.repo.manifest.write_text(
             json.dumps(
                 {

@@ -291,22 +291,12 @@ def validate_record(record_path: Path, task_selector: str, entry_profile: str) -
         if field not in dispatch or dispatch[field] is None:
             defects.append(f"task.dispatch.{field}: missing or null")
 
-    has_profile = "profile" in task
-    has_legacy_rung = "rung" in task
-    if has_profile and has_legacy_rung and task["profile"] != task["rung"]:
+    if "profile" not in task:
+        defects.append("task.profile: missing")
+    elif task["profile"] != entry_profile:
         defects.append(
-            "task.profile and legacy task.rung conflict: "
-            f"{task['profile']!r} != {task['rung']!r}"
+            f"task.profile: {task['profile']!r} differs from entry profile {entry_profile!r}"
         )
-    if not has_profile and not has_legacy_rung:
-        defects.append("task.profile: missing (legacy task.rung is also absent)")
-    else:
-        profile = task["profile"] if has_profile else task["rung"]
-        if profile != entry_profile:
-            field = "task.profile" if has_profile else "legacy task.rung"
-            defects.append(
-                f"{field}: {profile!r} differs from entry profile {entry_profile!r}"
-            )
 
     attempts = task.get("attempts")
     if isinstance(attempts, (int, float)) and attempts < 1:
@@ -353,31 +343,14 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--done", action="append", default=None, dest="done_commands")
     parser.add_argument("--record", required=True, type=Path)
     parser.add_argument("--task", required=True)
-    parser.add_argument("--entry-profile")
-    parser.add_argument("--entry-rung", help=argparse.SUPPRESS)
+    parser.add_argument("--entry-profile", required=True)
     return parser
-
-
-def selected_entry_profile(
-    parser: argparse.ArgumentParser,
-    entry_profile: str | None,
-    legacy_entry_rung: str | None,
-) -> str:
-    if entry_profile is None and legacy_entry_rung is None:
-        parser.error("--entry-profile is required (legacy --entry-rung is also accepted)")
-    if (
-        entry_profile is not None
-        and legacy_entry_rung is not None
-        and entry_profile != legacy_entry_rung
-    ):
-        parser.error("--entry-profile conflicts with legacy --entry-rung")
-    return entry_profile if entry_profile is not None else legacy_entry_rung
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
-    entry_profile = selected_entry_profile(parser, args.entry_profile, args.entry_rung)
+    entry_profile: str = args.entry_profile
     try:
         text = args.brief.read_text(encoding="utf-8")
     except (OSError, UnicodeError) as error:

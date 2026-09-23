@@ -8,7 +8,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 CONTRACTS = ROOT / "contracts"
 INDEX = CONTRACTS / "README.md"
-VALIDATION_FIXTURE = ROOT / "tests" / "fixtures" / "skill-convergence" / "VALIDATION.md"
 
 
 class ContractIndexTest(unittest.TestCase):
@@ -43,9 +42,8 @@ class ContractIndexTest(unittest.TestCase):
         ):
             self.assertIn(path, text)
 
-    def test_validation_history_is_a_fixture(self) -> None:
+    def test_validation_history_is_absent_from_contracts(self) -> None:
         self.assertFalse((CONTRACTS / "VALIDATION.md").exists())
-        self.assertTrue(VALIDATION_FIXTURE.exists())
 
     def test_index_is_bounded_and_harness_neutral(self) -> None:
         text = INDEX.read_text(encoding="utf-8")

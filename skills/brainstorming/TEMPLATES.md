@@ -1,6 +1,6 @@
 # Epic and task templates
 
-Use the record-task-state operation. Fill every field from the goal, decisions, and research before creating executable work. The epic body is one document: the decision line, then exactly the ten sections below in this order. Its Decision Log is attached record context, outside that body. The Design Ledger stays in the design transcript. The epic body, its Decision Log, and the task state are also written to the epic's record directory as `skills/executing-plans/references/record.md` specifies.
+Use the record-task-state operation. Fill every field from the goal, decisions, and research before creating executable work. The epic body is one document: the decision line, then exactly the ten sections below in this order. Its Decision Log is attached record context, outside that body. The Design Ledger stays in the design transcript. The epic body, its Decision Log, and the head are also written to the epic's record directory as `skills/executing-plans/references/record.md` specifies.
 
 Rows in "What will be true when done" are the Requirements (R ids). Rows in "What I'm assuming" are the Premises (P ids). Rows in "What could go wrong" are the failure cases (F ids). Entries under "What we won't do" are the Must Not Ship entries. Those names are how every later stage refers to the contents.
 
@@ -98,7 +98,7 @@ Test command: [exact task fast check from Checks the machines run].
 
 ### Effort brief
 
-The Director writes one effort brief per effort. Objective plus Interfaces plus Binding contract stay under 250 words excluding lists.
+The Director writes an effort's brief only when that effort becomes dependency-ready, from the accepted base at that moment. Objective plus Interfaces plus Binding contract stay under 250 words excluding lists.
 
 ```markdown
 ## Objective

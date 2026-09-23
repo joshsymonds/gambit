@@ -20,7 +20,7 @@ The Director is the session coordinating the epic, not another dispatch role. Th
 
 A model profile selects a model and reasoning effort. Its writing and read-only agent variants select tool access; read-only instructions are not operating-system containment. Every role has one entry model profile. Profiles are not an escalation ladder.
 
-Every dispatch uses the role's entry profile. An implementer gets at most two attempts at a task; the second carries the exact missing context or failing evidence from its gate record. Routing between attempts belongs to `skills/executing-plans/SKILL.md`. An agent never changes its own profile. Splitting preserves the lineage and its spent attempts; it does not select a stronger model.
+Every dispatch uses the role's entry profile. An implementer gets at most two attempts against a complete brief; the second carries the failing evidence from its gate record. A re-brief correcting the orchestrator's brief spends no attempt, and each split descendant starts with its own two. Routing between attempts belongs to `skills/executing-plans/SKILL.md`. An agent never changes its own profile. Splitting preserves the lineage; it does not select a stronger model.
 
 After the implementer's attempts are spent, the Orchestrator makes one final attempt itself under `contracts/implementer.md`, gated like any return. If it fails, the lineage is a gap.
 

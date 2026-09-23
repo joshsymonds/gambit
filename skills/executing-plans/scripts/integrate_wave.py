@@ -150,17 +150,7 @@ def load_manifest(path: Path) -> Manifest:
     ):
         fail("manifest.gate must be a non-empty argv array of strings")
 
-    has_implementers = "implementers" in root
-    has_legacy_workers = "workers" in root
-    if (
-        has_implementers
-        and has_legacy_workers
-        and root["implementers"] != root["workers"]
-    ):
-        fail("manifest.implementers conflicts with legacy manifest.workers")
-    implementers_value = (
-        root["implementers"] if has_implementers else root.get("workers")
-    )
+    implementers_value = root.get("implementers")
     if not isinstance(implementers_value, list) or not implementers_value:
         fail("manifest.implementers must be a non-empty ordered array")
 

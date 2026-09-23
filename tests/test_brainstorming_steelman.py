@@ -43,17 +43,14 @@ class BrainstormingStructureTest(unittest.TestCase):
         self.assertEqual(
             re.findall(r"^## (.+)$", self.text, re.MULTILINE),
             ["Inputs", "Research", "Questions in prose", "Approaches and design",
-             "Steelman", "The contract", "The document", "The first effort",
-             "Handoff"],
+             "Steelman", "The contract", "The document", "Handoff"],
         )
 
-    def test_first_effort_brief_fields_acceptance_and_constraints(self) -> None:
-        section = self.section("The first effort")
-        self.assertIn(", ".join(BRIEF_SECTIONS), section)
-        self.assertIn("250 words", section)
-        self.assertNotIn("Implementation,", section)
-        self.assertIn("level of care", section)
-        self.assertIn("no implementer receives an id without its text", section)
+    def test_contract_stage_creates_no_tasks(self) -> None:
+        handoff = self.section("Handoff")
+        self.assertIn("Create no tasks or effort briefs here", handoff)
+        self.assertNotIn("first effort", self.text.lower())
+        self.assertNotIn("ready briefs", self.text)
 
     def test_goal_file_rules_close_all_assumptions_and_findings(self) -> None:
         goal_file_rules = "\n".join(

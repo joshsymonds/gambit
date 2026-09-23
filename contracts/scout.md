@@ -32,7 +32,7 @@ When the brief concerns a bug, identify the exact reproduction command, or the s
 
 If reproduction needs writable state, including build artifacts, generated fixtures, or a scratch database, do not run it. Report the exact command for the orchestrator to hand to the `test-runner`, which executes it in an isolated workspace and returns the output.
 
-Be exact because the report becomes a Premise of the contract, while the reproduction becomes the first task's failing test and a Requirement's evidence.
+Be exact because the report becomes a Premise of the contract, while the reproduction becomes a Requirement's evidence and the failing test of the task that covers it.
 
 ## Report
 

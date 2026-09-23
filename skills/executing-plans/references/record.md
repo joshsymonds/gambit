@@ -41,7 +41,7 @@ Write `supersedes: none` when the entry reverses nothing.
   "epic_slug": "<epic-slug>",
   "epic_branch": "epic/<epic-slug>",
   "workspace": "<absolute epic workspace>",
-  "accepted_base": "<revision the current effort started from>",
+  "accepted_base": "<last epic revision to pass the full Done gate>",
   "candidate_revision": "<integrated candidate, or null>",
   "effort": 2,
   "efforts_admitted": 2,
@@ -107,9 +107,7 @@ Write `supersedes: none` when the entry reverses nothing.
 }
 ```
 
-Those top-level keys are the whole head, and every task entry carries exactly the keys shown. `efforts_admitted` counts every effort identity the Director has admitted so far, including concurrent partitions and review or release correction efforts; resuming an existing effort admits nothing. It starts at zero at acceptance, is copied into every effort brief's Base field and every `efforts/<n>/state.json`, and does not change on resume. Nothing bounds it: efforts are admitted while executable work remains, and the run ends only when every Requirement is released or every remaining lineage is exhausted. Each task's `dispatch` object carries exactly `child`, `workspace`, and `revision`; `child` and `revision` are strings or null, and `workspace` is an absolute path string or null. Write this object before dispatching the task's implementer, and keep all three values null until then. Each task's `conduct` object carries exactly `brief_defects`, `violations_prevented`, `violations_escaped`, `routing_history`, `outcome`, and `cost`. The first three are lists of strings from validation and routing; `routing_history` is a list of objects carrying exactly `signature`, `step`, and `attempt`; `outcome` is `pending`, `done`, `gap`, or `split`; and `cost` carries integer or null `turns` and `tokens`. Each effort entry carries exactly `n`, `branch`, `workspace`, `child`, `revision`, `status`, and `report`.
-
-New task entries use `profile`. The validator also reads an existing `rung` field as the same assignment and accepts `--entry-rung` as an alias for `--entry-profile`. Conflicting values are rejected. Do not rewrite frozen records, evidence, attempt counts, or lineage merely to update terminology.
+Those top-level keys are the whole head, and every task entry carries exactly the keys shown. `efforts_admitted` counts every effort identity the Director has admitted so far, including concurrent partitions and review or release correction efforts; resuming an existing effort admits nothing. It starts at zero at acceptance, is copied into every effort brief's Base field and every `efforts/<n>/state.json`, and does not change on resume. Nothing bounds it: efforts are admitted while executable work remains, and the run ends only when every Requirement is released or no executable work remains because every remaining lineage is exhausted or blocked by a gap. Each task's `dispatch` object carries exactly `child`, `workspace`, and `revision`; `child` and `revision` are strings or null, and `workspace` is an absolute path string or null. Write this object before dispatching the task's implementer, and keep all three values null until then. Each task's `conduct` object carries exactly `brief_defects`, `violations_prevented`, `violations_escaped`, `routing_history`, `outcome`, and `cost`. The first three are lists of strings from validation and routing; `routing_history` is a list of objects carrying exactly `signature`, `step`, and `attempt`; `outcome` is `pending`, `done`, `gap`, or `split`; and `cost` carries integer or null `turns` and `tokens`. Each effort entry carries exactly `n`, `branch`, `workspace`, `child`, `revision`, `status`, and `report`.
 
 ## Decomposition
 

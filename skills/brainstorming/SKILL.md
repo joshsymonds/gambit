@@ -1,6 +1,6 @@
 ---
 name: brainstorming
-description: Turns an idea, bug report, or goal file into an epic contract and its first executable effort.
+description: Turns an idea, bug report, or goal file into an accepted epic contract ready for execution.
 when_to_use: Use when defining work from a new idea, investigating a bug before planning its fix, or starting from a goal file. Not for executing an existing epic contract.
 user_invokable: true
 ---
@@ -9,7 +9,7 @@ user_invokable: true
 
 Own the contract stage. Read `README.md` in full as the design authority. Research, resolve the design, and create the contract before implementation. Use the harness's operations to dispatch roles, record task state, and load stages, rather than naming its tools.
 
-Give a complete, ordered answer before optional elaboration. A request to describe what you produce and do calls for a worked scenario, not live execution. Mark that frame once, complete the research within the scenario, and show its concrete findings, then the full contract and ready briefs, all forming one consistent repository scenario that respects every supplied fact. Do not substitute a live-tools disclaimer, promises of later research, or empty section names for the requested records. Described dispatches and acceptance are events in the scenario, not claims that live actions occurred. Summarize dispatch inputs and print the contract and briefs once.
+Give a complete, ordered answer before optional elaboration. A request to describe what you produce and do calls for a worked scenario, not live execution. Mark that frame once, complete the research within the scenario, and show its concrete findings, then the full contract, all forming one consistent repository scenario that respects every supplied fact. Do not substitute a live-tools disclaimer, promises of later research, or empty section names for the requested records. Described dispatches and acceptance are events in the scenario, not claims that live actions occurred. Summarize dispatch inputs and print the contract once.
 
 ## Inputs
 
@@ -30,7 +30,7 @@ For a bug, make this evidence chain explicit and complete:
 1. Give the scout the report and observed failure as clues to verify. Have it return the exact reproduction command as a command line and trace the root cause with causal `file:line` evidence, including what would falsify that cause. A suspected file or stack frame is not a verified diagnosis.
 2. If reproduction writes build artifacts, fixtures, a cache, or other state, dispatch `test-runner` with the exact command in an isolated workspace. It writes scratch state only and returns the command and output. The scout does not execute writable reproduction.
 3. Reconcile that output with the scout's causal evidence. Turn the verified root cause into a falsifiable Premise with its explicit Intent-survival clause.
-4. Make the verified reproduction the first task's failing test. Name that same reproduction and its expected corrected result as a Requirement's satisfying evidence, with the exact check. Carry the observed failure into the brief so the implementer begins from RED.
+4. Name the verified reproduction and its expected corrected result as a Requirement's satisfying evidence, with the exact check, and carry the observed failure into the contract. Execution makes that reproduction the failing test of the task covering the Requirement, so its implementer begins from RED.
 
 This is research for a fix, not the fix itself. Do not patch the bug, write implementation, or hand the investigation to another stage.
 
@@ -54,7 +54,7 @@ Proportionality failure is a contract-drafting failure: overdesign, excess robus
 
 ## Steelman
 
-Run exactly one discovery pass on the agreed design, before accepting the contract or creating its executable tasks. Read `contracts/steelman.md`. Dispatch the `steelman` role fresh and read-only under that contract, resolved through `contracts/models.md`.
+Run exactly one discovery pass on the agreed design, before accepting the contract. Read `contracts/steelman.md`. Dispatch the `steelman` role fresh and read-only under that contract, resolved through `contracts/models.md`.
 
 Supply the draft document as the Design Packet, using the receiver contract's exact fields, in order: What you asked for; What could go wrong, and how much we care; Things you did not ask for; What will be true when done; What I'm assuming; What we won't do; How, and why not the other ways; What leaves this machine or can't be undone; Decisions I need from you; Checks the machines run. Include each field's required evidence, ratings, survival clauses, reasons, commands, actions, and postconditions. Write `None` for genuinely absent decisions. Discovery receives this packet without prior steelman output.
 
@@ -79,11 +79,11 @@ Create the epic record through the record-task-state operation from the finalize
 9. **Decisions I need from you:** every open choice with options and a recommendation, or `None`.
 10. **Checks the machines run:** the exact commands for each task's fast check and the integrated candidate's full gate, the evidence named above, and the complete Quality Bar paragraph from README verbatim on one line starting `Quality Bar:`. Output the paragraph itself, not a summary, reference, or promise to copy it. Never customize it.
 
-In live execution, bind evidence links, file paths, commands, and release targets from inspected evidence before task creation. Do not present guesses as verified facts: an assumption can settle an open design choice, but cannot establish that an invented file exists. In a worked scenario, use its research findings. In both cases, show finished records, not section names or promises to populate them.
+In live execution, bind evidence links, file paths, commands, and release targets from inspected evidence before acceptance. Do not present guesses as verified facts: an assumption can settle an open design choice, but cannot establish that an invented file exists. In a worked scenario, use its research findings. In both cases, show finished records, not section names or promises to populate them.
 
 In conversation, present the complete document for acceptance and settle requested changes here. With a goal file, first check that every assumption the research produced, including each fact resolved after a `NOT FOUND` and each question you answered yourself, has its Decision Log entry, and log any missing one; then accept the contract yourself on that file's behalf. Record acceptance and freeze Intent, Premises with their survival clauses, and Requirements. Later changes of assessment belong in the Decision Log, leaving those clauses intact. The contract alone authorizes the work that follows.
 
-At acceptance, also write the epic's record directory `~/.gambit/<repository-id>/<epic-slug>/` as `skills/executing-plans/references/record.md` specifies: the frozen document to `epic.md`, every Decision Log entry to `decisions.md` in its append-only line format, and the head to `state.json`, carrying `efforts_admitted` at zero. Derive repository-id from the tree by that reference's rule, never from a workspace name. The record carries this epic for a reader holding no transcript.
+At acceptance, also write the epic's record directory `~/.gambit/<repository-id>/<epic-slug>/` as `skills/executing-plans/references/record.md` specifies: the frozen document to `epic.md`, every Decision Log entry to `decisions.md` in its append-only line format, and the head to `state.json`, carrying `efforts_admitted` at zero and no tasks. Derive repository-id from the tree by that reference's rule, never from a workspace name. The record carries this epic for a reader holding no transcript.
 
 ## The document
 
@@ -91,26 +91,14 @@ The contract is one document the person reads in a sitting, in the order they ne
 
 Rate each failure row before any mitigation is chosen, as the person would experience it. Limited means they recover in minutes and lose nothing but time. Serious means recovery takes real effort or money, or someone else is affected. Severe means the loss cannot be undone, harms someone else, or exposes a secret or a system. The worst row sets the level of care; a rating authorizes no work, and each row's What we do, starting prevent, reduce, recover, or accept, is the only work the row adds. The table has no likelihood column, and the level-of-care line carries no effort ceiling: execution admits efforts until the work ships or every lineage is exhausted, so the contract never rations them.
 
-Trace every Requirement, mechanism, check, and release step to a sentence of the person's request or goal file. Whatever traces to nothing goes in "Things you did not ask for" with its reason and cost: new files, infrastructure (a machine, service, harness, script, or corpus), external systems touched, and check runtime. In conversation, the person decides each row individually before accepting, and each decision is a Decision Log entry; striking a row removes it with the evidence and commands that depended on it. With a goal file, decide each row yourself from the goal and research, log each decision with its reason, and continue. An empty table means nothing was added. Execution treats infrastructure outside the accepted approach and these rows as unauthorized.
+Trace every Requirement, mechanism, check, and release step to a sentence of the person's request or goal file. Whatever traces to nothing goes in "Things you did not ask for" with its reason and cost: new files, infrastructure (a machine, service, harness, script, or corpus), external systems touched, and check runtime. In conversation, the person decides each row individually before accepting, and each decision is a Decision Log entry; striking a row removes it with the evidence and commands that depended on it. With a goal file, decide each row yourself from the goal and research, log each decision with its reason, and continue. An empty table means nothing was added. Execution treats a machine, service, or external system outside the accepted approach and these rows as unauthorized; the Director decides and logs in-repository additions such as a script, harness, fixture, or corpus.
 
 Each release step names its action and its effect in one cell, and its Undo may say none; a step with no undo is the irreversible action the catastrophe rule watches. "Decisions I need from you" holds every open choice before acceptance and reads `None` after it.
 
 The content above "Checks the machines run" fits forty lines when wrapped at 100 columns, counting table rows and prose only; headings, header rows, rule rows, and blank lines do not count. An epic that overflows is split into two epics that together keep the full scope; never trim a Requirement or a failure row to fit.
 
-## The first effort
-
-Create every task writable from the tree now for the first effort, with complete briefs. Cover each unmet Requirement that has executable work now; leave work needing unfinished interfaces for later decomposition. Never produce a full future task tree or split one behavior just to create parallel work.
-
-Use the task template's fields in order: Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, Acceptance, Constraints, Requirements covered, Test command. Supply the workspace, base revision, applicable contract clauses, verified `path:symbol:line` anchors, and the acceptance condition (an existing test or reproduction with its expected result, or the behavioral criteria for the failing test the implementer writes first). Keep Goal plus Acceptance plus Constraints under 250 words total. Constraints carries the level of care with the row that set it and each applicable failure row quoted with its What we do, so no implementer receives an id without its text. This brief carries no implementation steps, code, or diffs. Each brief must be executable without conversation history or questions.
-
-Give every concurrent task a disjoint exact owned-file list, including tests, additions, deletions, and implicit writes. Hidden shared surfaces and neighbors grant no ownership. Put work with overlapping files into one coherent task or leave it for a later effort. For bugs, the first brief carries the verified reproduction as its failing test and maps it to the Requirement's evidence.
-
-Record tasks as pending and ready, associated with the epic as their contract container, never as a blocker that must complete first. State the task state left behind and keep the Decision Log attached to the epic.
-
-Write that same task state into the record's `state.json` before handing off: each task's id, slug, subject, requirement, owned_files, lineage, profile, attempts, status, and gate_paths, with `next_actions` naming what the next reader does first and `never_drop` carrying the acceptance criteria, observed error signatures, and commands still needed.
-
 ## Handoff
 
-After acceptance and first-effort creation, load `skills/executing-plans/SKILL.md` by reading it and following it. Carry the accepted epic, Decision Log, and ready task briefs. Execution follows the same contract regardless of its source.
+Create no tasks or effort briefs here, and leave the head's task list empty; execution creates each task at the moment it will be dispatched. After acceptance, load `skills/executing-plans/SKILL.md` by reading it and following it. Carry the accepted epic and Decision Log. Execution follows the same contract regardless of its source.
 
-The person in conversation may choose to stop at the contract instead; settle that here. A goal-file run always hands off automatically, with no closing question or wait. When describing the stage without implementing, show this as the next load-a-stage operation and leave the described first effort ready.
+The person in conversation may choose to stop at the contract instead; settle that here. A goal-file run always hands off automatically, with no closing question or wait. When describing the stage without implementing, show this as the next load-a-stage operation.

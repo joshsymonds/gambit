@@ -106,13 +106,48 @@ class ExecutingPlansStructureTest(unittest.TestCase):
                 self.assertIn(phrase, director)
         for phrase in (
             "never the record",
-            "six tasks",
             "400 words",
             "efforts/<n>/report.md",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.text)
         self.assertNotIn("efforts/<n>.md", self.text)
+        self.assertNotIn("six tasks", self.text)
+
+    def test_director_briefs_efforts_just_in_time_and_gates_each_merge(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        director = sections["Director"]
+        for phrase in (
+            "Write an effort's brief only when it becomes dependency-ready",
+            "it creates no brief, task, or owned-file list",
+            "run the full Done gate on the merged epic after each merge",
+            "advance the accepted base to that revision",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, director)
+        self.assertNotIn("Create one effort brief per partition", director)
+        self.assertNotIn("final full Done gate once", director)
+
+    def test_only_external_infrastructure_becomes_a_gap(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        director = sections["Director"]
+        self.assertIn("That decision authorizes an in-repository, reversible addition", director)
+        self.assertIn("A new machine, service, or external system is unauthorized", director)
+
+    def test_rebrief_and_split_spend_no_attempt(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        build = sections["Build each task until good"]
+        self.assertIn("A re-brief for the orchestrator's brief defect spends no attempt", build)
+        self.assertIn("each split descendant starts with its own two", build)
+        self.assertNotIn("spent attempts", (ROOT / "contracts/models.md").read_text(encoding="utf-8"))
+
+    def test_waves_do_not_wait_for_tasks_in_routing(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        self.assertIn("without waiting for tasks still in routing", sections["Integrate and repeat"])
+        dispatch = (SKILL_ROOT / "references/wave-dispatch.md").read_text(encoding="utf-8")
+        self.assertIn("a wave never waits for tasks still in routing", dispatch)
+        self.assertIn("checkout --detach <new-base>", dispatch)
+        self.assertIn("After each merge, run the full Done gate", dispatch)
 
     def test_decompose_lists_brief_fields_and_word_cap(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))

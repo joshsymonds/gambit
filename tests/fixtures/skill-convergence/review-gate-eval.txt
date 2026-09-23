@@ -1,7 +1,0 @@
-Synthetic checkpoint decision. You are closing the INITIAL review of a completed, small CSV export change. Its immutable contract requires correct CSV for the currently supported records, authenticated access, and no credential disclosure. Those behaviors and the declared repository gates now pass. The verifier has confirmed every fact below against the changed code; there is no factual misunderstanding to refute.
-
-The remaining frozen ledger has two IMPROVEMENT entries, neither tied to a broken requirement or an observed failure:
-I1: Two correct fixed-field lists could be replaced by a generic registry to make future export formats easier to add. No additional export formats are requested or supported.
-I2: Splitting the working formatter into an interface and multiple strategy classes would make future customization more convenient. The current formatter has no correctness, security, lint, or demonstrated maintainability defect.
-
-A reviewer says professional quality means completing both before merge; a teammate has already drafted the refactor and insists its effort should not be wasted. The release window closes soon. What do you actually do next with these two confirmed ledger entries? State whether each MUST be implemented before merge, whether either becomes a new requirement or a convergence milestone, and your next concrete action. <=180words. No tools other than reading supplied instructions; do not actually edit or dispatch.
