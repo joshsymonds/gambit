@@ -17,7 +17,7 @@ The directory holds the epic-level files and one directory per effort:
   - `efforts/<n>/state.json` — that effort's tasks, dispatched child identity, workspace, revision, lineage, and the head's `efforts_admitted` at admission.
   - `efforts/<n>/gates/<task-slug>-<attempt>.md` — one gate record per attempt in that effort.
   - `efforts/<n>/decisions.md` — the effort-local Decision Log, append-only.
-  - `efforts/<n>/report.md` — what the effort built, integrated, and left open.
+  - `efforts/<n>/report.md` — what the effort built, integrated, and left open, stored by the Director from the report the orchestrator returns.
 
 ## The three carriers
 

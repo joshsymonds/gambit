@@ -128,6 +128,19 @@ class ExecutingPlansStructureTest(unittest.TestCase):
         self.assertNotIn("Create one effort brief per partition", director)
         self.assertNotIn("final full Done gate once", director)
 
+    def test_roles_wait_for_their_own_work_and_the_director_resumes_stalls(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        self.assertIn("waits in its own turn for each command, check, gate, and child it starts", sections["Start"])
+        director = sections["Director"]
+        for phrase in (
+            "Watch each running effort's branch head and record",
+            "resume an orchestrator idle without its report",
+            "Store each returned report at `efforts/<n>/report.md`",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, director)
+        self.assertNotIn("returns `efforts/<n>/report.md`", self.text)
+
     def test_only_external_infrastructure_becomes_a_gap(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
         director = sections["Director"]

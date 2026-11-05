@@ -40,4 +40,4 @@ Every return opens with a summary under 200 words, followed by the complete chan
 
 **BLOCKED** means the cause is reported with the common evidence above: the work cannot reach green and the evidence says why, the task needs more reasoning than you can provide, or the task is too large for one pass.
 
-A return is gate evidence, not a question or a terminal decision. Leave every change uncommitted; the orchestrator gates and commits it.
+Finish every command and check you start before you return; a return is your final message, never a promise to continue. A return is gate evidence, not a question or a terminal decision. Leave every change uncommitted; the orchestrator gates and commits it.

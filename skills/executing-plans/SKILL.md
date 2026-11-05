@@ -17,7 +17,7 @@ After compaction or resume, reload by role: the Director reloads `epic.md`, `dec
 
 Write `state.json` before each dispatch and after each return; write each gate record to `gates/<task-slug>-<attempt>.md` before the next dispatch. Mirror each transition through the harness's record-task-state operation.
 
-Use five harness operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. Run Git, Done and Release through the shell. Isolate fresh epics with `git worktree add -b <epic-branch> <epic-workspace> <base>`. Never execute on main.
+Use five harness operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. Run Git, Done and Release through the shell. Every dispatched role waits in its own turn for each command, check, gate, and child it starts before it returns. Isolate fresh epics with `git worktree add -b <epic-branch> <epic-workspace> <base>`. Never execute on main.
 
 Read `contracts/models.md`; resolve roles through `~/.claude/gambit/models.json`. Select each entry model profile and its dispatch target, read-only variant for read-only roles. Pass the complete brief and contract's absolute path from the current installation: `contracts/implementer.md` for `implementer`, `contracts/scout.md` for `scout`. No fallback: log unresolved roles; every task requiring one becomes a gap citing it. Independent work continues; end with gaps only when no executable work remains.
 
@@ -40,9 +40,9 @@ Admit an effort, whether a partition, a review correction, or a release correcti
 
 Before admitting any effort after the first, and whenever a report names new infrastructure, log one Director decision on whether the work adds infrastructure unnamed by the accepted approach, the accepted additions table ("Things you did not ask for"), or an accepted Decision Log proposal. That decision authorizes an in-repository, reversible addition such as a script, harness, fixture, or corpus that an unmet Requirement needs. A new machine, service, or external system is unauthorized; its dependent Requirements become gaps citing it.
 
-Dispatch every dependency-ready effort concurrently to a fresh orchestrator in its own worktree, first persisting the child identity, workspace, revision, and lineage in the head's efforts entry. When a report reveals a defect in the effort brief, log the Director's error, correct the brief, and dispatch a fresh orchestrator. Merge each finished effort branch into the epic branch in completion order and run the full Done gate on the merged epic after each merge. On green, advance the accepted base to that revision, then brief and dispatch every effort now dependency-ready, including work a report left open; on red, follow `references/wave-dispatch.md`. Fold report lines into the head; take no other tree action. When the registry resolves no `orchestrator` role, the Director performs each effort itself under the orchestrator rules above, inventing no dispatch target and owning the effort's record writes.
+Dispatch every dependency-ready effort concurrently to a fresh orchestrator in its own worktree, first persisting the child identity, workspace, revision, and lineage in the head's efforts entry. When a report reveals a defect in the effort brief, log the Director's error, correct the brief, and dispatch a fresh orchestrator. Merge each finished effort branch into the epic branch in completion order and run the full Done gate on the merged epic after each merge. On green, advance the accepted base to that revision, then brief and dispatch every effort now dependency-ready, including work a report left open; on red, follow `references/wave-dispatch.md`. Watch each running effort's branch head and record; resume an orchestrator idle without its report. Store each returned report at `efforts/<n>/report.md` and fold its lines into the head; take no other tree action. When the registry resolves no `orchestrator` role, the Director performs each effort itself under the orchestrator rules above, inventing no dispatch target and owning the effort's record writes.
 
-For an effort dispatch, the orchestrator input is the effort brief and code only, never the record. It decomposes into as many disjoint-file tasks as the behaviors allow and dispatches every independent task concurrently. It writes tasks, gates, and effort-local decisions under `efforts/<n>/` and returns `efforts/<n>/report.md` in under 400 words.
+For an effort dispatch, the orchestrator input is the effort brief and code only, never the record. It decomposes into as many disjoint-file tasks as the behaviors allow and dispatches every independent task concurrently. It writes tasks, gates, and effort-local decisions under `efforts/<n>/` and returns its report in under 400 words as its final message.
 
 ## Decompose the next effort
 
@@ -103,7 +103,7 @@ Every NOT DONE record names its cause. Its failure signature is the normalized f
 3. **Separable behaviors:** split them once per lineage, preserving the same unmet Requirements across complete descendants.
 4. **The orchestrator's own attempt:** make the attempt in the task's workspace under `contracts/implementer.md`, with the complete history of gate records. If it fails, the lineage is a gap on `gap/<task-slug>`, independent work continues, and the run ends with gaps naming the Requirement as unsatisfied as written.
 
-When a gate finding names an exact edit smaller than the brief that would describe it, the orchestrator applies it directly, logs it with the gate that named it, and counts no attempt. Beyond task review above, this routing sequence has no separate review dispatch or corrective loop.
+When a gate finding names an exact edit smaller than the brief that would describe it, the orchestrator applies it directly, logs it with the gate that named it, and counts no attempt. Routing adds no review dispatch beyond task review.
 
 ## Integrate and repeat
 
@@ -111,11 +111,11 @@ Every accepted implementer change set, including a single task, lands only throu
 
 For a failure appearing only after combination, record the complete routing decision before further investigation: itemized NOT DONE, the responsible lineage, the routing step reached, and the attempts spent there; the rejected revision retained on `candidate/<effort>` with its failing output, the last accepted base unchanged until the combined candidate passes the full Done gate, and the independent tasks continuing during correction. Assign the failure to its contributing lineage or one integration lineage for this effort. An existing contributing lineage continues from the routing step reached and the attempts it has spent there; a new integration lineage starts at the entry model profile. Keep this ownership for subsequent failures; never reset attempts with fresh lineages.
 
-Use the build step's failure-signature routing for that failure. The corrective workspace must contain the failing combination so its tests reproduce the integration defect. A task's passing fast check cannot substitute for a fresh full Done gate on the corrected combined candidate.
+Use the build step's failure-signature routing for that failure. The corrective workspace must contain the failing combination so its tests reproduce the integration defect. A task's fast check never replaces the full Done gate on the corrected candidate.
 
 If an integration lineage exhausts, preserve its work and gate as a gap and retain the rejected candidate. Build any remaining candidate from the last accepted base and independent DONE changes, excluding work dependent on the gap, then run its full Done gate. Never advance the accepted base to a rejected revision.
 
-Write the effort's report to `efforts/<n>/report.md` when the effort ends. Repeat from decomposition until every Requirement is DONE with its named evidence or is a gap. When no executable work remains, a Requirement depending on a gap becomes a gap citing that dependency. Task completion alone does not establish Requirement completion.
+Return the effort's report for `efforts/<n>/report.md` as the final message. Repeat from decomposition until every Requirement is DONE with its named evidence or is a gap. When no executable work remains, a Requirement depending on a gap becomes a gap citing that dependency. Task completion alone does not establish Requirement completion.
 
 ## Review once
 
@@ -125,11 +125,11 @@ Route each contract defect through the build step's failure-signature routing. C
 
 ## Release
 
-Release is eligible only when every Requirement is DONE, review is clean, and the fresh Done checks pass. Otherwise execute no Release action and proceed to the report with gaps. A clean review cannot authorize a partial release.
+Release is eligible only when every Requirement is DONE, review is clean, and the fresh Done checks pass. Otherwise execute no Release action and proceed to the report with gaps.
 
 For an eligible candidate, execute the exact steps of "What leaves this machine or can't be undone" in order through the shell, against their named targets and intended effects; the postconditions after `Then:` are the Release postconditions. Record each completed action and evidence immediately. On resume, inspect postconditions from that record instead of repeating completed external actions.
 
-An action that fails within the repository's own authority, including its tests, CI configuration, or build, opens a correction effort under the build step's failure-signature routing. Correct the failure, run its check, and Release resumes at the first action whose postcondition no longer holds; when every earlier postcondition still holds, that is the failed action, and no action whose postcondition holds is repeated. An action outside that authority that fails, or whose postcondition cannot be confirmed, is a release gap; a failure not shown to lie outside that authority is corrected as inside it. Record the failure and all actions already completed; execute no later action. Report release only when every Release postcondition holds. Before any external action, apply Human boundaries.
+An action that fails within the repository's own authority, including its tests, CI configuration, or build, opens a correction effort under the build step's failure-signature routing. Correct the failure, run its check, and Release resumes at the first action whose postcondition no longer holds, repeating no action whose postcondition holds. An action outside that authority that fails, or whose postcondition cannot be confirmed, is a release gap; a failure not shown to lie outside that authority is corrected as inside it. Record the failure and all actions already completed; execute no later action. Report release only when every Release postcondition holds. Before any external action, apply Human boundaries.
 
 ## Report and end
 
@@ -152,6 +152,6 @@ Catastrophe ends the run immediately when either condition holds:
 - A Premise is false and its frozen clause says the Intent cannot survive.
 - The next action is an irreversible external action that the release steps do not explicitly authorize by action, target, and intended effect.
 
-Cease building and external actions, record the condition and evidence, report **stopped on catastrophe**, and end the run. Do not continue independent work after catastrophe.
+Cease building and external actions, record the condition and evidence, report **stopped on catastrophe**, and end the run.
 
-Take no other external action the contract does not name either. A task needing one receives NOT DONE and becomes a gap; independent work continues. Every other decision, adjustment, decomposition, context resolution, validation, or gap is decided and logged. No mid-run question goes to a person.
+Take no other external action the contract leaves unnamed. A task needing one receives NOT DONE and becomes a gap; independent work continues. Everything else is decided and logged. No mid-run question goes to a person.
