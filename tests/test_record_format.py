@@ -117,6 +117,21 @@ class RecordReferenceTest(unittest.TestCase):
             with self.subTest(token=token):
                 self.assertIn(token, self.text)
 
+    def test_epic_slug_is_fixed_before_brainstorming_begins(self) -> None:
+        self.assertNotIn("fixed at acceptance", self.text)
+        clause = self.text.split("epic-slug is the epic's kebab-case name", 1)[1].split(
+            "\n", 1
+        )[0]
+        for token in (
+            "before brainstorming",
+            "first step",
+            "no existing record directory",
+            "~/.gambit/<repository-id>/",
+            "redraft",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, clause)
+
     def test_every_record_file_is_named(self) -> None:
         for name in RECORD_FILES:
             with self.subTest(name=name):
@@ -204,6 +219,13 @@ class BrainstormingWritesTheRecordTest(unittest.TestCase):
         for token in DIRECTORY_RULE:
             with self.subTest(token=token):
                 self.assertIn(token, self.skill)
+
+    def test_skill_fixes_the_slug_before_its_first_step(self) -> None:
+        research = self.skill.split("## Research\n", 1)[1]
+        before_first_step = research.split("Dispatch a read-only `scout`", 1)[0]
+        for token in ("epic-slug", "unused", "~/.gambit/<repository-id>/", "redraft", "keeps"):
+            with self.subTest(token=token):
+                self.assertIn(token, before_first_step)
 
     def test_skill_writes_the_three_carriers_at_acceptance(self) -> None:
         for name in ("epic.md", "decisions.md", "state.json"):

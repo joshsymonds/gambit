@@ -21,6 +21,8 @@ Collect decisions and their reasons for the epic's attached Decision Log. Keep i
 
 ## Research
 
+Before the first step, fix the epic-slug: this epic's kebab-case name, unused under `~/.gambit/<repository-id>/`, where repository-id is derived from the tree as `skills/executing-plans/references/record.md` specifies. Every step that follows carries it. A redraft of an existing epic keeps that epic's slug.
+
 Read `contracts/models.md`. Resolve each role through its registry, starting at the role's entry model profile and selecting the read-only variant for read-only roles. Pass the role's contract by absolute path and its complete brief as text, through the dispatch operation or, for a read-only role where `skills/executing-plans/references/steps.md` applies, as a step. Resolve paths from the installed tree. Follow the registry contract when a role cannot be resolved; never invent a dispatch target.
 
 Dispatch a read-only `scout` under `contracts/scout.md`, as a step where `skills/executing-plans/references/steps.md` applies, with the repository root and bounded questions. Establish existing implementation patterns, interfaces, tests, contribution commands, release conventions, constraints, and scale. Require `file:line` evidence or `NOT FOUND`, with coverage limitations. Inspect enough to choose between approaches, not merely list them. Research supplies facts; it cannot add requirements.

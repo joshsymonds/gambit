@@ -4,7 +4,7 @@
 
 One directory per epic, outside every repository and every workspace: `~/.gambit/<repository-id>/<epic-slug>/`. Nothing is written into a tree under version control, so the epic survives a rebuilt workspace, a discarded branch, and a fresh session.
 
-Derive repository-id from the tree: the basename of the parent of `git rev-parse --path-format=absolute --git-common-dir`, a hyphen, then the first seven characters of the root commit from `git rev-list --max-parents=0 HEAD | tail -1`. Ask for the absolute path format. The bare form prints a relative `.git` at a repository toplevel, whose parent is `.`, so the same repository would resolve one identifier from its toplevel and another from a linked workspace. epic-slug is the epic's kebab-case name, fixed at acceptance.
+Derive repository-id from the tree: the basename of the parent of `git rev-parse --path-format=absolute --git-common-dir`, a hyphen, then the first seven characters of the root commit from `git rev-list --max-parents=0 HEAD | tail -1`. Ask for the absolute path format. The bare form prints a relative `.git` at a repository toplevel, whose parent is `.`, so the same repository would resolve one identifier from its toplevel and another from a linked workspace. epic-slug is the epic's kebab-case name, fixed before brainstorming's first step. A new epic's slug names no existing record directory under `~/.gambit/<repository-id>/`; a redraft of an existing epic keeps its own slug.
 
 The directory holds the epic-level files and one directory per effort:
 
