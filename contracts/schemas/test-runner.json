@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Test runner return",
   "description": "The test runner's one return. Set status to blocked when the command could not start; exit_code is then omitted.",
   "type": "object",

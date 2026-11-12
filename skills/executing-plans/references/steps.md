@@ -4,7 +4,7 @@ A role may run as an orrery step instead of through the dispatch operation. This
 
 ## When steps apply
 
-Steps apply when the session has the `step_start` and `step_wait` tools that `orrery mcp` serves and the repository carries no context stamp. A context stamp is a `.claude/settings.json` that git does not track (`git ls-files --error-unmatch .claude/settings.json` fails) and that sets `env.ANTHROPIC_BASE_URL`. Pi has no step tools, so Pi keeps the dispatch operation.
+Steps apply when the session has the `step_start` and `step_wait` tools that `orrery mcp` serves and the repository carries no context stamp. A context stamp is a `.claude/settings.json` that git does not track (`git ls-files --error-unmatch .claude/settings.json` fails) and that sets `env.ANTHROPIC_BASE_URL`. Run the stamp test in the primary checkout, which is the parent directory of `git rev-parse --path-format=absolute --git-common-dir`, even when the session runs in a linked worktree: the untracked stamp exists only in the primary checkout. Pi has no step tools, so Pi keeps the dispatch operation.
 
 Step roles are `scout`, `steelman`, `task-reviewer`, `conformance-reviewer`, `integration-reviewer`, `finding-verifier`, and `test-runner`. The implementer is the writing step role. A role whose entry profile is `{"model": ...}` names no agent and uses the dispatch operation.
 

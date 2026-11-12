@@ -2,13 +2,18 @@
 
 from __future__ import annotations
 
+import json
 import re
+import shlex
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
 STEPS_PATH = "skills/executing-plans/references/steps.md"
+STAMP_RULE = "git rev-parse --path-format=absolute --git-common-dir"
 STEP_ROLES = (
     "scout",
     "steelman",
@@ -108,6 +113,10 @@ class StepsReferenceTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.text)
 
+    def test_stamp_test_runs_in_the_primary_checkout(self) -> None:
+        self.assertIn("primary checkout", self.text)
+        self.assertIn(STAMP_RULE, self.text)
+
     def test_profile_without_agent_uses_dispatch(self) -> None:
         self.assertIn('`{"model": ...}`', self.text)
 
@@ -164,6 +173,55 @@ class StepsReferenceTest(unittest.TestCase):
     def test_points_to_step_ends_without_restating_it(self) -> None:
         self.assertIn("skills/executing-plans/references/step-ends.md", self.text)
         self.assertIn("handled by", self.text)
+
+
+def git(cwd: Path, *args: str) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(["git", *args], cwd=cwd, capture_output=True, text=True, check=False)
+
+
+class StampRuleFromLinkedWorktreeTest(unittest.TestCase):
+    def test_rule_applied_from_a_linked_worktree_finds_the_primary_stamp(self) -> None:
+        self.assertIn(STAMP_RULE, read(STEPS_PATH))
+        with tempfile.TemporaryDirectory() as scratch:
+            primary = Path(scratch, "primary")
+            linked = Path(scratch, "linked")
+            primary.mkdir()
+            init = git(primary, "init", "-q")
+            self.assertEqual(init.returncode, 0, init.stderr)
+            commit = git(
+                primary,
+                "-c", "user.name=test",
+                "-c", "user.email=test@example.invalid",
+                "-c", "commit.gpgsign=false",
+                "commit", "-q", "--allow-empty", "-m", "init",
+            )
+            self.assertEqual(commit.returncode, 0, commit.stderr)
+            added = git(primary, "worktree", "add", "-q", "--detach", str(linked))
+            self.assertEqual(added.returncode, 0, added.stderr)
+
+            stamp = primary / ".claude" / "settings.json"
+            stamp.parent.mkdir()
+            stamp.write_text(
+                json.dumps({"env": {"ANTHROPIC_BASE_URL": "http://127.0.0.1:9"}}),
+                encoding="utf-8",
+            )
+
+            self.assertNotEqual(
+                git(linked, "ls-files", "--error-unmatch", ".claude/settings.json").returncode, 0
+            )
+
+            located = subprocess.run(
+                shlex.split(STAMP_RULE), cwd=linked, capture_output=True, text=True, check=False
+            )
+            self.assertEqual(located.returncode, 0, located.stderr)
+            stamp_checkout = Path(located.stdout.strip()).parent
+            self.assertEqual(stamp_checkout.resolve(), primary.resolve())
+            self.assertNotEqual(
+                git(stamp_checkout, "ls-files", "--error-unmatch", ".claude/settings.json").returncode,
+                0,
+            )
+            settings = json.loads((stamp_checkout / ".claude" / "settings.json").read_text(encoding="utf-8"))
+            self.assertIn("ANTHROPIC_BASE_URL", settings["env"])
 
 
 class ExecutingPlansRoutingTest(unittest.TestCase):

@@ -34,6 +34,6 @@ A `step_start` or other step call can be refused with an error and no id. The re
 - `resource_exhausted`, when the step cap (`--step-cap`) would be passed.
 - `-32000` with the message `Server already has 8 tool calls in flight`, when the MCP server refuses a ninth concurrent call.
 
-For either one, wait, then retry the same call. Each wait calls `WaitSteps` with only ids still running, using the caller's running steps. When none run, wait one minute instead. Then retry the refused call. The work does not leave a gap.
+For either one, wait, then retry the same call. Each wait calls `step_wait` with only ids still running, using the caller's running steps. When none run, wait one minute instead. Then retry the refused call. The work does not leave a gap.
 
 Any other refusal is a brief defect. Record it in the task's `conduct.brief_defects` or in the Decision Log, correct the brief, and retry the call.
