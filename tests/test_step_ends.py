@@ -23,7 +23,52 @@ ENDS = (
 )
 KEPT_ENDS = ("done", "returned", "goal_unmet")
 NO_RETURN_ENDS = tuple(end for end in ENDS if end not in KEPT_ENDS and end != "stopped")
-TABLE_HEADER = ("End", "Action for read-only roles", "Cost", "Steelman")
+TABLE_HEADER = (
+    "End",
+    "Action for read-only roles",
+    "Cost",
+    "Steelman",
+    "Implementer action",
+    "Implementer attempt",
+)
+WATCH_ENDS = ("overtime", "tool_stuck", "silent", "looping", "wedged")
+IMPLEMENTER_CELLS = {
+    "done": (
+        ("task-review", "gate", "inspect"),
+        ("the one that ran", "nothing more"),
+    ),
+    "returned": (
+        ("NEEDS_CONTEXT", "BLOCKED", "routed by the build step"),
+        ("as that routing step spends", "brief defect", "spends none"),
+    ),
+    "goal_unmet": (
+        ("judge's reason", "gate it as a done return"),
+        ("the one that ran",),
+    ),
+    "checks_failed": (
+        ("NOT DONE", "execution failure", "signature", "fresh step"),
+        ("is spent",),
+    ),
+    "failed": (
+        ("no return", "same arguments", "execution failure"),
+        ("none",),
+    ),
+    "stopped": (
+        ("caller stopped it", "act on nothing"),
+        ("none",),
+    ),
+    "engine_restarted": (
+        ("no return", "same arguments", "execution failure"),
+        ("none",),
+    ),
+    **{
+        end: (
+            ("NOT DONE", "execution failure", "signature", "fresh step"),
+            ("is spent",),
+        )
+        for end in WATCH_ENDS
+    },
+}
 
 
 class StepEndsTest(unittest.TestCase):
@@ -57,6 +102,48 @@ class StepEndsTest(unittest.TestCase):
                 self.assertTrue(action)
                 self.assertTrue(steelman)
                 self.assertIn("no implementer attempt", cost)
+
+    def test_intro_qualifies_no_attempt_claim_to_read_only_ends(self) -> None:
+        self.assertIn("No read-only end spends an implementer attempt", self.text)
+        self.assertNotIn("No end spends an implementer attempt", self.text)
+
+    def test_implementer_action_and_attempt_are_given_for_every_end(self) -> None:
+        for name in ENDS:
+            action, attempt = self.rows[name][0][4:6]
+            with self.subTest(end=name):
+                self.assertTrue(action)
+                self.assertTrue(attempt)
+
+    def test_implementer_cells_match_the_policy_for_every_end(self) -> None:
+        self.assertEqual(sorted(IMPLEMENTER_CELLS), sorted(ENDS))
+        for name in ENDS:
+            action, attempt = self.rows[name][0][4:6]
+            action_terms, attempt_terms = IMPLEMENTER_CELLS[name]
+            with self.subTest(end=name):
+                for term in action_terms:
+                    self.assertIn(term, action)
+                for term in attempt_terms:
+                    self.assertIn(term, attempt)
+
+    def test_implementer_no_return_ends_are_not_done_and_spend_no_attempt(self) -> None:
+        for name in ("failed", "engine_restarted"):
+            action, attempt = self.rows[name][0][4:6]
+            with self.subTest(end=name):
+                self.assertIn("fresh step", action)
+                self.assertNotIn("NOT DONE", action)
+                self.assertIn("none", attempt)
+
+    def test_implementer_fresh_steps_start_at_the_task_base_revision(self) -> None:
+        section = self.sections.get("Implementer steps", "")
+        self.assertIn("contracts/schemas/implementer.json", section)
+        self.assertIn("`done`", section)
+        self.assertIn("`revision`", section)
+        self.assertIn("dispatch.revision", section)
+        self.assertIn("task base", section)
+        self.assertIn("never the workspace HEAD", section)
+        self.assertIn("replacement", section)
+        self.assertIn("continuation", section)
+        self.assertIn("owned", section)
 
     def test_kept_returns_are_read_and_steelman_passes_without_rerun(self) -> None:
         for name in KEPT_ENDS:
@@ -112,6 +199,10 @@ class StepEndsTest(unittest.TestCase):
     def test_waits_name_only_running_ids(self) -> None:
         refusals = self.sections.get("Refusals", "")
         self.assertRegex(refusals, r"`WaitSteps`[^.\n]*\bonly ids still running\b")
+
+    def test_refusals_apply_to_implementer_step_calls(self) -> None:
+        refusals = self.sections.get("Refusals", "")
+        self.assertRegex(refusals, r"apply to implementer step calls")
 
 
 if __name__ == "__main__":
