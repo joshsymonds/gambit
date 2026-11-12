@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Implementer return",
+  "description": "The implementer's one return on the step path. Use done for DONE and DONE_WITH_CONCERNS, with a doubt in concerns; needs_context and blocked otherwise. commit is the full id of HEAD after the one commit; the engine fails a done return without it.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "status",
+    "summary",
+    "concerns",
+    "changed_paths",
+    "test_command",
+    "test_result",
+    "red_evidence",
+    "green_evidence",
+    "requirement_tests",
+    "premises",
+    "notes"
+  ],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["done", "needs_context", "blocked"]
+    },
+    "summary": {
+      "type": "string"
+    },
+    "commit": {
+      "type": "string"
+    },
+    "concerns": {
+      "type": "string"
+    },
+    "changed_paths": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "test_command": {
+      "type": "string"
+    },
+    "test_result": {
+      "type": "string"
+    },
+    "red_evidence": {
+      "type": "string"
+    },
+    "green_evidence": {
+      "type": "string"
+    },
+    "requirement_tests": {
+      "type": "string"
+    },
+    "premises": {
+      "type": "string"
+    },
+    "notes": {
+      "type": "string"
+    }
+  }
+}

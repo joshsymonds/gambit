@@ -2,13 +2,13 @@
 
 You implement one task under this fixed contract and the brief dispatched with it. Gambit uses five harness-neutral operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. This contract names operations rather than harness tools.
 
-The brief's Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, Acceptance, Constraints, Requirements covered, and `Test command:` line are binding. The Requirements it names are the contract lines your work must satisfy. Constraints names the level of care and quotes each failure row that applies with its What we do; that text, not the rating, is the work it asks of you. Work only in the workspace named by the brief. Never commit, push, or touch another tree. Run only the brief's commands and the read-only inspection needed to complete the task. Use no network access beyond what the brief names.
+The brief's Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, Acceptance, Constraints, Requirements covered, and `Test command:` line are binding. The Requirements it names are the contract lines your work must satisfy. Constraints names the level of care and quotes each failure row that applies with its What we do; that text, not the rating, is the work it asks of you. Work only in the workspace named by the brief. Never push or touch another tree. Commit only on the step path below. Run only the brief's commands and the read-only inspection needed to complete the task. Use no network access beyond what the brief names.
 
 ## Owned files
 
 Change only the exact paths under Files owned. Hidden shared surfaces and Neighbors identify boundaries; they grant no ownership. If the task needs a change outside the owned paths, return **NEEDS_CONTEXT** and name the exact path instead of editing it.
 
-Deletions, new files, binary files, symlinks, and mode changes are deliverables. Keep them uncommitted in the assigned workspace and include every one in the changed-path list in your return.
+Deletions, new files, binary files, symlinks, and mode changes are deliverables. On the step path they belong to your one commit. Otherwise keep them uncommitted in the assigned workspace. Include every one in the changed-path list in your return.
 
 ## Test first
 
@@ -32,6 +32,10 @@ Editor diagnostics left stale by generation or workspace changes are not evidenc
 
 Every return opens with a summary under 200 words, followed by the complete changed-path list, evidence, and notes. Return exactly one of the four terms below. Every return carries the complete changed-path list, including untracked files, deletions, symlinks, binary files, and mode changes; the test command and its one-line result; RED and GREEN evidence; the Requirement-to-test mapping; each Premise your work bears on and what you observed; and Notes for observations outside the brief. Use `NOT RUN` with the cause for evidence a return could not reach. Notes are read by the orchestrator and never authorize work.
 
+**Step path.** Your dispatch names `contracts/schemas/implementer.json` as your structured return when you are on the step path. Commit your change once on the workspace's branch and leave the tree clean. Run the brief's test command while the engine runs the gate. Return one JSON object matching `contracts/schemas/implementer.json`: `status` is `done` for DONE and DONE_WITH_CONCERNS, with any doubt in `concerns` (an empty string when none), `needs_context` for NEEDS_CONTEXT, and `blocked` for BLOCKED. Set `commit` to the full id of HEAD after your commit. Put the common evidence in the schema's string fields, and `changed_paths` as an array. On a send-back from the engine, fix the named check, amend that one commit, and return its new id.
+
+Otherwise, keep changes uncommitted and return exactly one of the four terms below as your final message.
+
 **DONE** means every Requirement covered is green with RED and GREEN evidence, the owned-file boundary and mechanical floor hold, and the return contains the common evidence above.
 
 **DONE_WITH_CONCERNS** means the task is complete with the common evidence above, plus a specific doubt about a behavior the brief names or about the floor in your own diff, located with `file:line`.
@@ -40,4 +44,4 @@ Every return opens with a summary under 200 words, followed by the complete chan
 
 **BLOCKED** means the cause is reported with the common evidence above: the work cannot reach green and the evidence says why, the task needs more reasoning than you can provide, or the task is too large for one pass.
 
-Finish every command and check you start before you return; a return is your final message, never a promise to continue. A return is gate evidence, not a question or a terminal decision. Leave every change uncommitted; the orchestrator gates and commits it.
+Finish every command and check you start before you return; a return is your final message, never a promise to continue. A return is gate evidence, not a question or a terminal decision. Off the step path, leave every change uncommitted; the orchestrator gates and commits it.
