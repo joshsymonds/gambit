@@ -2,7 +2,7 @@
 
 Use the record-task-state operation. Fill every field from the goal, decisions, and research before creating executable work. The epic body is one document: the decision line, then exactly the ten sections below in order. Its Decision Log is attached record context, outside that body. The Design Ledger stays in the design transcript. The epic body, Decision Log, and head are written to the epic's record directory per `skills/executing-plans/references/record.md`.
 
-Rows in "What will be true when done" are the Requirements (R ids). Rows in "What I'm assuming" are the Premises (P ids). Rows in "What could go wrong" are the failure cases (F ids). Entries under "What we won't do" are the Must Not Ship entries. Those names are how every later stage refers to the contents.
+Rows in "What will be true when done" are the Requirements (R ids). Rows in "What I'm assuming" are the Premises (P ids). Rows in "What could go wrong" are the failure cases (F ids). Entries under "What we won't do" are the Must Not Ship entries.
 
 ### Epic record
 
@@ -58,15 +58,15 @@ Then: [the observable facts that must all hold before reporting release].
 ## Checks the machines run
 Done: [exact task fast check with its setup and working directory]; [the integrated candidate's full gate, in order].
 Evidence: [the tests and observable results named under How we'll know].
-Steps: [read-only: schema check; implementer: schema check, then head, ancestry, clean and owned from the task base revision, then the gate, an absolute argv, no shell, under the heavy-command wrapper's absolute path, through the project's development-environment entry if tools live only there, with its limit in seconds.] A Decision Log line changes them for steps started after it.
+Steps: [read-only: schema check; implementer: schema check, then head, ancestry, clean and owned from the task base revision, then the gate, named in `.orrery/project.toml` or defined by this contract as an absolute argv, no shell, under the heavy-command wrapper's absolute path, through the project's development-environment entry if tools live only there, with its needs and limit in seconds.] A Decision Log line changes them for steps started after it.
 Quality Bar: Failing, low-quality, or bad code is unacceptable, but failure to meet a mythic platonic ideal of code or cover literally every imaginable edge case is NOT itself a defect. This bar is FIXED for every epic; write it verbatim — never elicit it, strengthen it, or make it a per-project preference. A defect is exactly one of: a Requirement's named evidence not met; a Must Not Ship entry present; a change outside the task's owned files; a change the contract did not ask for; a violation of the implementer contract's mechanical floor (a suppressed check, a weakened or tautological test, dead code, an unhandled error); or a security or data-loss failure with a reachable precondition that the change itself introduces. Everything else the orchestrator or a reviewer notices is an observation — it may be recorded in the Decision Log and the report; it never becomes work during the run. The craftsmanship asked of the implementer is one line: simple, foundational, secure; match the surrounding code.
 ```
 
-After acceptance, "Decisions I need from you" reads `None`, then the settled decisions by id. Acceptance freezes What you asked for, the assumptions with their If-wrong clauses, and the Requirements. Keep subsequent assessments in the Decision Log without rewriting frozen text. Each log entry states the decision or assumption, its reason and evidence, and any affected finding or contract identifier.
+After acceptance, "Decisions I need from you" reads `None`, then the settled decisions by id. Acceptance freezes What you asked for, the assumptions with their If-wrong clauses, and the Requirements. Keep later assessments in the Decision Log, never rewriting frozen text. Each entry states the decision or assumption, its reason and evidence, and any affected finding or contract identifier.
 
 ### Task brief
 
-Supply the task's workspace, base revision, and applicable contract clauses with this body. Keep Goal plus Acceptance plus Constraints under 250 words total. This brief carries no implementation steps, code, or diffs. Create only work grounded in the tree now.
+Supply the task's workspace, base revision, and applicable contract clauses with this body. Keep Goal plus Acceptance plus Constraints under 250 words total. It carries no implementation steps, code, or diffs. Create only work grounded in the tree now.
 
 ```markdown
 ## Goal
@@ -76,7 +76,7 @@ Supply the task's workspace, base revision, and applicable contract clauses with
 - [Exact repository-relative path, including each addition or deletion. No globs or directory allowlists.]
 
 ## Hidden shared surfaces
-[Lockfiles, generated indexes, registries, snapshots, and other implicit writes checked. State None when absent. These grant no ownership; every intended edit belongs in Files owned.]
+[Lockfiles, generated indexes, registries, snapshots, and other implicit writes checked. State None when absent. They grant no ownership; list every edit in Files owned.]
 
 ## Neighbors
 [Every concurrent task and its complete owned-file list, all off-limits. State None for a single task.]
@@ -95,11 +95,12 @@ Supply the task's workspace, base revision, and applicable contract clauses with
 
 ## Test command
 Test command: [exact task fast check from Checks the machines run].
+Gate: [step route only: the gate NAME from Steps].
 ```
 
 ### Effort brief
 
-The Director writes an effort's brief only when it becomes dependency-ready, from the accepted base. Objective plus Interfaces plus Binding contract stay under 250 words excluding lists.
+The Director writes an effort's brief only once dependency-ready, from the accepted base. Objective plus Interfaces plus Binding contract stay under 250 words excluding lists.
 
 ```markdown
 ## Objective
@@ -121,4 +122,4 @@ The Director writes an effort's brief only when it becomes dependency-ready, fro
 [Cap the report at 400 words.]
 ```
 
-Tasks are pending executable children of the epic, never blocked by it. Owned-file lists are disjoint within the effort. Leave tasks requiring unfinished interfaces for execution to author when those interfaces exist.
+Tasks are pending executable children of the epic, never blocked by it. Owned-file lists are disjoint within the effort. Execution authors tasks needing unfinished interfaces once they exist.

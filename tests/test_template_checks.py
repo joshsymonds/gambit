@@ -12,8 +12,8 @@ ROOT = Path(__file__).resolve().parents[1]
 class TemplateChecksTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
-        templates = (ROOT / "skills/brainstorming/TEMPLATES.md").read_text(encoding="utf-8")
-        block = re.findall(r"```[^\n]*\n(.*?)\n```", templates, re.DOTALL)[0]
+        cls.templates = (ROOT / "skills/brainstorming/TEMPLATES.md").read_text(encoding="utf-8")
+        block = re.findall(r"```[^\n]*\n(.*?)\n```", cls.templates, re.DOTALL)[0]
         cls.checks = block.split("## Checks the machines run\n", 1)[1].split("\n## ", 1)[0]
         cls.steps = [line for line in cls.checks.splitlines() if line.startswith("Steps: ")]
         cls.line = cls.steps[0] if cls.steps else ""
@@ -42,8 +42,22 @@ class TemplateChecksTest(unittest.TestCase):
 
     def test_gate_is_absolute_argv_under_the_wrapper_with_limit_in_seconds(self) -> None:
         self.assertRegex(self.bracket, r"an absolute argv, no shell, under the heavy-command wrapper's absolute path")
-        self.assertRegex(self.bracket, r"with its limit in seconds")
+        self.assertRegex(self.bracket, r"with its needs and limit in seconds")
         self.assertNotIn("/tmp/", self.line)
+
+    def test_gate_is_named_from_project_file_or_defined_by_this_contract(self) -> None:
+        self.assertRegex(
+            self.bracket,
+            r"the gate, named in `\.orrery/project\.toml` or defined by this contract as an absolute argv",
+        )
+
+    def test_task_brief_gate_line_follows_the_test_command_line(self) -> None:
+        brief = self.templates.split("### Task brief", 1)[1].split("### Effort brief", 1)[0]
+        block = re.findall(r"```[^\n]*\n(.*?)\n```", brief, re.DOTALL)[0]
+        lines = block.split("## Test command\n", 1)[1].splitlines()
+        self.assertTrue(lines[0].startswith("Test command: ["))
+        self.assertTrue(lines[1].startswith("Gate: [step route only: the gate NAME from Steps]"))
+        self.assertEqual(sum(line.startswith("Gate: ") for line in lines), 1)
 
     def test_development_environment_gate_runs_through_project_entry(self) -> None:
         self.assertRegex(
