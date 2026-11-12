@@ -441,17 +441,59 @@ Test command: {test_command}
             self.assertEqual(result.returncode, 1)
             self.assertIn("task", result.stdout)
 
-    def test_record_null_dispatch_fields_are_rejected(self) -> None:
-        for field in ("child", "workspace", "revision"):
+    def test_record_null_child_dispatch_is_accepted(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record(
+                dispatch={
+                    "child": None,
+                    "workspace": "/workspace/7",
+                    "revision": revision,
+                },
+            )
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1"), workspace,
+                record=record, task="validate-record", entry_profile="luna-low",
+            )
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_record_null_workspace_or_revision_is_rejected(self) -> None:
+        for field in ("workspace", "revision"):
             with self.subTest(field=field), self.make_workspace() as temporary:
                 workspace = Path(temporary)
-                record = self.valid_record(dispatch={field: None})
+                revision = self.make_git_base(workspace)
+                record = self.valid_record(
+                    dispatch={
+                        "child": "implementer-7",
+                        "workspace": "/workspace/7",
+                        "revision": revision,
+                    },
+                )
+                record["tasks"][0]["dispatch"][field] = None
                 result = self.run_validator(
-                    self.valid_brief(), workspace,
+                    self.valid_brief(anchors="- source.py:1"), workspace,
                     record=record, task="validate-record", entry_profile="luna-low",
                 )
                 self.assertEqual(result.returncode, 1)
                 self.assertIn(f"dispatch.{field}", result.stdout)
+
+    def test_record_dispatch_without_child_key_is_rejected(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record = self.valid_record(
+                dispatch={
+                    "workspace": "/workspace/7",
+                    "revision": revision,
+                },
+            )
+            result = self.run_validator(
+                self.valid_brief(anchors="- source.py:1"), workspace,
+                record=record, task="validate-record", entry_profile="luna-low",
+            )
+            self.assertEqual(result.returncode, 1)
+            self.assertIn("dispatch.child", result.stdout)
 
     def test_record_wrong_profile_is_rejected(self) -> None:
         with self.make_workspace() as temporary:
