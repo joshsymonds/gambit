@@ -23,6 +23,7 @@ RECORD_FILES = (
     "epic.md",
     "decisions.md",
     "state.json",
+    "gates.toml",
     "gates/<task-slug>-<attempt>.md",
     "efforts/<n>/",
 )
@@ -121,6 +122,28 @@ class RecordReferenceTest(unittest.TestCase):
             with self.subTest(name=name):
                 self.assertIn(name, self.text)
 
+    def test_gates_file_is_listed_apart_from_the_gate_records(self) -> None:
+        self.assertRegex(self.text, r"(?m)^- `gates\.toml` ")
+        self.assertRegex(self.text, r"(?m)^- `gates/<task-slug>-<attempt>\.md` ")
+
+    def test_gates_file_section_names_its_shape_and_rewrite_rule(self) -> None:
+        self.assertIn("## gates.toml\n", self.text)
+        section = self.text.split("## gates.toml\n", 1)[1].split("\n## ", 1)[0]
+        for token in (
+            "[gates]",
+            "header",
+            "[gates.NAME]",
+            "argv",
+            "limit",
+            "needs",
+            "Director",
+            "decisions.md",
+            "orchestrator",
+            "started after",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, section)
+
     def test_state_keys_are_named(self) -> None:
         for key in (
             STATE_KEYS
@@ -186,6 +209,24 @@ class BrainstormingWritesTheRecordTest(unittest.TestCase):
         for name in ("epic.md", "decisions.md", "state.json"):
             with self.subTest(name=name):
                 self.assertIn(name, self.skill)
+
+    def test_skill_writes_the_gates_file_at_acceptance(self) -> None:
+        paragraphs = [
+            paragraph
+            for paragraph in self.skill.split("\n\n")
+            if "At acceptance" in paragraph and "`gates.toml`" in paragraph
+        ]
+        self.assertEqual(len(paragraphs), 1, "no acceptance paragraph writes gates.toml")
+        for token in (
+            "`[gates]`",
+            "header alone",
+            "[gates.NAME]",
+            "Director",
+            "decisions.md",
+            "orchestrator",
+        ):
+            with self.subTest(token=token):
+                self.assertIn(token, paragraphs[0])
 
     def test_templates_point_at_the_reference(self) -> None:
         self.assertIn("references/record.md", self.templates)

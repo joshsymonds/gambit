@@ -11,6 +11,7 @@ The directory holds the epic-level files and one directory per effort:
 - `epic.md` — the contract: its decision line and ten sections, frozen at acceptance.
 - `decisions.md` — the Director-level Decision Log, append-only.
 - `state.json` — the head: where this epic stands now.
+- `gates.toml` — the contract's gates by name, written at acceptance and rewritten only by the Director. It is not the `gates/` directory of gate records.
 - `gates/<task-slug>-<attempt>.md` — one gate record per attempt.
 - `efforts/<n>/` — one directory per effort. Each effort directory contains:
   - `efforts/<n>/brief.md` — the accepted brief for that effort.
@@ -108,6 +109,20 @@ Write `supersedes: none` when the entry reverses nothing.
 ```
 
 Those top-level keys are the whole head, and every task entry carries exactly the keys shown. `efforts_admitted` counts every effort identity the Director has admitted so far, including concurrent partitions and review or release correction efforts; resuming an existing effort admits nothing. It starts at zero at acceptance, is copied into every effort brief's Base field and every `efforts/<n>/state.json`, and does not change on resume. Nothing bounds it: efforts are admitted while executable work remains, and the run ends only when every Requirement is released or no executable work remains because every remaining lineage is exhausted or blocked by a gap. Each task's `dispatch` object carries exactly `child`, `workspace`, and `revision`. `child` is a string or null, `workspace` is an absolute path string, and `revision` is a string. The orchestrator writes `workspace` and `revision` before validation runs, and validation runs before the task's implementer is dispatched, so a missing or null `workspace` or `revision` is a defect. `child` stays null until the dispatch returns the child's identity, a step id or an agent id, and the orchestrator records that identity at once; a `child` key that is absent is a defect, but a null `child` is not. Each task's `conduct` object carries exactly `brief_defects`, `violations_prevented`, `violations_escaped`, `routing_history`, `outcome`, and `cost`. The first three are lists of strings from validation and routing; `routing_history` is a list of objects carrying exactly `signature`, `step`, and `attempt`; `outcome` is `pending`, `done`, `gap`, or `split`; and `cost` carries integer or null `turns` and `tokens`. Each effort entry carries exactly `n`, `branch`, `workspace`, `child`, `revision`, `status`, and `report`.
+
+## gates.toml
+
+`gates.toml` names the gates that implementer steps run, so a step passes a name and never an argv. Acceptance writes it: a `[gates]` table with one `[gates.NAME]` table for each gate the contract's Checks the machines run section defines. Each gate table holds `argv` (an array of strings, required), `limit` (integer seconds, 1 or more, required), and `needs` (an inline table of pool name to member count, optional). When the contract defines no gate, the file is the `[gates]` header alone, so every implementer step passes the same file.
+
+```toml
+[gates]
+
+[gates.unit]
+argv = ["/home/<user>/.local/share/claude-heavy/heavy", "make", "test"]
+limit = 1800
+```
+
+Only the Director rewrites `gates.toml`, on a line in `decisions.md` that names the gate it changes. No orchestrator writes it. A rewrite reaches only the steps started after that line; a step already running keeps the gate it started with.
 
 ## Decomposition
 
