@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Test runner return",
+  "description": "The test runner's one return. Set status to blocked when the command could not start; exit_code is then omitted.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "command", "revision", "workspace", "output"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["done", "blocked"]
+    },
+    "command": {
+      "type": "string"
+    },
+    "revision": {
+      "type": "string"
+    },
+    "workspace": {
+      "type": "string"
+    },
+    "exit_code": {
+      "type": "integer"
+    },
+    "output": {
+      "type": "string"
+    }
+  }
+}

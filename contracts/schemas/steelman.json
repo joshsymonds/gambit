@@ -1,0 +1,72 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Steelman return",
+  "description": "The steelman's one return per pass. Set status to blocked when verdict is BLOCKED, otherwise done.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "pass", "verdict", "evidence_and_coverage"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["done", "blocked"]
+    },
+    "pass": {
+      "type": "string",
+      "enum": ["discovery", "closure"]
+    },
+    "verdict": {
+      "type": "string",
+      "enum": [
+        "READY",
+        "REVISE",
+        "NEEDS_DECISION",
+        "BLOCKED",
+        "STILL_OPEN",
+        "CHANGE_INDUCED_CONCERN"
+      ]
+    },
+    "strongest_case": {
+      "type": "string"
+    },
+    "strongest_alternative": {
+      "type": "string"
+    },
+    "findings": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "impact": {
+            "type": "string"
+          },
+          "evidence": {
+            "type": "string"
+          },
+          "change": {
+            "type": "string"
+          }
+        },
+        "required": ["id", "impact", "evidence", "change"],
+        "additionalProperties": false
+      }
+    },
+    "decisions_for_caller": {
+      "type": "string"
+    },
+    "ledger_dispositions": {
+      "type": "string"
+    },
+    "change_induced_concerns": {
+      "type": "string"
+    },
+    "required_caller_action": {
+      "type": "string"
+    },
+    "evidence_and_coverage": {
+      "type": "string"
+    }
+  }
+}

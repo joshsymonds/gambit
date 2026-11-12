@@ -12,7 +12,7 @@
 | `conformance-reviewer` | Reviews the final candidate against the overall contract. | No. | `skills/review/reviewers/conformance-reviewer.md` |
 | `integration-reviewer` | Reviews cross-task interactions and shared interfaces in the final candidate. | No. | `skills/review/reviewers/integration-reviewer.md` |
 | `finding-verifier` | Independently confirms or drops a reported defect, or checks its closure. | No. | `skills/review/reviewers/finding-verifier.md` |
-| `test-runner` | Executes a command needing writable scratch state in an isolated workspace. | Yes, scratch only. | The command it is given. |
+| `test-runner` | Executes a command needing writable scratch state in an isolated workspace. | Yes, scratch only. | `contracts/test-runner.md` |
 
 The Director is the session coordinating the epic, not another dispatch role. The Orchestrator coordinates an effort. Stage names describe when work happens; role names describe responsibility; model profiles describe execution settings.
 

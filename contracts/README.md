@@ -16,7 +16,7 @@ A contract is the fixed text a role works under. Every dispatch passes it by abs
 | `conformance-reviewer` | `skills/review/reviewers/conformance-reviewer.md` | No |
 | `integration-reviewer` | `skills/review/reviewers/integration-reviewer.md` | No |
 | `finding-verifier` | `skills/review/reviewers/finding-verifier.md` | No |
-| `test-runner` | The exact command it is given, run in an isolated workspace | Scratch only |
+| `test-runner` | `contracts/test-runner.md` | Scratch only |
 
 The `scout`, `steelman`, `task-reviewer`, `conformance-reviewer`, `integration-reviewer`, and `finding-verifier` roles are read-only. Only `implementer` may change owned files. The `test-runner` may write scratch state, and the `orchestrator` writes the record and the candidate.
 
