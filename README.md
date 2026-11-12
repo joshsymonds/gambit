@@ -20,7 +20,7 @@ A person is present at exactly three moments: writing the contract, reading the 
 6. **Record, don't ask.** A decision, a compromise, a changed assessment, or a gap goes to the Decision Log and the report. It never becomes a question.
 7. **One process.** A contract written in conversation and a contract written from a goal file enter the same loop. The loop never learns which.
 8. **Read-only roles never write.** Scout, steelman, task reviewer, conformance reviewer, integration reviewer, and finding verifier inspect and report. Only an implementer changes the tree — the orchestrator only for its own final attempt when routing reaches it — and only the orchestrator commits.
-9. **One text, five operations, any harness.** Skills name operations, never a harness's tool. A harness that lacks an operation is fixed outside gambit.
+9. **One text, five operations, any harness.** Skills name operations, never a harness's tool; the one exception is the step route in `skills/executing-plans/references/steps.md`, which applies only where a harness serves step tools. A harness that lacks an operation is fixed outside gambit.
 
 ## The Contract
 
@@ -116,7 +116,7 @@ Gambit is one tree of skills and contracts. A harness runs it by providing five 
 
 | Operation | Claude Code | Pi |
 |---|---|---|
-| Dispatch a role | Agent tool with the model profile's agent | Agent tool (pi-subagents) with the model profile's agent file |
+| Dispatch a role | Agent tool with the model profile's agent; read-only roles as orrery steps where `skills/executing-plans/references/steps.md` applies | Agent tool (pi-subagents) with the model profile's agent file |
 | Record task state | Task API | Task API (pi-tasks) |
 | Load a stage | read `skills/<name>/SKILL.md` and follow it | same, or the skill's slash command |
 | Isolate a workspace | `git worktree add`, run by the orchestrator | same |
