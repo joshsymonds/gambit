@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Steelman return",
   "description": "The steelman's one return per pass. Set status to blocked when verdict is BLOCKED, otherwise done.",
   "type": "object",

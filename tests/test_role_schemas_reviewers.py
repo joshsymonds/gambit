@@ -21,7 +21,6 @@ ALLOWED_KEYWORDS = {
     "additionalProperties",
     "title",
     "description",
-    "$schema",
     "default",
     "examples",
 }
