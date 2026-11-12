@@ -15,16 +15,16 @@ Read the epic record. Freeze the candidate revision at entry and identify its ba
 
 Do not follow the branch tip. Additional commits landing during review are excluded from inspection and from the correction base. Reviewing those commits would require a later review, which the loop never runs for this epic. The only successor considered here is the corrected candidate produced from the frozen candidate by this review's ledger tasks.
 
-Read `contracts/models.md`. Resolve each role through its registry, starting at the role's entry model profile and selecting its read-only variant for `conformance-reviewer`, `integration-reviewer`, and `finding-verifier`. Pass role contracts by absolute path from the current installation. An unresolved role is recorded in the Decision Log; work requiring it becomes a gap, while independent executable work continues. Do not substitute a dispatch target.
+Read `contracts/models.md`. Resolve each role through its registry, starting at the role's entry model profile and selecting its read-only variant for `conformance-reviewer`, `integration-reviewer`, and `finding-verifier`; those read-only roles run as steps where `skills/executing-plans/references/steps.md` applies. Pass role contracts by absolute path from the current installation. An unresolved role is recorded in the Decision Log; work requiring it becomes a gap, while independent executable work continues. Do not substitute a dispatch target.
 
 ## Final review
 
-Dispatch these two read-only roles concurrently, each with its contract by absolute path:
+Dispatch these two read-only roles concurrently, each with its contract by absolute path, as steps where `skills/executing-plans/references/steps.md` applies:
 
 - The `conformance-reviewer` role under `skills/review/reviewers/conformance-reviewer.md` checks Requirements, Must Not Ship, owned files, minimal change, cross-document consistency, and named workload evidence.
 - The `integration-reviewer` role under `skills/review/reviewers/integration-reviewer.md` checks cross-task interfaces, ordering, shared surfaces, and introduced security, data-loss, and resource failures.
 
-Pass the frozen revisions, workspace, complete change set, task briefs and owned-file lists, task-review evidence, Requirements with their named evidence, Must Not Ship entries, Quality Bar, Done commands, the level of care, and the failure table rows with their What we do as data. Both reviewers inspect the final candidate and surrounding code without editing it. Task review does not replace either final pass.
+Pass the frozen revisions, workspace, complete change set, task briefs and owned-file lists, task-review evidence, Requirements with their named evidence, Must Not Ship entries, Quality Bar, Done commands, the level of care, and the failure table rows with their What we do as data. Both reviewers inspect the final candidate and surrounding code without editing it. Task review does not replace either final pass. Record each step id in the review ledger record before waiting.
 
 A candidate finding carries an identifier, a claim, `file:line` on the frozen candidate, an admissibility source, and a concrete verify-by step. Admit it only when it cites one of:
 
@@ -38,9 +38,9 @@ Everything else is an observation. Record it in the Decision Log or report with 
 
 ## Finding verification
 
-Dispatch one read-only `finding-verifier` per admissible candidate under `skills/review/reviewers/finding-verifier.md`. Pass that candidate, its verify-by step, the frozen revisions, and the contract data. The finding verifier independently gathers fresh evidence and confirms or drops the candidate. A claim it cannot confirm, including one it cannot reproduce on the frozen revision, is dropped. Record the reason; do not make dropped claims correction work.
+Dispatch one read-only `finding-verifier` per admissible candidate under `skills/review/reviewers/finding-verifier.md`, as a step where `skills/executing-plans/references/steps.md` applies, and record its step id in the review ledger record before waiting. Pass that candidate, its verify-by step, the frozen revisions, and the contract data. The finding verifier independently gathers fresh evidence and confirms or drops the candidate. A claim it cannot confirm, including one it cannot reproduce on the frozen revision, is dropped. Record the reason; do not make dropped claims correction work.
 
-For checks needing writable scratch state, dispatch `test-runner` in an isolated workspace at the revision being checked and return its command, revision, and output to the verifier. Neither reviewers nor finding verifiers write files or perform corrections.
+For checks needing writable scratch state, dispatch `test-runner` in an isolated workspace at the revision being checked and return its command, revision, and output to the verifier. A checked revision is a commit, so `test-runner` runs as a step where `skills/executing-plans/references/steps.md` applies. Neither reviewers nor finding verifiers write files or perform corrections.
 
 Freeze all confirmed findings into one ledger. Every entry retains its identifier, claim, contract citation, `file:line`, verify-by step, and confirming evidence. Record dropped claims separately. Ledger membership and claims are fixed; correction and closure may attach evidence and status but cannot add findings.
 
@@ -52,7 +52,7 @@ For each return, write the binary gate record with its contract-item evidence, o
 
 ## Closure
 
-After each correction effort, dispatch a `finding-verifier` per ledger finding with the same contract path, its frozen ledger entry, and the resulting candidate revision. Re-check only that finding against the candidate. Do not dispatch final reviewers again or broaden discovery to newly noticed issues.
+After each correction effort, dispatch a `finding-verifier` per ledger finding, as a step where `skills/executing-plans/references/steps.md` applies, with the same contract path, its frozen ledger entry, and the resulting candidate revision. Re-check only that finding against the candidate. Do not dispatch final reviewers again or broaden discovery to newly noticed issues.
 
 For every identifier, attach fresh closure evidence. Close it only when the original defect is proven resolved. A finding that remains confirmed, or whose resolution cannot be established, stays open for another correction effort while its lineage can continue. If its lineage is exhausted while it remains open, record it as a **review gap**. Preserve its original contract citation and location, the closure result, correction task and gate evidence, and any gap branch.
 

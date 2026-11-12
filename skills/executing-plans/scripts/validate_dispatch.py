@@ -287,7 +287,9 @@ def validate_record(record_path: Path, task_selector: str, entry_profile: str) -
     dispatch = task.get("dispatch")
     if not isinstance(dispatch, dict):
         dispatch = {}
-    for field in ("child", "workspace", "revision"):
+    if "child" not in dispatch:
+        defects.append("task.dispatch.child: missing")
+    for field in ("workspace", "revision"):
         if field not in dispatch or dispatch[field] is None:
             defects.append(f"task.dispatch.{field}: missing or null")
 

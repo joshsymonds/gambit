@@ -9,9 +9,9 @@ user_invokable: true
 
 ## Start
 
-Find the record directory by the rule in `references/record.md` and read its `epic.md`, the decision line, all ten sections, and the Decision Log. The contract alone authorizes work. Keep the Intent ("What you asked for") and Requirements ("What will be true when done") fixed; assess defects by the contract's Quality Bar, not a stronger standard. The level of care on the failure table's line and each failure row's What we do are the only guarding work the contract asks for; a rating by itself authorizes none.
+Find the record directory per `references/record.md` and read its `epic.md`, the decision line, all ten sections, and the Decision Log. The contract alone authorizes work. Keep the Intent ("What you asked for") and Requirements ("What will be true when done") fixed; assess defects by the contract's Quality Bar, not a stronger standard. The level of care and each failure row's What we do are the only guarding work the contract asks for; a rating alone authorizes none.
 
-Resume the record whose `state.json` names the current epic branch, and only that one; without one, the run is fresh. A terminal run only shows its stored report; it dispatches nothing and repeats no external action. For an active run, recover from `state.json` the accepted base, candidate revision, tasks and lineages, profile assignments and attempts used, split history, gate records, review state, and completed Release actions.
+Resume only the record whose `state.json` names the current epic branch; without one, the run is fresh. A terminal run only shows its stored report; it dispatches nothing and repeats no external action. For an active run, recover from `state.json` the accepted base, candidate revision, tasks and lineages, profile assignments and attempts used, split history, gate records, review state, and completed Release actions.
 
 After compaction or resume, reload by role: the Director reloads `epic.md`, `decisions.md` by pointer, `state.json`, and the latest `efforts/<n>/report.md`; the Orchestrator reloads its effort brief and `efforts/<n>/state.json`; an implementer reloads its brief. Replace a lost child only after confirmed termination, attempts unchanged; reject an orphan return whose child identity or revision mismatches the recorded entry.
 
@@ -19,15 +19,15 @@ Write `state.json` before each dispatch and after each return; write each gate r
 
 Use five harness operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. Run Git, Done and Release through the shell. Every dispatched role waits in its own turn for each command, check, gate, and child it starts before it returns. Isolate fresh epics with `git worktree add -b <epic-branch> <epic-workspace> <base>`. Never execute on main.
 
-Read `contracts/models.md`; resolve roles through `~/.claude/gambit/models.json`. Select each entry model profile and its dispatch target, read-only variant for read-only roles. Pass the complete brief and contract's absolute path from the current installation: `contracts/implementer.md` for `implementer`, `contracts/scout.md` for `scout`. No fallback: log unresolved roles; every task requiring one becomes a gap citing it. Independent work continues; end with gaps only when no executable work remains.
+Read `contracts/models.md`; resolve roles through `~/.claude/gambit/models.json`. Select each entry model profile and its dispatch target, read-only variant for read-only roles; read-only roles run as steps per `skills/executing-plans/references/steps.md` when they apply. Pass the complete brief and contract's absolute path from the current installation: `contracts/implementer.md` for `implementer`, `contracts/scout.md` for `scout`. No fallback: log unresolved roles; every task requiring one becomes a gap citing it. Independent work continues; end with gaps only when no executable work remains.
 
-Dispatch the `orchestrator` role once for review and once for release. Its brief is the record directory and the stage name; it reads the record for everything else and writes its result there. Read only the report that dispatch returns. When the registry resolves no `orchestrator` role, the session that loaded this stage performs the review or release itself under these same rules, inventing no dispatch target and owning the record writes.
+Dispatch the `orchestrator` role once for review and once for release. Its brief is the record directory and the stage name; it reads the record for everything else and writes its result there. Read only the report that dispatch returns. When the registry resolves no `orchestrator` role, the session that loaded this stage performs the review or release itself under these rules and owns the record writes.
 
 ## Director
 
 The session that loaded this stage is the Director. From the accepted Requirements, build the change's dependency graph. Freeze shared interfaces as efforts that land first. Partition the remaining work into dependency-cohesive efforts with ownership exclusive among concurrent efforts, as many as the graph allows, and log the partition in the Director Decision Log; it creates no brief, task, or owned-file list.
 
-An effort is dependency-ready once every effort it depends on has merged into the accepted base. Write an effort's brief only when it becomes dependency-ready, from the accepted base at that moment. Store it at `efforts/<n>/brief.md` with effort state at `efforts/<n>/state.json`. Each brief carries these fields in order:
+An effort is dependency-ready once every effort it depends on has merged into the accepted base. Write an effort's brief only when it becomes dependency-ready, from the base then accepted. Store it at `efforts/<n>/brief.md` with effort state at `efforts/<n>/state.json`. Each brief carries these fields in order:
 
 - **Objective:** Requirements quoted with their named evidence.
 - **Partition:** exact owned files; concurrent efforts' files are off-limits.
@@ -36,9 +36,9 @@ An effort is dependency-ready once every effort it depends on has merged into th
 - **Base:** accepted revision, branch `effort/<epic-slug>-<n>`, workspace, exact check commands, and the head's `efforts_admitted`.
 - **Report shape:** required report lines and the `efforts/<n>/report.md` destination.
 
-Admit an effort, whether a partition, a review correction, or a release correction, whenever an unmet Requirement, an open review finding, or a failed release action has executable work, incrementing the head's `efforts_admitted` before its dispatch and copying that count into the brief's Base field and `efforts/<n>/state.json`; resuming an existing effort admits nothing. There is no ceiling on efforts. End with gaps only when no executable work remains because every remaining lineage is exhausted or blocked by a gap, naming each unmet Requirement and the lineage that exhausted.
+Admit an effort, whether a partition, a review correction, or a release correction, whenever an unmet Requirement, an open review finding, or a failed release action has executable work, incrementing the head's `efforts_admitted` before its dispatch and copying that count into the brief's Base field and `efforts/<n>/state.json`; resuming an existing effort admits nothing. End with gaps only when no executable work remains because every remaining lineage is exhausted or blocked by a gap, naming each unmet Requirement and the lineage that exhausted.
 
-Before admitting any effort after the first, and whenever a report names new infrastructure, log one Director decision on whether the work adds infrastructure unnamed by the accepted approach, the accepted additions table ("Things you did not ask for"), or an accepted Decision Log proposal. That decision authorizes an in-repository, reversible addition such as a script, harness, fixture, or corpus that an unmet Requirement needs. A new machine, service, or external system is unauthorized; its dependent Requirements become gaps citing it.
+Before admitting any effort after the first, and whenever a report names new infrastructure, log one Director decision on whether the work adds infrastructure unnamed by the accepted approach, the "Things you did not ask for" table, or an accepted Decision Log proposal. That decision authorizes an in-repository, reversible addition such as a script, harness, fixture, or corpus that an unmet Requirement needs. A new machine, service, or external system is unauthorized; its dependent Requirements become gaps citing it.
 
 Dispatch every dependency-ready effort concurrently to a fresh orchestrator in its own worktree, first persisting the child identity, workspace, revision, and lineage in the head's efforts entry. When a report reveals a defect in the effort brief, log the Director's error, correct the brief, and dispatch a fresh orchestrator. Merge each finished effort branch into the epic branch in completion order and run the full Done gate on the merged epic after each merge. On green, advance the accepted base to that revision, then brief and dispatch every effort now dependency-ready, including work a report left open; on red, follow `references/wave-dispatch.md`. Watch each running effort's branch head and record; resume an orchestrator idle without its report. Store each returned report at `efforts/<n>/report.md` and fold its lines into the head; take no other tree action. When the registry resolves no `orchestrator` role, the Director performs each effort itself under the orchestrator rules above, inventing no dispatch target and owning the effort's record writes.
 
@@ -64,15 +64,15 @@ A task is one behavior with one failing test, at most three files including the 
 
 Give the brief its workspace, base revision, applicable contract clauses, and evidence sufficient without session history; keep simultaneous owned-file lists disjoint, including hidden surfaces.
 
-When a brief needs facts, dispatch a read-only `scout` with the bounded question and workspace and complete the brief from its `file:line` evidence or NOT FOUND. Decide from the contract and tree, logging each decision and reason. Observations beyond the contract never become tasks.
+When a brief needs facts, dispatch a read-only `scout` (a step per `skills/executing-plans/references/steps.md`) with the bounded question and workspace and complete the brief from its `file:line` evidence or NOT FOUND. Decide from the contract and tree, logging each decision.
 
 ## Build each task until good
 
-Isolate each implementer in its own workspace from the effort's current base, including a single-task effort. Before every implementer dispatch, run `scripts/validate_dispatch.py` by absolute path against brief and record; dispatch only on exit 0, append exit 1 defects to `conduct.brief_defects`, and include `Brief: <absolute path>`, `Workspace: <absolute path>`, `Record: <absolute state.json path>`, and `Task: <id>` in prompt. A new task starts at the `implementer` entry model profile, under its contract and brief, test first. Only the orchestrator commits, and it implements only the final attempt the routing below names.
+Isolate each implementer in its own workspace from the effort's current base, including a single-task effort. Before every implementer dispatch, run `scripts/validate_dispatch.py` by absolute path against brief and record; dispatch only on exit 0, append exit 1 defects to `conduct.brief_defects`, and include `Brief: <absolute path>`, `Workspace: <absolute path>`, `Record: <absolute state.json path>`, and `Task: <id>` in prompt. A new task starts at the `implementer` entry model profile, under its contract and brief, test first. Implementers always use the dispatch operation, never a step; the orchestrator records the identity a dispatch returns in the task's `dispatch.child`. Only the orchestrator commits, and it implements only the final attempt the routing names.
 
 Inspect every return's complete staged, unstaged, untracked, deleted, binary, symlink, and mode changes. Read artifacts and fresh RED/GREEN evidence, not summaries or verdicts; run missing checks. Build or capture rendered Requirement evidence, inspect it, and record the observation.
 
-After inspection and before the verdict, dispatch one read-only `task-reviewer` under `skills/review/reviewers/task-reviewer.md`: workspace, base, complete task change set, brief, covered Requirements, Must Not Ship, Quality Bar, and named check. Dispatch one read-only `finding-verifier` per admissible candidate under `skills/review/reviewers/finding-verifier.md`, with isolated `test-runner` reproductions as needed. A confirmed finding makes the verdict NOT DONE, routed below. Record drops and observations without tasks. Review correction deltas against their ledger citations; pre-existing defects outside them remain observations and never expand the ledger.
+After inspection and before the verdict, dispatch one read-only `task-reviewer` under `skills/review/reviewers/task-reviewer.md`: workspace, base, complete task change set, brief, covered Requirements, Must Not Ship, Quality Bar, and named check. Dispatch one read-only `finding-verifier` per admissible candidate under `skills/review/reviewers/finding-verifier.md`, with isolated `test-runner` reproductions as needed. Route both through `skills/executing-plans/references/steps.md` when it applies, briefed with the task workspace; record each step id in the gate record's Task review row before waiting. A confirmed finding makes the verdict NOT DONE, routed below. Record drops and observations without tasks. Review correction deltas against their ledger citations; pre-existing defects outside them remain observations and never expand the ledger.
 
 Write this gate record relative to the run's record directory, which for an effort is `efforts/<n>/`: `gates/<task-slug>-<attempt>.md`, with exactly these fields:
 
@@ -94,7 +94,7 @@ The mechanical floor rejects suppressed checks, weakened or tautological tests, 
 
 Apply a touched Premise's If-wrong clause ("What I'm assuming") before further building. If false and the Intent survives, record the changed assessment and evidence in the Decision Log, follow the clause's alternative, and revise the affected approach or briefs. Keep the frozen Premise text, its clause, Intent, and Requirements unchanged; continue executable work under the revised design. If the clause says the Intent cannot survive, apply Human boundaries immediately.
 
-Implementer returns DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, and BLOCKED are gate evidence, not terminal outcomes. Supply missing context from tree or contract. Concerns require evidence of contract defects; unsatisfied tasks are NOT DONE regardless of their return labels.
+Implementer returns DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, and BLOCKED are gate evidence, not terminal outcomes. Supply missing context from tree or contract. Concerns require evidence of contract defects; unsatisfied tasks are NOT DONE whatever their return labels.
 
 Every NOT DONE record names its cause. Its failure signature is the normalized failing check plus its first assertion or error line, persisted in task `state.json` with the step reached. An implementer has two attempts against a complete brief: its first dispatch and one continuation. A re-brief for the orchestrator's brief defect spends no attempt, and each split descendant starts with its own two. Take step 1 while an attempt remains and each other step once per distinct signature; repeats advance. Catastrophe applies only when evidence contradicts a Premise or Requirement.
 
@@ -111,7 +111,7 @@ Every accepted implementer change set, including a single task, lands only throu
 
 For a failure appearing only after combination, record the complete routing decision before further investigation: itemized NOT DONE, the responsible lineage, the routing step reached, and the attempts spent there; the rejected revision retained on `candidate/<effort>` with its failing output, the last accepted base unchanged until the combined candidate passes the full Done gate, and the independent tasks continuing during correction. Assign the failure to its contributing lineage or one integration lineage for this effort. An existing contributing lineage continues from the routing step reached and the attempts it has spent there; a new integration lineage starts at the entry model profile. Keep this ownership for subsequent failures; never reset attempts with fresh lineages.
 
-Use the build step's failure-signature routing for that failure. The corrective workspace must contain the failing combination so its tests reproduce the integration defect. A task's fast check never replaces the full Done gate on the corrected candidate.
+Use the build step's failure-signature routing. The corrective workspace must contain the failing combination so its tests reproduce the defect. A task's fast check never replaces the full Done gate on the corrected candidate.
 
 If an integration lineage exhausts, preserve its work and gate as a gap and retain the rejected candidate. Build any remaining candidate from the last accepted base and independent DONE changes, excluding work dependent on the gap, then run its full Done gate. Never advance the accepted base to a rejected revision.
 
@@ -119,7 +119,7 @@ Return the effort's report for `efforts/<n>/report.md` as the final message. Rep
 
 ## Review once
 
-Freeze one candidate after the build loop and follow `skills/review/SKILL.md` for it through the load-a-stage operation. Record that review began so a resume cannot start another discovery pass.
+Freeze one candidate after the build loop and follow `skills/review/SKILL.md` through the load-a-stage operation. Record that review began so a resume cannot start another discovery pass.
 
 Route each contract defect through the build step's failure-signature routing. Correct the candidate and re-run closure until closure passes, using the attempt and gap rules. A finding is a review gap only when no executable work remains for it. Review never releases; release remains this stage's next decision.
 
@@ -127,7 +127,7 @@ Route each contract defect through the build step's failure-signature routing. C
 
 Release is eligible only when every Requirement is DONE, review is clean, and the fresh Done checks pass. Otherwise execute no Release action and proceed to the report with gaps.
 
-For an eligible candidate, execute the exact steps of "What leaves this machine or can't be undone" in order through the shell, against their named targets and intended effects; the postconditions after `Then:` are the Release postconditions. Record each completed action and evidence immediately. On resume, inspect postconditions from that record instead of repeating completed external actions.
+For an eligible candidate, execute the exact steps of "What leaves this machine or can't be undone" in order through the shell; the postconditions after `Then:` are the Release postconditions. Record each completed action and evidence immediately. On resume, inspect postconditions from that record instead of repeating completed external actions.
 
 An action that fails within the repository's own authority, including its tests, CI configuration, or build, opens a correction effort under the build step's failure-signature routing. Correct the failure, run its check, and Release resumes at the first action whose postcondition no longer holds, repeating no action whose postcondition holds. An action outside that authority that fails, or whose postcondition cannot be confirmed, is a release gap; a failure not shown to lie outside that authority is corrected as inside it. Record the failure and all actions already completed; execute no later action. Report release only when every Release postcondition holds. Before any external action, apply Human boundaries.
 
@@ -154,4 +154,4 @@ Catastrophe ends the run immediately when either condition holds:
 
 Cease building and external actions, record the condition and evidence, report **stopped on catastrophe**, and end the run.
 
-Take no other external action the contract leaves unnamed. A task needing one receives NOT DONE and becomes a gap; independent work continues. Everything else is decided and logged. No mid-run question goes to a person.
+Take no other external action the contract leaves unnamed. A task needing one receives NOT DONE and becomes a gap; independent work continues. No mid-run question goes to a person.

@@ -21,14 +21,14 @@ Collect decisions and their reasons for the epic's attached Decision Log. Keep i
 
 ## Research
 
-Read `contracts/models.md`. Resolve each role through its registry, starting at the role's entry model profile and selecting the read-only variant for read-only roles. Pass the role's contract by absolute path and its complete brief as text through the dispatch operation. Resolve paths from the installed tree. Follow the registry contract when a role cannot be resolved; never invent a dispatch target.
+Read `contracts/models.md`. Resolve each role through its registry, starting at the role's entry model profile and selecting the read-only variant for read-only roles. Pass the role's contract by absolute path and its complete brief as text, through the dispatch operation or, for a read-only role where `skills/executing-plans/references/steps.md` applies, as a step. Resolve paths from the installed tree. Follow the registry contract when a role cannot be resolved; never invent a dispatch target.
 
-Dispatch a read-only `scout` under `contracts/scout.md` with the repository root and bounded questions. Establish existing implementation patterns, interfaces, tests, contribution commands, release conventions, constraints, and scale. Require `file:line` evidence or `NOT FOUND`, with coverage limitations. Inspect enough to choose between approaches, not merely list them. Research supplies facts; it cannot add requirements.
+Dispatch a read-only `scout` under `contracts/scout.md`, as a step where `skills/executing-plans/references/steps.md` applies, with the repository root and bounded questions. Establish existing implementation patterns, interfaces, tests, contribution commands, release conventions, constraints, and scale. Require `file:line` evidence or `NOT FOUND`, with coverage limitations. Inspect enough to choose between approaches, not merely list them. Research supplies facts; it cannot add requirements.
 
 For a bug, make this evidence chain explicit and complete:
 
 1. Give the scout the report and observed failure as clues to verify. Have it return the exact reproduction command as a command line and trace the root cause with causal `file:line` evidence, including what would falsify that cause. A suspected file or stack frame is not a verified diagnosis.
-2. If reproduction writes build artifacts, fixtures, a cache, or other state, dispatch `test-runner` with the exact command in an isolated workspace. It writes scratch state only and returns the command and output. The scout does not execute writable reproduction.
+2. If reproduction writes build artifacts, fixtures, a cache, or other state, dispatch `test-runner` with the exact command in an isolated workspace, as a step where `skills/executing-plans/references/steps.md` applies, since repository HEAD is committed. It writes scratch state only and returns the command and output. The scout does not execute writable reproduction.
 3. Reconcile that output with the scout's causal evidence. Turn the verified root cause into a falsifiable Premise with its explicit Intent-survival clause.
 4. Name the verified reproduction and its expected corrected result as a Requirement's satisfying evidence, with the exact check, and carry the observed failure into the contract. Execution makes that reproduction the failing test of the task covering the Requirement, so its implementer begins from RED.
 
@@ -54,7 +54,7 @@ Proportionality failure is a contract-drafting failure: overdesign, excess robus
 
 ## Steelman
 
-Run exactly one discovery pass on the agreed design, before accepting the contract. Read `contracts/steelman.md`. Dispatch the `steelman` role fresh and read-only under that contract, resolved through `contracts/models.md`.
+Run exactly one discovery pass on the agreed design, before accepting the contract. Read `contracts/steelman.md`. Dispatch the `steelman` role fresh and read-only under that contract, resolved through `contracts/models.md`, as a step where `skills/executing-plans/references/steps.md` applies. Record its step id in the Decision Log before waiting.
 
 Supply the draft document as the Design Packet, using the receiver contract's exact fields, in order: What you asked for; What could go wrong, and how much we care; Things you did not ask for; What will be true when done; What I'm assuming; What we won't do; How, and why not the other ways; What leaves this machine or can't be undone; Decisions I need from you; Checks the machines run. Include each field's required evidence, ratings, survival clauses, reasons, commands, actions, and postconditions. Write `None` for genuinely absent decisions. Discovery receives this packet without prior steelman output.
 
