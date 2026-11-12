@@ -33,7 +33,7 @@ An effort is dependency-ready once every effort it depends on has merged into th
 - **Partition:** exact owned files; concurrent efforts' files are off-limits.
 - **Interfaces and order:** frozen shared interfaces, dependencies, and landing order.
 - **Binding contract:** the level of care with the row that set it, each applicable failure row quoted with its What we do, applicable Must Not Ship entries, Premise clauses, Quality Bar, and Decision Log entries touching its files.
-- **Base:** accepted revision, branch `effort/<epic-slug>-<n>`, workspace, exact check commands, and the head's `efforts_admitted`.
+- **Base:** accepted revision, epic label `<repository-id>/<epic-slug>`, branch `effort/<epic-slug>-<n>`, workspace, exact checks, head's `efforts_admitted`.
 - **Report shape:** required report lines and the `efforts/<n>/report.md` destination.
 
 Admit an effort, whether a partition, a review correction, or a release correction, whenever an unmet Requirement, an open review finding, or a failed release action has executable work, incrementing the head's `efforts_admitted` before its dispatch and copying that count into the brief's Base field and `efforts/<n>/state.json`; resuming an existing effort admits nothing. End with gaps only when no executable work remains because every remaining lineage is exhausted or blocked by a gap, naming each unmet Requirement and the lineage that exhausted.

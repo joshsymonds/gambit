@@ -330,6 +330,12 @@ class ExecutingPlansRoutingTest(unittest.TestCase):
             build,
         )
 
+    def test_base_field_names_the_epic_label(self) -> None:
+        match = re.search(r"(?m)^- \*\*Base:\*\*.*$", self.text)
+        base = match.group(0) if match else ""
+        self.assertRegex(base, r"\bepic\b")
+        self.assertIn("`<repository-id>/<epic-slug>`", base)
+
 
 class ReviewRoutingTest(unittest.TestCase):
     @classmethod
@@ -389,6 +395,11 @@ class EffortBriefTemplateTest(unittest.TestCase):
         base = section(self.text, "Base")
         self.assertRegex(base, r"\bgate names?\b")
         self.assertIn("absolute `gates.toml`", base)
+
+    def test_base_section_names_the_epic_label(self) -> None:
+        base = section(self.text, "Base")
+        self.assertRegex(base, r"\bepic\b")
+        self.assertIn("`<repository-id>/<epic-slug>`", base)
 
 
 class ReadmeDispatchTest(unittest.TestCase):
