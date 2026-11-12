@@ -10,7 +10,7 @@ Step roles are `scout`, `steelman`, `task-reviewer`, `conformance-reviewer`, `in
 
 ## step_start arguments
 
-The keys follow `startSchema` in orrery v0.14.0's `internal/stepmcp/tools.go`, which refuses unknown keys. There is no model or effort field. The field rules are in orrery v0.14.0 docs/contract.md under "StartStep checks each field".
+The keys follow `startSchema` in orrery v0.24.3's `internal/stepmcp/tools.go`, which refuses unknown keys. There is no model or effort field. The field rules are in orrery v0.24.3 docs/contract.md under "StartStep checks each field".
 
 ### Read-only steps
 
@@ -20,6 +20,8 @@ The keys follow `startSchema` in orrery v0.14.0's `internal/stepmcp/tools.go`, w
 - `workspace`: the absolute git workspace the role inspects.
 - `revision`: the base revision it inspects: the task base for task-gate roles, the frozen or corrected candidate in review, and repository HEAD in brainstorming.
 - `readOnly`: true for every step role, the test runner included.
+- `epic`: the epic record directory's path under `~/.gambit/`, `<repository-id>/<epic-slug>`, which every step passes.
+- `task`: the slug of the step's one task, passed by the `task-reviewer` and the `finding-verifier` that gate the task and omitted by every other read-only step, including the `finding-verifier` that review dispatches.
 
 Omit `doneValue`, `ownedPaths`, `gate`, and `gateLimitSeconds`; the schemas' done status is `done`, the default.
 
@@ -37,6 +39,8 @@ An implementer step is a writing step. Its `workspace` is the task's own linked 
 - `doneValue`: `done`.
 - `gateName`: the name on the brief's `Gate:` line; orrery's named-gates release (L1b) takes it with `gatesFile`.
 - `gatesFile`: the absolute path of `gates.toml` in the epic's record directory.
+- `epic`: the epic record directory's path under `~/.gambit/`, `<repository-id>/<epic-slug>`, which every step passes.
+- `task`: the slug of the step's one task, passed by this implementer step; the `task-reviewer` and `finding-verifier` gating the task pass it too, and every other step omits it.
 
 The effort brief carries, for each gate, its name and the absolute path of the epic's `gates.toml`; the effort orchestrator fills `gateName` and `gatesFile` from it.
 

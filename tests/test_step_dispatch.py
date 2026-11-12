@@ -35,6 +35,16 @@ def section(text: str, heading: str) -> str:
     return sections.get(heading, "")
 
 
+def subsection(text: str, heading: str) -> str:
+    match = re.search(rf"(?ms)^### {re.escape(heading)}\n(.*?)(?=^#{{2,3}} |\Z)", text)
+    return match.group(1) if match else ""
+
+
+def bullet(body: str, key: str) -> str:
+    match = re.search(rf"(?m)^- `{re.escape(key)}`:.*$", body)
+    return match.group(0) if match else ""
+
+
 class StepsReferenceTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -67,15 +77,42 @@ class StepsReferenceTest(unittest.TestCase):
             "resolved in `gates.toml`, then in `.orrery/project.toml` at the top of the step's `workspace`",
             "An epic accepted before 2.11.0 has no `gates.toml`",
             "the Director logs one Decision Log line naming the gate and writes `gates.toml` from its `Steps:` line's argv and limit.",
-            "orrery v0.14.0 docs/contract.md",
+            "orrery v0.24.3 docs/contract.md",
             "StartStep checks each field",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.text)
 
+    def test_read_only_step_start_key_set(self) -> None:
+        keys = set(re.findall(r"(?m)^- `([A-Za-z]+)`:", subsection(self.text, "Read-only steps")))
+        self.assertEqual(
+            keys,
+            {"agent", "schema", "prompt", "workspace", "revision", "readOnly", "epic", "task"},
+        )
+
+    def test_every_step_passes_epic_naming_the_record_directory(self) -> None:
+        for heading in ("Read-only steps", "Implementer steps"):
+            with self.subTest(heading=heading):
+                line = bullet(subsection(self.text, heading), "epic")
+                self.assertIn("`~/.gambit/`", line)
+                self.assertIn("`<repository-id>/<epic-slug>`", line)
+                self.assertIn("every step passes", line)
+
+    def test_task_names_the_step_task_its_roles_and_omission_elsewhere(self) -> None:
+        read_only = bullet(subsection(self.text, "Read-only steps"), "task")
+        self.assertIn("the slug of the step's one task", read_only)
+        self.assertIn("`task-reviewer`", read_only)
+        self.assertIn("`finding-verifier`", read_only)
+        self.assertIn("omitted by every other read-only step", read_only)
+        implementer = bullet(subsection(self.text, "Implementer steps"), "task")
+        self.assertIn("the slug of the step's one task", implementer)
+        self.assertIn("passed by this implementer step", implementer)
+        self.assertIn("`task-reviewer`", implementer)
+        self.assertIn("`finding-verifier`", implementer)
+        self.assertIn("every other step omits it", implementer)
+
     def test_implementer_arguments_pass_gate_name_and_file_and_no_argv_gate(self) -> None:
-        implementer = re.search(r"(?ms)^### Implementer steps\n(.*?)(?=^## )", self.text)
-        body = implementer.group(1) if implementer else ""
+        body = subsection(self.text, "Implementer steps")
         keys = set(re.findall(r"(?m)^- `([A-Za-z]+)`:", body))
         self.assertEqual(
             keys,
@@ -90,6 +127,8 @@ class StepsReferenceTest(unittest.TestCase):
                 "doneValue",
                 "gateName",
                 "gatesFile",
+                "epic",
+                "task",
             },
         )
         self.assertNotIn("gate", keys)
@@ -158,7 +197,8 @@ class StepsReferenceTest(unittest.TestCase):
         self.assertIn("contracts/schemas/<role>.json", self.text)
         self.assertIn("startSchema", self.text)
         self.assertIn("internal/stepmcp/tools.go", self.text)
-        self.assertIn("v0.14.0", self.text)
+        self.assertIn("v0.24.3", self.text)
+        self.assertNotIn("v0.14.0", self.text)
         self.assertIn("no model or effort field", self.text)
 
     def test_omits_the_four_optional_keys(self) -> None:
