@@ -15,13 +15,13 @@ Resume only the record whose `state.json` names the current epic branch; without
 
 After compaction or resume, reload by role: the Director reloads `epic.md`, `decisions.md` by pointer, `state.json`, and the latest `efforts/<n>/report.md`; the Orchestrator reloads its effort brief and `efforts/<n>/state.json`; an implementer reloads its brief. Replace a lost child only after confirmed termination, attempts unchanged; reject an orphan return whose child identity or revision mismatches the recorded entry.
 
-Write `state.json` before each dispatch and after each return; write each gate record to `gates/<task-slug>-<attempt>.md` before the next dispatch. Mirror each transition through the harness's record-task-state operation.
+Write `state.json` before each dispatch and after each return; write each gate record to `gates/<task-slug>-<attempt>.md` before the next dispatch. Mirror each transition through the record-task-state operation.
 
-Use five harness operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. Run Git, Done and Release through the shell. Every dispatched role waits in its own turn for each command, check, gate, and child it starts before it returns. Isolate fresh epics with `git worktree add -b <epic-branch> <epic-workspace> <base>`. Never execute on main.
+Use five harness operations: dispatch a role, record task state, load a stage, isolate a workspace, and end a run. Run Git, Done and Release through the shell. Every dispatched role waits in its own turn for each command, check, gate, and child it starts before returning. Isolate fresh epics with `git worktree add -b <epic-branch> <epic-workspace> <base>`. Never execute on main.
 
-Read `contracts/models.md`; resolve roles through `~/.claude/gambit/models.json`. Select each entry model profile and its dispatch target, read-only variant for read-only roles; read-only roles run as steps per `skills/executing-plans/references/steps.md` when they apply. Pass the complete brief and contract's absolute path from the current installation: `contracts/implementer.md` for `implementer`, `contracts/scout.md` for `scout`. No fallback: log unresolved roles; every task requiring one becomes a gap citing it. Independent work continues; end with gaps only when no executable work remains.
+Read `contracts/models.md`; resolve roles through `~/.claude/gambit/models.json`. Select each entry model profile and its dispatch target, read-only variant for read-only roles; read-only roles run as steps per `skills/executing-plans/references/steps.md` when they apply; implementers run as writing steps where steps apply, otherwise dispatching. Pass the complete brief and contract's absolute path from the current installation: `contracts/implementer.md` for `implementer`, `contracts/scout.md` for `scout`. No fallback: log unresolved roles; every task requiring one becomes a gap citing it. Independent work continues; end with gaps only when no executable work remains.
 
-Dispatch the `orchestrator` role once for review and once for release. Its brief is the record directory and the stage name; it reads the record for everything else and writes its result there. Read only the report that dispatch returns. When the registry resolves no `orchestrator` role, the session that loaded this stage performs the review or release itself under these rules and owns the record writes.
+Dispatch the `orchestrator` role once for review and once for release. Its brief is the record directory and the stage name; it reads the record for everything else and writes its result there. Read only that dispatch's report. When the registry resolves no `orchestrator` role, the session that loaded this stage performs the review or release itself under these rules and owns the record writes.
 
 ## Director
 
@@ -68,7 +68,7 @@ When a brief needs facts, dispatch a read-only `scout` (a step per `skills/execu
 
 ## Build each task until good
 
-Isolate each implementer in its own workspace from the effort's current base, including a single-task effort. Before every implementer dispatch, run `scripts/validate_dispatch.py` by absolute path against brief and record; dispatch only on exit 0, append exit 1 defects to `conduct.brief_defects`, and include `Brief: <absolute path>`, `Workspace: <absolute path>`, `Record: <absolute state.json path>`, and `Task: <id>` in prompt. A new task starts at the `implementer` entry model profile, under its contract and brief, test first. Implementers always use the dispatch operation, never a step; the orchestrator records the identity a dispatch returns in the task's `dispatch.child`. Only the orchestrator commits, and it implements only the final attempt the routing names.
+Isolate each implementer in its own workspace from the effort's current base, including a single-task effort. Before every implementer dispatch, run `scripts/validate_dispatch.py` by absolute path against brief and record; dispatch only on exit 0, append exit 1 defects to `conduct.brief_defects`, and include `Brief: <absolute path>`, `Workspace: <absolute path>`, `Record: <absolute state.json path>`, and `Task: <id>` in prompt. A new task starts at the `implementer` entry model profile, under its contract and brief, test first; the orchestrator records the identity a dispatch returns in the task's `dispatch.child`; a step commits once in its own workspace. Only the orchestrator commits to the effort branch and implements only the final attempt the routing names.
 
 Inspect every return's complete staged, unstaged, untracked, deleted, binary, symlink, and mode changes. Read artifacts and fresh RED/GREEN evidence, not summaries or verdicts; run missing checks. Build or capture rendered Requirement evidence, inspect it, and record the observation.
 
@@ -101,7 +101,7 @@ Every NOT DONE record names its cause. Its failure signature is the normalized f
 1. **Execution failure against a complete brief:** hand the failing output back to the same implementer thread.
 2. **Gate finding the brief wrong:** re-brief a fresh implementer and log an orchestrator error.
 3. **Separable behaviors:** split them once per lineage, preserving the same unmet Requirements across complete descendants.
-4. **The orchestrator's own attempt:** make the attempt in the task's workspace under `contracts/implementer.md`, with the complete history of gate records. If it fails, the lineage is a gap on `gap/<task-slug>`, independent work continues, and the run ends with gaps naming the Requirement as unsatisfied as written.
+4. **The orchestrator's own attempt:** make the attempt in the task's workspace under `contracts/implementer.md`, with the complete history of gate records. If it fails, the lineage is a gap on `gap/<task-slug>`, independent work continues, and the run ends with gaps naming the Requirement unsatisfied as written.
 
 When a gate finding names an exact edit smaller than the brief that would describe it, the orchestrator applies it directly, logs it with the gate that named it, and counts no attempt. Routing adds no review dispatch beyond task review.
 
@@ -109,7 +109,7 @@ When a gate finding names an exact edit smaller than the brief that would descri
 
 Every accepted implementer change set, including a single task, lands only through `scripts/integrate_wave.py`, run by absolute path with a manifest as `references/wave-dispatch.md` describes and the full Done gate as its gate. The script makes one commit per task and advances the effort only on green; record each committed revision in its gate record and `state.json`. A gap's work is not candidate material. A wave integrates gated tasks without waiting for tasks still in routing, which then move to the new base as that reference describes.
 
-For a failure appearing only after combination, record the complete routing decision before further investigation: itemized NOT DONE, the responsible lineage, the routing step reached, and the attempts spent there; the rejected revision retained on `candidate/<effort>` with its failing output, the last accepted base unchanged until the combined candidate passes the full Done gate, and the independent tasks continuing during correction. Assign the failure to its contributing lineage or one integration lineage for this effort. An existing contributing lineage continues from the routing step reached and the attempts it has spent there; a new integration lineage starts at the entry model profile. Keep this ownership for subsequent failures; never reset attempts with fresh lineages.
+For a failure appearing only after combination, record the complete routing decision before further investigation: itemized NOT DONE, the responsible lineage, the routing step reached, and the attempts spent there; the rejected revision retained on `candidate/<effort>` with its failing output, the last accepted base unchanged until the combined candidate passes the full Done gate, and the independent tasks continuing during correction. Assign the failure to its contributing lineage or one integration lineage for this effort. An existing contributing lineage continues from the routing step reached and the attempts it has spent there; a new integration lineage starts at the entry model profile. Keep this ownership for later failures; never reset attempts with fresh lineages.
 
 Use the build step's failure-signature routing. The corrective workspace must contain the failing combination so its tests reproduce the defect. A task's fast check never replaces the full Done gate on the corrected candidate.
 
@@ -121,7 +121,7 @@ Return the effort's report for `efforts/<n>/report.md` as the final message. Rep
 
 Freeze one candidate after the build loop and follow `skills/review/SKILL.md` through the load-a-stage operation. Record that review began so a resume cannot start another discovery pass.
 
-Route each contract defect through the build step's failure-signature routing. Correct the candidate and re-run closure until closure passes, using the attempt and gap rules. A finding is a review gap only when no executable work remains for it. Review never releases; release remains this stage's next decision.
+Route each contract defect through the build step's failure-signature routing. Correct the candidate and re-run closure until closure passes, using the attempt and gap rules. A finding is a review gap only when no executable work remains for it. Review never releases.
 
 ## Release
 
@@ -143,7 +143,7 @@ Always write the report, including after catastrophe. It contains:
 - For each task, whether it was DONE on its first attempt at the `implementer` entry model profile, every routing step it used, and its lineage.
 - Implementer first-pass rate divides first-attempt DONE tasks by all tasks beside per-task-family conduct metrics from `scripts/report_metrics.py`: brief defects, violations prevented and escaped, routing steps, outcomes, cost, with raw numerators and denominators. If below 80%, flag decomposition.
 
-Record exactly one terminal outcome: **released**, **ended with gaps**, or **stopped on catastrophe**. Store the report with that outcome, then use the harness's end-a-run operation as `README.md`'s Install section maps it.
+Record exactly one terminal outcome: **released**, **ended with gaps**, or **stopped on catastrophe**. Store the report with that outcome, then use the end-a-run operation as `README.md`'s Install section maps it.
 
 ## Human boundaries
 

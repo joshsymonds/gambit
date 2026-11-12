@@ -1,16 +1,18 @@
-# Read-only steps
+# Steps
 
-A read-only role may run as an orrery step instead of through the dispatch operation. This reference says when a step applies, what each `step_start` argument carries, and what to record. Implementers and orchestrators are never steps; they always use the dispatch operation.
+A role may run as an orrery step instead of through the dispatch operation. This reference says when a step applies, what each `step_start` argument carries, what a done implementer end gives the gate, and what to record. Orchestrators are never steps; they always use the dispatch operation, while implementers run as writing steps where steps apply and dispatch elsewhere.
 
 ## When steps apply
 
 Steps apply when the session has the `step_start` and `step_wait` tools that `orrery mcp` serves and the repository carries no context stamp. A context stamp is a `.claude/settings.json` that git does not track (`git ls-files --error-unmatch .claude/settings.json` fails) and that sets `env.ANTHROPIC_BASE_URL`. Pi has no step tools, so Pi keeps the dispatch operation.
 
-Step roles are `scout`, `steelman`, `task-reviewer`, `conformance-reviewer`, `integration-reviewer`, `finding-verifier`, and `test-runner`. A role whose entry profile is `{"model": ...}` names no agent and uses the dispatch operation.
+Step roles are `scout`, `steelman`, `task-reviewer`, `conformance-reviewer`, `integration-reviewer`, `finding-verifier`, and `test-runner`. The implementer is the writing step role. A role whose entry profile is `{"model": ...}` names no agent and uses the dispatch operation.
 
 ## step_start arguments
 
-The keys follow `startSchema` in orrery v0.14.0's `internal/stepmcp/tools.go`, which refuses unknown keys. There is no model or effort field.
+The keys follow `startSchema` in orrery v0.14.0's `internal/stepmcp/tools.go`, which refuses unknown keys. There is no model or effort field. The field rules are in orrery v0.14.0 docs/contract.md under "StartStep checks each field".
+
+### Read-only steps
 
 - `agent`: the entry profile's `readonly_agent`, except that the test runner uses the profile's writing `agent`.
 - `schema`: the JSON object in `contracts/schemas/<role>.json` of the current installation.
@@ -21,12 +23,39 @@ The keys follow `startSchema` in orrery v0.14.0's `internal/stepmcp/tools.go`, w
 
 Omit `doneValue`, `ownedPaths`, `gate`, and `gateLimitSeconds`; the schemas' done status is `done`, the default.
 
+### Implementer steps
+
+An implementer step is a writing step. Its `workspace` is the task's own linked worktree, which the orchestrator creates from the effort's current base before the start. Run `scripts/validate_dispatch.py` on the brief and record before `step_start`, as the build step requires before any implementer dispatch: dispatch only on exit 0, and append exit 1 defects to `conduct.brief_defects`. Its arguments:
+
+- `agent`: the entry profile's writing `agent`.
+- `schema`: the JSON object in `contracts/schemas/implementer.json` of the current installation.
+- `prompt`: `contracts/implementer.md` by absolute path plus the complete brief with its `Brief:`, `Workspace:`, `Record:` and `Task:` lines, as the dispatch operation passes them.
+- `workspace`: the task's own linked worktree; orrery refuses a main working tree.
+- `revision`: the task base, the task's `dispatch.revision`, for every step of the task.
+- `readOnly`: false.
+- `ownedPaths`: exactly the brief's Files owned.
+- `doneValue`: `done`.
+- `gate`: the per-task gate as an absolute argv whose program is the heavy wrapper `~/.local/share/claude-heavy/heavy` with `~` expanded, e.g. `["/home/<user>/.local/share/claude-heavy/heavy", "just", "check"]`. A project whose tools live only in its development environment enters it through its own entry after the wrapper, e.g. `scripts/in-devenv -c '<command>'`.
+- `gateLimitSeconds`: that gate's limit in seconds.
+
+The gate and its limit come from the contract's `Steps:` checks line (`skills/brainstorming/TEMPLATES.md`), as the latest Decision Log line changes them for steps started after it; the effort brief carries them in its check commands.
+
 ## Workspace and revision
 
 A read-only step runs in a detached worktree at `revision`, without the task's uncommitted change. Brief each task-gate reviewer and verifier with the task workspace's absolute path to inspect. The test runner is a step only at a committed revision; a command that must run against uncommitted work uses the dispatch operation.
 
+An implementer step writes in its own linked worktree, not a detached one, and its `revision` is the task base.
+
+## Implementer done ends
+
+A `done` end of an implementer step gives the gate its evidence. The engine runs four commit checks in order: `head`, `ancestry`, `clean`, and `owned`. `owned` checks the paths changed from the task base to the return's `commit` against `ownedPaths`. The gate then runs. These checks, the gate result, and the return's `commit` supply the gate record's Owned-files result and named check, and inspection of the commit and task review continue: the orchestrator reads the commit's complete change set as the build step requires, and the commit integrates as the manifest entry's `commit`, as `skills/executing-plans/references/wave-dispatch.md` describes.
+
+## Commits
+
+An implementer's commit follows its route: a dispatched implementer leaves its changes uncommitted, and a step commits once in its own workspace before it returns `done`, naming that commit as `commit`; only the orchestrator commits to the effort branch.
+
 ## Recording and waiting
 
-`step_start` returns `{"id": ...}`. Record each id where its dispatch is recorded before waiting: the gate record's Task review row in executing-plans, the review ledger record in review, the Decision Log in brainstorming.
+`step_start` returns `{"id": ...}`. Record each id where its dispatch is recorded before waiting: the gate record's Task review row in executing-plans, the review ledger record in review, the Decision Log in brainstorming. An implementer's id goes in the task's `dispatch.child` before waiting, per `skills/executing-plans/references/record.md`.
 
 `step_wait` takes `ids` and returns `{"ended": <step or null>, "steps": [...]}`. A null `ended` means the 1500-second clamp passed; wait again. Name only ids still running, and drop an id once its step ends. Every end and every refused start or call is handled by `skills/executing-plans/references/step-ends.md`, which this reference does not restate.

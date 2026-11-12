@@ -19,7 +19,7 @@ A person is present at exactly three moments: writing the contract, reading the 
 5. **No human mid-run except catastrophe.** The loop never asks for approval, confirmation, or direction between the contract and the report. A harness safety pause that resumes the same run unchanged is the one documented exception; the Pi install names it.
 6. **Record, don't ask.** A decision, a compromise, a changed assessment, or a gap goes to the Decision Log and the report. It never becomes a question.
 7. **One process.** A contract written in conversation and a contract written from a goal file enter the same loop. The loop never learns which.
-8. **Read-only roles never write.** Scout, steelman, task reviewer, conformance reviewer, integration reviewer, and finding verifier inspect and report. Only an implementer changes the tree — the orchestrator only for its own final attempt when routing reaches it — and only the orchestrator commits.
+8. **Read-only roles never write.** Scout, steelman, task reviewer, conformance reviewer, integration reviewer, and finding verifier inspect and report. Only an implementer changes the tree, and implementers run as writing steps where steps apply (`skills/executing-plans/references/steps.md`), otherwise dispatched; the orchestrator changes the tree only for its own final attempt when routing reaches it. The commit rule: a dispatched implementer leaves its changes uncommitted, a step commits once in its own workspace, and only the orchestrator commits to the effort branch.
 9. **One text, five operations, any harness.** Skills name operations, never a harness's tool; the one exception is the step route in `skills/executing-plans/references/steps.md`, which applies only where a harness serves step tools. A harness that lacks an operation is fixed outside gambit.
 
 ## The Contract
@@ -92,7 +92,7 @@ The implementer has its entry model profile only. Routing between attempts is by
 
 The implementer contract is the fixed text every implementer works under: test first, owned files only, the mechanical floor, minimal change, and the four returns DONE, DONE_WITH_CONCERNS, NEEDS_CONTEXT, BLOCKED. A brief carries Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, Acceptance, Constraints, Requirements covered, and Test command. A gate record carries the task and its lineage, the model profile, the candidate revision, every contract item checked with its command and result, the owned-files and mechanical-floor results, any Premise touched, the verdict, and the next action.
 
-An implementer leaves its changes uncommitted in its own workspace. The orchestrator reads the complete change set, gates it, commits it onto the effort's candidate, and records that revision in the gate record. An exhausted lineage's workspace is committed to `gap/<task-slug>` instead.
+A dispatched implementer leaves its changes uncommitted in its own workspace, while implementers run as writing steps where steps apply (`skills/executing-plans/references/steps.md`) and a step commits once in its own workspace. Either way, only the orchestrator commits to the effort branch: it reads the complete change set, gates it, commits it onto the effort's candidate, and records that revision in the gate record. An exhausted lineage's workspace is committed to `gap/<task-slug>` instead.
 
 Model profiles are named in one place, the registry at `~/.claude/gambit/models.json`, which the harness's configuration renders. Skills and contracts name roles, never model profiles and never a model.
 
@@ -116,7 +116,7 @@ Gambit is one tree of skills and contracts. A harness runs it by providing five 
 
 | Operation | Claude Code | Pi |
 |---|---|---|
-| Dispatch a role | Agent tool with the model profile's agent; read-only roles as orrery steps where `skills/executing-plans/references/steps.md` applies | Agent tool (pi-subagents) with the model profile's agent file |
+| Dispatch a role | Agent tool with the model profile's agent; read-only roles as orrery steps where `skills/executing-plans/references/steps.md` applies, and implementers run as writing steps where steps apply | Agent tool (pi-subagents) with the model profile's agent file |
 | Record task state | Task API | Task API (pi-tasks) |
 | Load a stage | read `skills/<name>/SKILL.md` and follow it | same, or the skill's slash command |
 | Isolate a workspace | `git worktree add`, run by the orchestrator | same |

@@ -40,9 +40,60 @@ class StepsReferenceTest(unittest.TestCase):
             with self.subTest(role=role):
                 self.assertIn(f"`{role}`", self.text)
 
-    def test_implementers_and_orchestrators_are_never_steps(self) -> None:
-        self.assertIn("Implementers and orchestrators are never steps", self.text)
+    def test_orchestrators_are_never_steps_and_implementers_are_writing_steps(self) -> None:
+        self.assertNotIn("Implementers and orchestrators are never steps", self.text)
+        self.assertIn("Orchestrators are never steps", self.text)
         self.assertIn("always use the dispatch operation", self.text)
+        self.assertIn("implementers run as writing steps where steps apply", self.text)
+
+    def test_implementer_step_start_arguments_and_sources(self) -> None:
+        for phrase in (
+            "`agent`: the entry profile's writing `agent`.",
+            "`schema`: the JSON object in `contracts/schemas/implementer.json` of the current installation.",
+            "`prompt`: `contracts/implementer.md` by absolute path plus the complete brief with its `Brief:`, `Workspace:`, `Record:` and `Task:` lines",
+            "`workspace`: the task's own linked worktree; orrery refuses a main working tree.",
+            "`revision`: the task base, the task's `dispatch.revision`, for every step of the task.",
+            "`readOnly`: false.",
+            "`ownedPaths`: exactly the brief's Files owned.",
+            "`doneValue`: `done`.",
+            "`gate`: the per-task gate as an absolute argv",
+            "`~/.local/share/claude-heavy/heavy`",
+            '`["/home/<user>/.local/share/claude-heavy/heavy", "just", "check"]`',
+            "`scripts/in-devenv -c '<command>'`",
+            "`gateLimitSeconds`: that gate's limit in seconds.",
+            "`Steps:`",
+            "skills/brainstorming/TEMPLATES.md",
+            "Decision Log",
+            "orrery v0.14.0 docs/contract.md",
+            "StartStep checks each field",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.text)
+
+    def test_done_end_gives_the_gate_its_evidence_and_integrates_the_commit(self) -> None:
+        for phrase in (
+            "`head`, `ancestry`, `clean`, and `owned`",
+            "from the task base",
+            "Owned-files result",
+            "named check",
+            "inspection of the commit and task review continue",
+            "integrates as the manifest entry's `commit`",
+            "skills/executing-plans/references/wave-dispatch.md",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.text)
+
+    def test_implementer_step_commits_once_and_dispatch_leaves_changes_uncommitted(self) -> None:
+        for phrase in (
+            "a step commits once in its own workspace",
+            "a dispatched implementer leaves its changes uncommitted",
+            "only the orchestrator commits to the effort branch",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, self.text)
+
+    def test_implementer_step_id_is_recorded_as_dispatch_child_before_waiting(self) -> None:
+        self.assertIn("An implementer's id goes in the task's `dispatch.child` before waiting", self.text)
 
     def test_presence_test_names_step_tools_and_context_stamp(self) -> None:
         for phrase in (
@@ -137,9 +188,15 @@ class ExecutingPlansRoutingTest(unittest.TestCase):
         self.assertIn("task workspace", build)
         self.assertIn("record each step id in the gate record's Task review row before waiting", build)
 
-    def test_implementers_stay_on_dispatch_and_record_the_child(self) -> None:
+    def test_implementers_route_through_steps_and_otherwise_dispatch(self) -> None:
+        start = section(self.text, "Start")
+        self.assertIn("implementers run as writing steps where steps apply", start)
+        self.assertIn(STEPS_PATH, start)
+        self.assertIn("otherwise dispatching", start)
         build = section(self.text, "Build each task until good")
-        self.assertIn("Implementers always use the dispatch operation, never a step", build)
+        self.assertIn("a step commits once in its own workspace", build)
+        self.assertIn("Only the orchestrator commits to the effort branch", build)
+        self.assertNotIn("never a step", self.text)
         self.assertIn(
             "the orchestrator records the identity a dispatch returns in the task's `dispatch.child`",
             build,
@@ -205,6 +262,36 @@ class ReadmeDispatchTest(unittest.TestCase):
         self.assertEqual(len(rows), 1)
         self.assertIn("Agent tool", rows[0])
         self.assertIn("steps.md", rows[0])
+
+    def test_dispatch_row_names_implementer_writing_steps(self) -> None:
+        rows = [line for line in self.text.splitlines() if line.startswith("| Dispatch a role |")]
+        self.assertEqual(len(rows), 1)
+        self.assertIn("implementers run as writing steps where steps apply", rows[0])
+
+    def test_principle_eight_names_both_implementer_paths(self) -> None:
+        principle = re.search(r"(?m)^8\. \*\*Read-only roles never write\.\*\*.*$", self.text)
+        self.assertIsNotNone(principle)
+        for phrase in (
+            "implementers run as writing steps where steps apply",
+            "skills/executing-plans/references/steps.md",
+            "a step commits once in its own workspace",
+            "a dispatched implementer leaves its changes uncommitted",
+            "only the orchestrator commits to the effort branch",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, principle.group(0))
+
+    def test_implementer_paragraph_names_both_paths(self) -> None:
+        paragraphs = [line for line in self.text.splitlines() if line.startswith("A dispatched implementer leaves")]
+        self.assertEqual(len(paragraphs), 1)
+        for phrase in (
+            "implementers run as writing steps where steps apply",
+            "skills/executing-plans/references/steps.md",
+            "a step commits once in its own workspace",
+            "only the orchestrator commits to the effort branch",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, paragraphs[0])
 
     def test_principle_nine_admits_the_step_route(self) -> None:
         principle = re.search(r"(?m)^9\. \*\*One text.*$", self.text)
