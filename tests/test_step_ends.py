@@ -111,7 +111,20 @@ class StepEndsTest(unittest.TestCase):
 
     def test_waits_name_only_running_ids(self) -> None:
         refusals = self.sections.get("Refusals", "")
-        self.assertRegex(refusals, r"`WaitSteps`[^.\n]*\bonly ids still running\b")
+        self.assertRegex(refusals, r"`step_wait`[^.\n]*\bonly ids still running\b")
+
+    def test_no_file_under_skills_or_tests_names_the_engine_rpc(self) -> None:
+        this_file = Path(__file__).resolve()
+        offenders = [
+            path.relative_to(ROOT).as_posix()
+            for directory in (ROOT / "skills", ROOT / "tests")
+            for path in directory.rglob("*")
+            if path.is_file()
+            and "__pycache__" not in path.parts
+            and path.resolve() != this_file
+            and b"WaitSteps" in path.read_bytes()
+        ]
+        self.assertEqual(offenders, [])
 
 
 if __name__ == "__main__":
