@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Task reviewer return",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "findings", "observations", "missing_evidence", "test_runner_requests"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["done", "blocked"]
+    },
+    "findings": {
+      "type": "array",
+      "description": "Candidate defects. An empty array means there are none.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "claim", "citation", "location", "evidence", "verify_by"],
+        "properties": {
+          "id": {"type": "string"},
+          "claim": {"type": "string"},
+          "citation": {"type": "string"},
+          "location": {"type": "string"},
+          "evidence": {"type": "string"},
+          "verify_by": {"type": "string"},
+          "precondition": {"type": "string"},
+          "consequence": {"type": "string"}
+        }
+      }
+    },
+    "observations": {
+      "type": "array",
+      "description": "True observations that do not qualify as defects, with the reason.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["location", "observation", "reason"],
+        "properties": {
+          "location": {"type": "string"},
+          "observation": {"type": "string"},
+          "reason": {"type": "string"}
+        }
+      }
+    },
+    "missing_evidence": {
+      "type": "array",
+      "items": {"type": "string"}
+    },
+    "test_runner_requests": {
+      "type": "array",
+      "description": "Checks needing writable state, for an isolated test-runner.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "revision"],
+        "properties": {
+          "command": {"type": "string"},
+          "revision": {"type": "string"}
+        }
+      }
+    }
+  }
+}

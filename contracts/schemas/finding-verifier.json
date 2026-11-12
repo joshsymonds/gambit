@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Finding verifier return",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["status", "mode", "results", "test_runner_requests"],
+  "properties": {
+    "status": {
+      "type": "string",
+      "enum": ["done", "blocked"]
+    },
+    "mode": {
+      "type": "string",
+      "enum": ["initial", "closure"]
+    },
+    "results": {
+      "type": "array",
+      "description": "One result per supplied identifier.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "citation", "claim", "revision", "evidence", "result"],
+        "properties": {
+          "id": {"type": "string"},
+          "citation": {"type": "string"},
+          "claim": {"type": "string"},
+          "revision": {"type": "string"},
+          "evidence": {"type": "string"},
+          "result": {
+            "type": "string",
+            "enum": ["confirmed", "dropped", "closed", "open"]
+          },
+          "gap_reason": {"type": "string"}
+        }
+      }
+    },
+    "test_runner_requests": {
+      "type": "array",
+      "description": "Checks needing writable state, for an isolated test-runner.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["command", "revision"],
+        "properties": {
+          "command": {"type": "string"},
+          "revision": {"type": "string"}
+        }
+      }
+    }
+  }
+}

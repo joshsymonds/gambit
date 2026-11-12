@@ -12,6 +12,8 @@ Admit only a Requirement's evidence not met, a Must Not Ship entry present, or a
 
 ## Return
 
-Return candidate findings, each with an identifier, the claim, the specific contract citation, `file:line`, observed evidence, and a concrete verify-by step stating what would confirm or disprove it. For introduced security or data-loss claims, include the reachable precondition and consequence.
+Return one JSON object matching `contracts/schemas/conformance-reviewer.json`. Set `status` to `done` when the review finished, or `blocked` when required input was missing or the review needed a forbidden action, and name which in `missing_evidence`.
 
-Separate observations with their locations and the reason they do not qualify as defects. The orchestrator records them in the Decision Log or report, without creating tasks. If there are no candidate findings, say so. Report missing evidence as missing; do not invent it or turn it into a question to a person. You neither declare release eligibility nor release anything.
+Each entry in `findings` has an identifier, the claim, the specific contract citation, `file:line`, observed evidence, and a concrete verify-by step stating what would confirm or disprove it. For introduced security or data-loss claims, fill `precondition` and `consequence`. Put commands needing writable scratch state in `test_runner_requests` for an isolated `test-runner`.
+
+Put observations, with their locations and the reason they do not qualify as defects, in `observations`. The orchestrator records them in the Decision Log or report, without creating tasks. An empty `findings` array means no candidates. Report missing evidence in `missing_evidence` as missing; do not invent it or turn it into a question to a person. You neither declare release eligibility nor release anything.

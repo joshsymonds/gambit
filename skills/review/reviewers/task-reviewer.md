@@ -12,6 +12,8 @@ Admit only a Requirement's named evidence not met, a Must Not Ship entry present
 
 ## Return
 
-Return each candidate with an identifier, claim, specific contract citation, `file:line`, observed evidence, and a concrete verify-by step. Security and data-loss claims include the reachable precondition and consequence. Send commands needing writable scratch state to the Orchestrator for an isolated `test-runner`; never imply an unrun check passed.
+Return one JSON object matching `contracts/schemas/task-reviewer.json`. Set `status` to `done` when the review finished, or `blocked` when required input was missing or the review needed a forbidden action, and name which in `missing_evidence`.
 
-Separate observations and their reasons from defects. State when there are no candidates and identify unavailable evidence as missing. You do not issue the task verdict, expand its scope, ask a person for direction, or release anything.
+Each entry in `findings` has an identifier, claim, specific contract citation, `file:line`, observed evidence, and a concrete verify-by step. Security and data-loss findings fill `precondition` and `consequence`. Put commands needing writable scratch state in `test_runner_requests` for an isolated `test-runner`; never imply an unrun check passed.
+
+Put observations and their reasons in `observations`, separate from defects. An empty array means none. Identify unavailable evidence in `missing_evidence`. You do not issue the task verdict, expand its scope, ask a person for direction, or release anything.

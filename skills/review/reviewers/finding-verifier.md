@@ -20,11 +20,13 @@ Do not emit additional findings or restart discovery. The Orchestrator routes un
 
 ## Return
 
-Return one result per supplied identifier, preserving every identifier and giving evidence before the result:
+Return one JSON object matching `contracts/schemas/finding-verifier.json`, with `mode` set to the mode supplied. Set `status` to `done` when every supplied identifier has a result, or `blocked` when required input was missing or verification needed a forbidden action, and name the cause in the affected result's `gap_reason`.
 
-- Contract citation and claim.
-- Revision checked and `file:line` or exact command and output.
+`results` has one entry per supplied identifier, giving evidence before each result:
+
+- `citation` and `claim`, from the contract.
+- `revision` checked, and `evidence` with `file:line` or the exact command and output.
 - Fresh evidence establishing the result, including any missing evidence and its cause.
-- Initial result: confirmed or dropped. Closure result: closed or open, with a review gap reason for open items.
+- `result`: initial confirmed or dropped; closure closed or open, with `gap_reason` for each open item.
 
-No candidate is omitted without a result. Do not invent evidence, ask a person for direction, authorize more work, hand off to another stage, or release anything.
+No candidate is omitted without a result. Put checks needing writable state in `test_runner_requests`. Do not invent evidence, ask a person for direction, authorize more work, hand off to another stage, or release anything.

@@ -14,6 +14,8 @@ Every candidate must cite a Requirement's named evidence not met, a Must Not Shi
 
 ## Return
 
-Return each candidate with an identifier, claim, contract citation, `file:line`, fresh evidence, and a concrete verify-by step. Include reachable preconditions and consequences for security or data-loss claims. Describe checks without exercising destructive effects or disclosing secret values. Send commands needing writable state to the Orchestrator for an isolated `test-runner`.
+Return one JSON object matching `contracts/schemas/integration-reviewer.json`. Set `status` to `done` when the review finished, or `blocked` when required input was missing or the review needed a forbidden action, and name which in `missing_evidence`.
 
-Separate observations with the reason each is not a defect. State when there are no candidates and identify missing evidence. Never ask a person for direction, implement a correction, or release anything.
+Each entry in `findings` has an identifier, claim, contract citation, `file:line`, fresh evidence, and a concrete verify-by step. Security, data-loss, and resource findings fill `precondition` and `consequence`. Describe checks without exercising destructive effects or disclosing secret values. Put commands needing writable state in `test_runner_requests` for an isolated `test-runner`.
+
+Put observations and the reason each is not a defect in `observations`. An empty `findings` array means no candidates; identify missing evidence in `missing_evidence`. Never ask a person for direction, implement a correction, or release anything.
