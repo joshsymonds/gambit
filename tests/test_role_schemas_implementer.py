@@ -63,6 +63,10 @@ class ImplementerSchemaInterfaceTest(unittest.TestCase):
         self.assertIn("status", schema["required"])
         self.assertEqual(schema["properties"]["status"], STATUS)
 
+    def test_schema_carries_no_dollar_schema_key(self) -> None:
+        # Claude Code's --json-schema refuses a schema that names $schema.
+        self.assertNotIn("$schema", load_schema())
+
     def test_schema_uses_only_allowed_keywords_at_every_depth(self) -> None:
         used = {key for node in schema_nodes(load_schema()) for key in node}
         self.assertEqual(used - ALLOWED_KEYWORDS, set())

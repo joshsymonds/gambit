@@ -1,5 +1,4 @@
 {
-  "$schema": "https://json-schema.org/draft/2020-12/schema",
   "title": "Implementer return",
   "description": "The implementer's one return on the step path. Use done for DONE and DONE_WITH_CONCERNS, with a doubt in concerns; needs_context and blocked otherwise. commit is the full id of HEAD after the one commit; the engine fails a done return without it.",
   "type": "object",
