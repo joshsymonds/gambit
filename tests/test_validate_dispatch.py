@@ -22,6 +22,7 @@ class ValidateDispatchTest(unittest.TestCase):
         task: str | int | None = None,
         entry_profile: str | None = None,
         brief_only: bool = False,
+        record_path: Path | None = None,
     ) -> subprocess.CompletedProcess[str]:
         brief_path = workspace / "brief.md"
         brief_path.write_text(brief, encoding="utf-8")
@@ -41,9 +42,9 @@ class ValidateDispatchTest(unittest.TestCase):
         for item in done:
             command.extend(["--done", item])
         if record is not None:
-            record_path = workspace / "state.json"
-            record_path.write_text(json.dumps(record), encoding="utf-8")
-            command.extend(["--record", str(record_path)])
+            target = record_path if record_path is not None else workspace / "state.json"
+            target.write_text(json.dumps(record), encoding="utf-8")
+            command.extend(["--record", str(target)])
         if task is not None:
             command.extend(["--task", str(task)])
         if entry_profile is not None:
@@ -96,7 +97,15 @@ class ValidateDispatchTest(unittest.TestCase):
             "tasks": [task],
         }
 
-    def valid_brief(self, *, files: str = "- src/main.py", anchors: str = "- brief.md:1", test_command: str = "python3 -m unittest") -> str:
+    def valid_brief(
+        self,
+        *,
+        files: str = "- src/main.py",
+        anchors: str = "- brief.md:1",
+        test_command: str = "python3 -m unittest",
+        gate: str | None = None,
+    ) -> str:
+        gate_line = f"\nGate: {gate}" if gate is not None else ""
         return f"""## Goal
 Implement the requested validator behavior.
 
@@ -122,7 +131,7 @@ Standard library only.
 - R13: Brief checks are enforced by the validator.
 
 ## Test command
-Test command: {test_command}
+Test command: {test_command}{gate_line}
 """
 
     def test_missing_heading_is_rejected(self) -> None:
@@ -665,6 +674,144 @@ Test command: {test_command}
             )
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
             self.assertEqual(result.stdout, "")
+
+    def nested_record(self, workspace: Path) -> Path:
+        """A record two directories below the epic directory that holds epic.md."""
+        epic = workspace / "epic"
+        (epic / "efforts" / "1").mkdir(parents=True)
+        (epic / "epic.md").write_text("# Epic\n", encoding="utf-8")
+        return epic / "efforts" / "1" / "state.json"
+
+    def run_gate_brief(
+        self, workspace: Path, gate: str, record_path: Path
+    ) -> subprocess.CompletedProcess[str]:
+        revision = self.git(workspace, "rev-parse", "HEAD").stdout.strip()
+        record = self.valid_record()
+        record["tasks"][0]["dispatch"]["revision"] = revision
+        return self.run_validator(
+            self.valid_brief(anchors="- source.py:1", gate=gate),
+            workspace,
+            record=record,
+            task="validate-record",
+            entry_profile="luna-low",
+            record_path=record_path,
+        )
+
+    def test_gate_named_in_epic_gates_file_passes(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            self.make_git_base(workspace)
+            record_path = self.nested_record(workspace)
+            (workspace / "epic" / "gates.toml").write_text("[gates.check]\n", encoding="utf-8")
+            result = self.run_gate_brief(workspace, "check", record_path)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_gate_named_only_in_workspace_project_file_passes(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            self.make_git_base(workspace)
+            record_path = self.nested_record(workspace)
+            (workspace / "epic" / "gates.toml").write_text("[gates.check]\n", encoding="utf-8")
+            (workspace / ".orrery").mkdir()
+            (workspace / ".orrery" / "project.toml").write_text("[gates.lint]\n", encoding="utf-8")
+            result = self.run_gate_brief(workspace, "lint", record_path)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_unknown_gate_name_is_named_defect(self) -> None:
+        for gates_text in (None, "[gates.other]\n", "[gates]\ncheck = 1\n"):
+            with self.subTest(gates_text=gates_text), self.make_workspace() as temporary:
+                workspace = Path(temporary)
+                self.make_git_base(workspace)
+                record_path = self.nested_record(workspace)
+                if gates_text is not None:
+                    (workspace / "epic" / "gates.toml").write_text(gates_text, encoding="utf-8")
+                result = self.run_gate_brief(workspace, "check", record_path)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("[gates.check]", result.stdout)
+                self.assertNotIn("Traceback", result.stderr)
+
+    def test_brief_without_gate_line_reads_no_gates_file(self) -> None:
+        for unreadable in (False, True):
+            with self.subTest(unreadable=unreadable), self.make_workspace() as temporary:
+                workspace = Path(temporary)
+                revision = self.make_git_base(workspace)
+                record_path = self.nested_record(workspace)
+                if unreadable:
+                    (workspace / "epic" / "gates.toml").mkdir()
+                    (workspace / ".orrery").mkdir()
+                    (workspace / ".orrery" / "project.toml").mkdir()
+                record = self.valid_record()
+                record["tasks"][0]["dispatch"]["revision"] = revision
+                result = self.run_validator(
+                    self.valid_brief(anchors="- source.py:1"),
+                    workspace,
+                    record=record,
+                    task="validate-record",
+                    entry_profile="luna-low",
+                    record_path=record_path,
+                )
+                self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_unreadable_gates_file_is_named_defect(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            self.make_git_base(workspace)
+            record_path = self.nested_record(workspace)
+            (workspace / "epic" / "gates.toml").mkdir()
+            result = self.run_gate_brief(workspace, "check", record_path)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("could not read", result.stdout)
+            self.assertIn("gates.toml", result.stdout)
+            self.assertNotIn("Traceback", result.stderr)
+
+    def test_unparseable_gates_file_is_named_defect(self) -> None:
+        for relative in (("epic", "gates.toml"), (".orrery", "project.toml")):
+            with self.subTest(file="/".join(relative)), self.make_workspace() as temporary:
+                workspace = Path(temporary)
+                self.make_git_base(workspace)
+                record_path = self.nested_record(workspace)
+                path = workspace.joinpath(*relative)
+                path.parent.mkdir(exist_ok=True)
+                path.write_text("[gates.check\n", encoding="utf-8")
+                result = self.run_gate_brief(workspace, "check", record_path)
+                self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+                self.assertIn("could not parse", result.stdout)
+                self.assertIn(path.name, result.stdout)
+                self.assertNotIn("Traceback", result.stderr)
+
+    def test_gates_table_that_is_not_a_table_is_named_defect(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            self.make_git_base(workspace)
+            record_path = self.nested_record(workspace)
+            (workspace / "epic" / "gates.toml").write_text("gates = 1\n", encoding="utf-8")
+            result = self.run_gate_brief(workspace, "check", record_path)
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("must be a table", result.stdout)
+            self.assertNotIn("Traceback", result.stderr)
+
+    def test_multiple_gate_lines_are_named_defect(self) -> None:
+        with self.make_workspace() as temporary:
+            workspace = Path(temporary)
+            revision = self.make_git_base(workspace)
+            record_path = self.nested_record(workspace)
+            (workspace / "epic" / "gates.toml").write_text(
+                "[gates.check]\n[gates.lint]\n", encoding="utf-8"
+            )
+            record = self.valid_record()
+            record["tasks"][0]["dispatch"]["revision"] = revision
+            brief = self.valid_brief(anchors="- source.py:1", gate="check") + "Gate: lint\n"
+            result = self.run_validator(
+                brief,
+                workspace,
+                record=record,
+                task="validate-record",
+                entry_profile="luna-low",
+                record_path=record_path,
+            )
+            self.assertEqual(result.returncode, 1, result.stdout + result.stderr)
+            self.assertIn("Gate lines", result.stdout)
+            self.assertNotIn("Traceback", result.stderr)
 
 
 if __name__ == "__main__":

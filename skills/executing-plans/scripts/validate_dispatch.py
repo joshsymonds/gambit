@@ -11,6 +11,7 @@ import json
 import re
 import subprocess
 import sys
+import tomllib
 from pathlib import Path, PurePosixPath
 from typing import Sequence
 
@@ -33,6 +34,7 @@ ANCHOR_RE = re.compile(
     r"(?![A-Za-z0-9_./-])"
 )
 TEST_COMMAND_RE = re.compile(r"^\s*Test command:\s*(.*?)\s*$", re.MULTILINE)
+GATE_RE = re.compile(r"^[ \t]*Gate:[ \t]*(.*?)[ \t]*$", re.MULTILINE)
 
 
 def section_map(text: str) -> tuple[list[str], dict[str, str]]:
@@ -133,9 +135,50 @@ def recorded_done_commands(record_path: Path) -> tuple[list[str], list[str]]:
     return commands, defects
 
 
+def declared_gates(path: Path) -> tuple[set[str], list[str]]:
+    try:
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return set(), []
+    except (OSError, UnicodeError) as error:
+        return set(), [f"gates: could not read {path}: {error}"]
+    except tomllib.TOMLDecodeError as error:
+        return set(), [f"gates: could not parse {path}: {error}"]
+    gates = data.get("gates", {})
+    if not isinstance(gates, dict):
+        return set(), [f"gates: [gates] in {path} must be a table"]
+    return {name for name, table in gates.items() if isinstance(table, dict)}, []
+
+
+def gate_defects(name: str, record_path: Path, workspace: Path) -> list[str]:
+    epic_dir = next(
+        (
+            directory
+            for directory in record_path.resolve().parents
+            if (directory / "epic.md").is_file()
+        ),
+        None,
+    )
+    sources = [workspace / ".orrery" / "project.toml"]
+    if epic_dir is not None:
+        sources.insert(0, epic_dir / "gates.toml")
+    defects: list[str] = []
+    found = False
+    for source in sources:
+        names, source_defects = declared_gates(source)
+        if name in names:
+            found = True
+        defects.extend(source_defects)
+    if not found:
+        locations = " or ".join(str(source) for source in sources)
+        defects.append(f"Gate: {name!r} names no [gates.{name}] table in {locations}")
+    return defects
+
+
 def validate(
     text: str,
     workspace: Path,
+    record_path: Path,
     done_commands: Sequence[str],
     base_revision: str | None = None,
 ) -> list[str]:
@@ -252,6 +295,14 @@ def validate(
                 f"Test command: {test_command!r} does not match any Done fast check ({expected})"
             )
 
+        gate_names = GATE_RE.findall(sections["Test command"])
+        if len(gate_names) > 1:
+            defects.append(
+                f"Test command: {len(gate_names)} Gate lines; a brief names exactly one gate"
+            )
+        elif gate_names:
+            defects.extend(gate_defects(gate_names[0], record_path, root))
+
     return defects
 
 
@@ -366,6 +417,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     defects = validate(
         text,
         args.workspace,
+        args.record,
         done_commands,
         base_revision=base_revision,
     )
