@@ -99,6 +99,12 @@ class StepsReferenceTest(unittest.TestCase):
         self.assertIn("orrery's named-gates release (L1b)", line)
         self.assertIsNone(re.search(r"\d+\.\d+", line))
 
+    def test_effort_brief_carries_each_gate_name_and_gates_file(self) -> None:
+        self.assertRegex(
+            self.text,
+            r"effort brief carries[^.]*\bname\b[^.]*absolute path[^.]*`gates\.toml`",
+        )
+
     def test_done_end_gives_the_gate_its_evidence_and_integrates_the_commit(self) -> None:
         for phrase in (
             "`head`, `ancestry`, `clean`, and `owned`",
@@ -332,6 +338,17 @@ class BrainstormingRoutingTest(unittest.TestCase):
 
     def test_names_steps_by_path_without_the_context_stamp(self) -> None:
         self.assertNotIn(".claude/settings.json", self.text)
+
+
+class EffortBriefTemplateTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = read("skills/brainstorming/TEMPLATES.md")
+
+    def test_base_field_names_each_gate_name_and_gates_file(self) -> None:
+        base = section(self.text, "Base")
+        self.assertRegex(base, r"\bgate names?\b")
+        self.assertIn("absolute `gates.toml`", base)
 
 
 class ReadmeDispatchTest(unittest.TestCase):

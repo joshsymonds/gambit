@@ -116,7 +116,7 @@ The Director writes an effort's brief only once dependency-ready, from the accep
 [The level of care with the row that set it, each applicable failure row with its What we do, applicable What we won't do entries, assumption If-wrong clauses, the Quality Bar, and Decision Log entries touching these files.]
 
 ## Base
-[Give the accepted base, branch `effort/<epic-slug>-<n>`, check commands, and the head's `efforts_admitted`.]
+[Accepted base; branch `effort/<epic-slug>-<n>`; checks; head's `efforts_admitted`; gate names; absolute `gates.toml` path.]
 
 ## Report shape
 [Cap the report at 400 words.]

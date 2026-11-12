@@ -38,6 +38,8 @@ An implementer step is a writing step. Its `workspace` is the task's own linked 
 - `gateName`: the name on the brief's `Gate:` line; orrery's named-gates release (L1b) takes it with `gatesFile`.
 - `gatesFile`: the absolute path of `gates.toml` in the epic's record directory.
 
+The effort brief carries, for each gate, its name and the absolute path of the epic's `gates.toml`; the effort orchestrator fills `gateName` and `gatesFile` from it.
+
 The name comes from the contract's `Steps:` checks line (`skills/brainstorming/TEMPLATES.md`), resolved in `gates.toml`, then in `.orrery/project.toml` at the top of the step's `workspace`. An epic accepted before 2.11.0 has no `gates.toml`: the Director logs one Decision Log line naming the gate and writes `gates.toml` from its `Steps:` line's argv and limit.
 
 ## Workspace and revision
