@@ -61,19 +61,43 @@ class StepsReferenceTest(unittest.TestCase):
             "`readOnly`: false.",
             "`ownedPaths`: exactly the brief's Files owned.",
             "`doneValue`: `done`.",
-            "`gate`: the per-task gate as an absolute argv",
-            "`~/.local/share/claude-heavy/heavy`",
-            '`["/home/<user>/.local/share/claude-heavy/heavy", "just", "check"]`',
-            "`scripts/in-devenv -c '<command>'`",
-            "`gateLimitSeconds`: that gate's limit in seconds.",
-            "`Steps:`",
-            "skills/brainstorming/TEMPLATES.md",
-            "Decision Log",
+            "`gateName`: the name on the brief's `Gate:` line; orrery's named-gates release (L1b) takes it with `gatesFile`.",
+            "`gatesFile`: the absolute path of `gates.toml` in the epic's record directory.",
+            "The name comes from the contract's `Steps:` checks line (`skills/brainstorming/TEMPLATES.md`)",
+            "resolved in `gates.toml`, then in `.orrery/project.toml` at the top of the step's `workspace`",
+            "An epic accepted before 2.11.0 has no `gates.toml`",
+            "the Director logs one Decision Log line naming the gate and writes `gates.toml` from its `Steps:` line's argv and limit.",
             "orrery v0.14.0 docs/contract.md",
             "StartStep checks each field",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.text)
+
+    def test_implementer_arguments_pass_gate_name_and_file_and_no_argv_gate(self) -> None:
+        implementer = re.search(r"(?ms)^### Implementer steps\n(.*?)(?=^## )", self.text)
+        body = implementer.group(1) if implementer else ""
+        keys = set(re.findall(r"(?m)^- `([A-Za-z]+)`:", body))
+        self.assertEqual(
+            keys,
+            {
+                "agent",
+                "schema",
+                "prompt",
+                "workspace",
+                "revision",
+                "readOnly",
+                "ownedPaths",
+                "doneValue",
+                "gateName",
+                "gatesFile",
+            },
+        )
+        self.assertNotIn("gate", keys)
+        self.assertNotIn("gateLimitSeconds", keys)
+        gate_name = re.search(r"(?m)^- `gateName`:.*$", body)
+        line = gate_name.group(0) if gate_name else ""
+        self.assertIn("orrery's named-gates release (L1b)", line)
+        self.assertIsNone(re.search(r"\d+\.\d+", line))
 
     def test_done_end_gives_the_gate_its_evidence_and_integrates_the_commit(self) -> None:
         for phrase in (
