@@ -23,6 +23,7 @@ class Implementer:
     worktree: Path
     owned_paths: tuple[str, ...]
     commit_message: str
+    commit: str | None = None
 
 
 @dataclass(frozen=True)
@@ -40,6 +41,7 @@ class PreparedImplementer:
     staged_diff_path: Path
     tree: str
     fingerprint: str
+    head: str
 
 
 @dataclass(frozen=True)
@@ -164,6 +166,11 @@ def load_manifest(path: Path) -> Manifest:
         name = require_string(implementer_data, "name", label)
         worktree = manifest_path(require_string(implementer_data, "worktree", label), parent)
         commit_message = require_string(implementer_data, "commit_message", label)
+        commit = (
+            require_string(implementer_data, "commit", label)
+            if "commit" in implementer_data
+            else None
+        )
         owned_value = implementer_data.get("owned_paths")
         if (
             not isinstance(owned_value, list)
@@ -190,7 +197,7 @@ def load_manifest(path: Path) -> Manifest:
             owned_path_implementers[owned_path] = name
         names.add(name)
         worktrees.add(worktree)
-        implementers.append(Implementer(name, worktree, owned_paths, commit_message))
+        implementers.append(Implementer(name, worktree, owned_paths, commit_message, commit))
 
     if epic == integration or epic in worktrees or integration in worktrees:
         fail("epic, integration, and implementer worktree paths must be distinct")
@@ -278,6 +285,36 @@ def worktree_diff(worktree: Path) -> bytes:
     ).stdout
 
 
+def committed_diff(worktree: Path, base: str, commit: str) -> bytes:
+    return git(
+        worktree,
+        "-c",
+        "core.quotePath=false",
+        "diff",
+        "--binary",
+        "--full-index",
+        "--no-ext-diff",
+        "--no-textconv",
+        base,
+        commit,
+        "--",
+    ).stdout
+
+
+def committed_change_paths(worktree: Path, base: str, commit: str) -> tuple[str, ...]:
+    output = git(
+        worktree,
+        "diff",
+        "--name-only",
+        "-z",
+        "--no-renames",
+        base,
+        commit,
+        "--",
+    ).stdout
+    return tuple(os.fsdecode(entry) for entry in output.split(b"\0") if entry)
+
+
 def untracked_artifact_fingerprint(worktree: Path, status: bytes) -> bytes:
     digest = hashlib.sha256()
     for entry in status.split(b"\0"):
@@ -354,6 +391,52 @@ def require_snapshot_head(
         fail(f"{label} must be exactly at base {base}; found {captured.head}")
 
 
+def resolve_implementer_commit(implementer: Implementer, revision: str) -> str:
+    result = git(
+        implementer.worktree,
+        "rev-parse",
+        "--verify",
+        "--quiet",
+        f"{revision}^{{commit}}",
+        check=False,
+    )
+    if result.returncode:
+        fail(f"implementer {implementer.name} commit {revision!r} does not resolve to a commit")
+    return output_text(result)
+
+
+def require_committed_snapshot(captured: WorktreeSnapshot, commit: str, name: str) -> None:
+    if captured.head != commit:
+        fail(f"implementer {name} HEAD must be exactly at commit {commit}; found {captured.head}")
+    if captured.status:
+        fail(f"implementer {name} worktree must be clean at commit {commit}")
+
+
+def validate_committed_implementer(implementer: Implementer, revision: str, base: str) -> None:
+    commit = resolve_implementer_commit(implementer, revision)
+    require_committed_snapshot(snapshot(implementer.worktree, base), commit, implementer.name)
+    ancestry = git(
+        implementer.worktree,
+        "merge-base",
+        "--is-ancestor",
+        base,
+        commit,
+        check=False,
+    )
+    if ancestry.returncode:
+        fail(f"implementer {implementer.name} commit {commit} is not based on base {base}")
+    paths = committed_change_paths(implementer.worktree, base, commit)
+    if not paths:
+        fail(f"implementer {implementer.name} has no changes")
+    outside = sorted(set(paths) - set(implementer.owned_paths))
+    if outside:
+        rendered = ", ".join(repr(path) for path in outside)
+        fail(
+            f"implementer {implementer.name} changed paths outside its exact owned_paths "
+            f"allowlist: {rendered}"
+        )
+
+
 def validate_initial_state(manifest: Manifest, base: str) -> str:
     epic = manifest.epic_worktree
     if not epic.is_dir():
@@ -374,6 +457,9 @@ def validate_initial_state(manifest: Manifest, base: str) -> str:
             fail(f"implementer {implementer.name} worktree does not exist: {implementer.worktree}")
         if common_directory(implementer.worktree) != common:
             fail(f"implementer {implementer.name} is not a worktree of the epic repository")
+        if implementer.commit is not None:
+            validate_committed_implementer(implementer, implementer.commit, base)
+            continue
         implementer_snapshot = snapshot(implementer.worktree, base)
         require_snapshot_head(implementer_snapshot, base, f"implementer {implementer.name}")
         paths = changed_paths(implementer_snapshot.status)
@@ -389,8 +475,11 @@ def validate_initial_state(manifest: Manifest, base: str) -> str:
     return epic_snapshot.fingerprint
 
 
-def prepare_implementer(implementer: Implementer, base: str, patch_directory: Path) -> PreparedImplementer:
-    before = snapshot(implementer.worktree, base)
+def stage_owned_paths(
+    implementer: Implementer,
+    base: str,
+    before: WorktreeSnapshot,
+) -> tuple[bytes, str]:
     with tempfile.TemporaryDirectory(prefix="gambit-integration-index-") as tempdir:
         env = os.environ.copy()
         env["GIT_INDEX_FILE"] = str(Path(tempdir) / "index")
@@ -406,23 +495,38 @@ def prepare_implementer(implementer: Implementer, base: str, patch_directory: Pa
         staged_diff = full_index_diff(implementer.worktree, base, env=env)
         if not staged_diff:
             fail(f"implementer {implementer.name} has no changes after staging owned_paths")
-        descriptor, raw_patch_path = tempfile.mkstemp(
-            prefix="implementer-",
-            suffix=".patch",
-            dir=patch_directory,
-        )
-        with os.fdopen(descriptor, "wb") as patch_stream:
-            patch_stream.write(staged_diff)
         tree = output_text(git(implementer.worktree, "write-tree", env=env))
-        after = snapshot(implementer.worktree, base)
-        if after.fingerprint != before.fingerprint:
-            fail(f"implementer {implementer.name} changed while being inspected")
-        return PreparedImplementer(
-            implementer=implementer,
-            staged_diff_path=Path(raw_patch_path),
-            tree=tree,
-            fingerprint=after.fingerprint,
-        )
+    return staged_diff, tree
+
+
+def prepare_implementer(implementer: Implementer, base: str, patch_directory: Path) -> PreparedImplementer:
+    before = snapshot(implementer.worktree, base)
+    if implementer.commit is None:
+        staged_diff, tree = stage_owned_paths(implementer, base, before)
+        recorded_head = base
+    else:
+        commit = resolve_implementer_commit(implementer, implementer.commit)
+        require_committed_snapshot(before, commit, implementer.name)
+        staged_diff = committed_diff(implementer.worktree, base, commit)
+        tree = output_text(git(implementer.worktree, "rev-parse", f"{commit}^{{tree}}"))
+        recorded_head = commit
+    descriptor, raw_patch_path = tempfile.mkstemp(
+        prefix="implementer-",
+        suffix=".patch",
+        dir=patch_directory,
+    )
+    with os.fdopen(descriptor, "wb") as patch_stream:
+        patch_stream.write(staged_diff)
+    after = snapshot(implementer.worktree, base)
+    if after.fingerprint != before.fingerprint:
+        fail(f"implementer {implementer.name} changed while being inspected")
+    return PreparedImplementer(
+        implementer=implementer,
+        staged_diff_path=Path(raw_patch_path),
+        tree=tree,
+        fingerprint=after.fingerprint,
+        head=recorded_head,
+    )
 
 
 def expose_diff(prepared: PreparedImplementer) -> None:
@@ -453,7 +557,10 @@ def revalidate(
     for prepared in prepared_implementers:
         implementer = prepared.implementer
         implementer_snapshot = snapshot(implementer.worktree, base)
-        require_snapshot_head(implementer_snapshot, base, f"implementer {implementer.name}")
+        if implementer.commit is None:
+            require_snapshot_head(implementer_snapshot, base, f"implementer {implementer.name}")
+        else:
+            require_committed_snapshot(implementer_snapshot, prepared.head, implementer.name)
         paths = changed_paths(implementer_snapshot.status)
         outside = sorted(set(paths) - set(implementer.owned_paths))
         if outside:

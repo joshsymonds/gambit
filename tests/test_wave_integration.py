@@ -83,21 +83,26 @@ class WaveRepository:
         gate: list[str],
         *,
         base: str | None = None,
+        commits: dict[str, str] | None = None,
     ) -> None:
+        named_commits = commits or {}
+        entries: list[dict[str, object]] = []
+        for name, owned_paths, commit_message in implementers:
+            entry: dict[str, object] = {
+                "name": name,
+                "worktree": str(self.implementers[name]),
+                "owned_paths": owned_paths,
+                "commit_message": commit_message,
+            }
+            if name in named_commits:
+                entry["commit"] = named_commits[name]
+            entries.append(entry)
         payload = {
             "base": self.base if base is None else base,
             "epic_worktree": str(self.epic),
             "integration_worktree": str(self.integration),
             "gate": gate,
-            "implementers": [
-                {
-                    "name": name,
-                    "worktree": str(self.implementers[name]),
-                    "owned_paths": owned_paths,
-                    "commit_message": commit_message,
-                }
-                for name, owned_paths, commit_message in implementers
-            ],
+            "implementers": entries,
         }
         self.manifest.write_text(json.dumps(payload), encoding="utf-8")
 
@@ -401,6 +406,145 @@ class WaveIntegrationTest(unittest.TestCase):
         self.assertFalse(first.exists())
         self.assertFalse(second.exists())
         self.assertFalse(self.repo.integration.exists())
+
+    def test_integrates_committed_and_uncommitted_implementers_in_one_wave(self) -> None:
+        committed = self.repo.add_implementer("committed-implementer")
+        uncommitted = self.repo.add_implementer("uncommitted-implementer")
+        (committed / "committed.txt").write_text("committed\n", encoding="utf-8")
+        git(committed, "add", "--", "committed.txt")
+        git(committed, "commit", "-m", "implementer commit")
+        committed_commit = git(committed, "rev-parse", "HEAD").stdout.strip()
+        (uncommitted / "tracked.txt").write_text("uncommitted\n", encoding="utf-8")
+
+        gate_count = self.root / "gate-count"
+        tested_head = self.root / "tested-head"
+        gate = [
+            sys.executable,
+            "-c",
+            (
+                "from pathlib import Path; import subprocess; "
+                f"count=Path({str(gate_count)!r}); "
+                "count.write_text(count.read_text()+'x' if count.exists() else 'x'); "
+                "assert Path('committed.txt').read_text() == 'committed\\n'; "
+                "assert Path('tracked.txt').read_text() == 'uncommitted\\n'; "
+                f"Path({str(tested_head)!r}).write_text("
+                "subprocess.check_output(['git','rev-parse','HEAD'], text=True).strip())"
+            ),
+        ]
+        self.repo.write_manifest(
+            [
+                ("committed-implementer", ["committed.txt"], "integrate committed implementer"),
+                ("uncommitted-implementer", ["tracked.txt"], "integrate uncommitted implementer"),
+            ],
+            gate,
+            commits={"committed-implementer": committed_commit},
+        )
+
+        result = self.repo.integrate()
+
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(gate_count.read_text(encoding="utf-8"), "x")
+        self.assertEqual(tested_head.read_text(encoding="utf-8"), self.repo.head())
+        subjects = git(
+            self.repo.epic,
+            "log",
+            "--reverse",
+            "--format=%s",
+            f"{self.repo.base}..HEAD",
+        ).stdout.splitlines()
+        self.assertEqual(
+            subjects,
+            ["integrate committed implementer", "integrate uncommitted implementer"],
+        )
+        self.assertEqual(
+            (self.repo.epic / "committed.txt").read_text(encoding="utf-8"),
+            "committed\n",
+        )
+        self.assertEqual(
+            (self.repo.epic / "tracked.txt").read_text(encoding="utf-8"),
+            "uncommitted\n",
+        )
+        self.assertFalse(committed.exists())
+        self.assertFalse(uncommitted.exists())
+        self.assertFalse(self.repo.integration.exists())
+
+    def committed_wave(self, commit: str, owned_paths: list[str] | None = None) -> None:
+        self.repo.write_manifest(
+            [("committed-implementer", owned_paths or ["tracked.txt"], "committed")],
+            [sys.executable, "-c", f"open({str(self.root / 'gate-count')!r}, 'a').write('x')"],
+            commits={"committed-implementer": commit},
+        )
+
+    def assert_committed_refused(self, implementer: Path, fragment: str) -> None:
+        result = self.repo.integrate()
+
+        self.assertNotEqual(result.returncode, 0, result.stdout)
+        self.assertIn("committed-implementer", result.stderr)
+        self.assertIn(fragment, result.stderr)
+        self.assertEqual(self.repo.head(), self.repo.base)
+        self.assertTrue(implementer.exists())
+        self.assertFalse(self.repo.integration.exists())
+        self.assertFalse((self.root / "gate-count").exists())
+
+    def test_rejects_committed_implementer_whose_head_is_not_its_commit(self) -> None:
+        implementer = self.repo.add_implementer("committed-implementer")
+        (implementer / "tracked.txt").write_text("first\n", encoding="utf-8")
+        git(implementer, "commit", "-am", "first")
+        named = git(implementer, "rev-parse", "HEAD").stdout.strip()
+        (implementer / "tracked.txt").write_text("second\n", encoding="utf-8")
+        git(implementer, "commit", "-am", "second")
+        self.committed_wave(named)
+
+        self.assert_committed_refused(implementer, "HEAD must be exactly at commit")
+
+    def test_rejects_dirty_committed_implementer(self) -> None:
+        implementer = self.repo.add_implementer("committed-implementer")
+        (implementer / "tracked.txt").write_text("first\n", encoding="utf-8")
+        git(implementer, "commit", "-am", "first")
+        named = git(implementer, "rev-parse", "HEAD").stdout.strip()
+        (implementer / "tracked.txt").write_text("dirty\n", encoding="utf-8")
+        self.committed_wave(named)
+
+        self.assert_committed_refused(implementer, "must be clean")
+
+    def test_rejects_committed_implementer_not_based_on_base(self) -> None:
+        implementer = self.repo.add_implementer("committed-implementer")
+        git(implementer, "checkout", "--orphan", "unrelated")
+        git(implementer, "rm", "-r", "-q", "-f", "--", ".")
+        (implementer / "unrelated.txt").write_text("unrelated\n", encoding="utf-8")
+        git(implementer, "add", "--", "unrelated.txt")
+        git(implementer, "commit", "-m", "unrelated history")
+        named = git(implementer, "rev-parse", "HEAD").stdout.strip()
+        self.committed_wave(named, ["unrelated.txt"])
+
+        self.assert_committed_refused(implementer, "is not based on base")
+
+    def test_rejects_committed_implementer_with_empty_change_set(self) -> None:
+        implementer = self.repo.add_implementer("committed-implementer")
+        git(implementer, "commit", "--allow-empty", "-m", "empty")
+        named = git(implementer, "rev-parse", "HEAD").stdout.strip()
+        self.committed_wave(named)
+
+        self.assert_committed_refused(implementer, "has no changes")
+
+    def test_rejects_committed_implementer_changing_a_path_outside_owned_paths(self) -> None:
+        implementer = self.repo.add_implementer("committed-implementer")
+        (implementer / "tracked.txt").write_text("allowed\n", encoding="utf-8")
+        (implementer / "rogue.bin").write_bytes(b"\x00rogue")
+        git(implementer, "add", "--", ".")
+        git(implementer, "commit", "-m", "mixed")
+        named = git(implementer, "rev-parse", "HEAD").stdout.strip()
+        self.committed_wave(named)
+
+        self.assert_committed_refused(implementer, "rogue.bin")
+
+    def test_rejects_committed_implementer_naming_a_missing_commit(self) -> None:
+        implementer = self.repo.add_implementer("committed-implementer")
+        (implementer / "tracked.txt").write_text("first\n", encoding="utf-8")
+        git(implementer, "commit", "-am", "first")
+        self.committed_wave("no-such-commit")
+
+        self.assert_committed_refused(implementer, "does not resolve to a commit")
 
     def test_rejects_an_empty_implementer_before_creating_integration_worktree(self) -> None:
         implementer = self.repo.add_implementer("empty-implementer")

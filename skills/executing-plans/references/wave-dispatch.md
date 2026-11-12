@@ -21,7 +21,7 @@ For a multi-task effort, invoke `scripts/integrate_wave.py` by absolute path thr
 }
 ```
 
-`base` is the effort's current base: the revision its workspace and every listed implementer sit at when this wave begins. `gate` is the full Done gate as an argument vector; use a shell invocation when Done requires shell syntax. `owned_paths` lists every writable path, including new files, deletions, binary files, symlinks, and mode changes. Implementers leave changes uncommitted. Transporting only an ordinary diff would omit some of these states.
+`base` is the effort's current base: the revision its workspace and every listed implementer sit at when this wave begins. `gate` is the full Done gate as an argument vector; use a shell invocation when Done requires shell syntax. `owned_paths` lists every writable path, including new files, deletions, binary files, symlinks, and mode changes. Implementers leave changes uncommitted. Transporting only an ordinary diff would omit some of these states. An entry may instead name `commit`, the accepted commit in its clean worktree, based on `base`; the script integrates that commit's tree.
 
 ## Transaction
 
@@ -30,7 +30,7 @@ For a multi-task effort, invoke `scripts/integrate_wave.py` by absolute path thr
 3. Run the full Done gate once on the combined candidate. A nonzero exit or any tracked, staged, or non-ignored untracked integration artifact fails the transaction.
 4. Revalidate the candidate, implementers, and epic. Fast-forward the epic from the recorded base only to the exact clean candidate revision that passed the gate.
 5. Remove transient workspaces only after that fast-forward succeeds. Failures before fast-forward retain workspaces and evidence without advancing the epic; preserve any rejected revision on `candidate/<effort>` and route its NOT DONE record through the skill's integration step. A cleanup failure is reported after the tested revision is accepted: record that revision and the remaining workspace paths rather than treating the candidate as rejected. Record successful candidate revisions in the task gates.
-6. Move each task still in routing to the new effort base before its next dispatch or gate, and only while its implementer is not running: `git -C <workspace> checkout --detach <new-base>`. Disjoint ownership lets the checkout carry the task's uncommitted owned-file changes unchanged. Re-run its test command there before gating. If the checkout refuses, re-dispatch the task from a fresh workspace at the new base with its gate history. Neither move spends an attempt.
+6. Move each task still in routing to the new effort base before its next dispatch or gate, and only while its implementer is not running: `git -C <workspace> checkout --detach <new-base>`. Disjoint ownership lets the checkout carry the task's uncommitted owned-file changes unchanged. A committed task moves by `git -C <workspace> rebase --onto <new-base> <old-base>`; its next step starts at the new base, and its next manifest names the rebased commit. Re-run its test command there before gating. If the checkout or rebase refuses, re-dispatch the task from a fresh workspace at the new base with its gate history. Neither move spends an attempt.
 
 ## Efforts
 
