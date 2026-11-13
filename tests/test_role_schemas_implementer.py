@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import re
 import unittest
 from pathlib import Path
 
@@ -23,21 +22,24 @@ ALLOWED_KEYWORDS = {
 }
 STRING = {"type": "string"}
 STATUS = {"type": "string", "enum": ["done", "needs_context", "blocked"]}
+FIELD_ORDER = ("status", "summary", "commit", "red_evidence", "green_evidence")
 EXPECTED_PROPERTIES = {
     "status": STATUS,
     "summary": STRING,
     "commit": STRING,
-    "concerns": STRING,
-    "changed_paths": {"type": "array", "items": STRING},
-    "test_command": STRING,
-    "test_result": STRING,
     "red_evidence": STRING,
     "green_evidence": STRING,
-    "requirement_tests": STRING,
-    "premises": STRING,
-    "notes": STRING,
 }
-EXPECTED_REQUIRED = set(EXPECTED_PROPERTIES) - {"commit"}
+EXPECTED_REQUIRED = set(FIELD_ORDER) - {"commit"}
+DROPPED_FIELDS = (
+    "concerns",
+    "changed_paths",
+    "test_command",
+    "test_result",
+    "requirement_tests",
+    "premises",
+    "notes",
+)
 
 
 def load_schema() -> dict:
@@ -74,21 +76,31 @@ class ImplementerSchemaInterfaceTest(unittest.TestCase):
         status = load_schema()["properties"]["status"]
         self.assertEqual(status["enum"], ["done", "needs_context", "blocked"])
 
-    def test_commit_and_concerns_are_string_properties(self) -> None:
-        properties = load_schema()["properties"]
-        self.assertEqual(properties["commit"], STRING)
-        self.assertEqual(properties["concerns"], STRING)
+    def test_commit_is_a_string_property(self) -> None:
+        self.assertEqual(load_schema()["properties"]["commit"], STRING)
 
     def test_schema_carries_named_fields(self) -> None:
         self.assertEqual(load_schema()["properties"], EXPECTED_PROPERTIES)
 
+    def test_schema_fields_keep_their_order(self) -> None:
+        self.assertEqual(list(load_schema()["properties"]), list(FIELD_ORDER))
+
     def test_required_is_every_field_except_commit(self) -> None:
         self.assertEqual(set(load_schema()["required"]), EXPECTED_REQUIRED)
+
+    def test_schema_description_names_no_dropped_field(self) -> None:
+        description = load_schema()["description"]
+        for name in DROPPED_FIELDS:
+            with self.subTest(field=name):
+                self.assertNotIn(name, description)
 
 
 class ImplementerContractSchemaTest(unittest.TestCase):
     def setUp(self) -> None:
         self.text = IMPLEMENTER_CONTRACT.read_text(encoding="utf-8")
+
+    def paragraph(self, opening: str) -> str:
+        return next(line for line in self.text.splitlines() if line.startswith(opening))
 
     def test_contract_names_its_schema_as_return(self) -> None:
         self.assertIn("contracts/schemas/implementer.json", self.text)
@@ -116,6 +128,23 @@ class ImplementerContractSchemaTest(unittest.TestCase):
             self.text,
             r"(?is)otherwise[^\n]{0,300}\buncommitted\b[^\n]{0,300}\bfour\b",
         )
+
+    def test_contract_asks_for_no_dropped_field(self) -> None:
+        for name in DROPPED_FIELDS:
+            with self.subTest(field=name):
+                self.assertNotIn(f"`{name}`", self.text)
+
+    def test_step_path_return_asks_for_the_schema_facts(self) -> None:
+        step_path = self.paragraph("**Step path.**")
+        for name in ("status", "commit", "summary", "red_evidence", "green_evidence"):
+            with self.subTest(field=name):
+                self.assertIn(f"`{name}`", step_path)
+
+    def test_dispatch_path_return_asks_for_the_same_facts_in_prose(self) -> None:
+        otherwise = self.paragraph("Otherwise, ")
+        for fact in ("summary", "RED", "GREEN"):
+            with self.subTest(fact=fact):
+                self.assertIn(fact, otherwise)
 
 
 if __name__ == "__main__":

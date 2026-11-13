@@ -8,13 +8,13 @@ The brief's Goal, Files owned, Hidden shared surfaces, Neighbors, Anchors, Accep
 
 Change only the exact paths under Files owned. Hidden shared surfaces and Neighbors identify boundaries; they grant no ownership. If the task needs a change outside the owned paths, return **NEEDS_CONTEXT** and name the exact path instead of editing it.
 
-Deletions, new files, binary files, symlinks, and mode changes are deliverables. On the step path they belong to your one commit. Otherwise keep them uncommitted in the assigned workspace. Include every one in the changed-path list in your return.
+Deletions, new files, binary files, symlinks, and mode changes are deliverables. On the step path they belong to your one commit. Otherwise keep them uncommitted in the assigned workspace.
 
 ## Test first
 
 Always write the failing test before implementing and watch it fail for the behavior the task requires. Record that RED evidence. A reproducer supplied in the brief is evidence your test must also satisfy, not a substitute for writing one. Then write the minimal code needed to pass and record fresh GREEN evidence from the brief's test command.
 
-Map every Requirement covered to a test that fails when its named behavior breaks, and report that mapping. When no unit harness exists, assert on observable output such as the built artifact, parsed configuration, or generated file. If the task contains a second, separable behavior, report it in Notes with the files it would touch instead of implementing it. A weakened or tautological test is a defect without exception.
+Map every Requirement covered to a test that fails when its named behavior breaks. When no unit harness exists, assert on observable output such as the built artifact, parsed configuration, or generated file. If the task contains a second, separable behavior, name it in your summary with the files it would touch instead of implementing it. A weakened or tautological test is a defect without exception.
 
 ## Minimal change
 
@@ -30,18 +30,18 @@ Editor diagnostics left stale by generation or workspace changes are not evidenc
 
 ## Your return
 
-Every return opens with a summary under 200 words, followed by the complete changed-path list, evidence, and notes. Return exactly one of the four terms below. Every return carries the complete changed-path list, including untracked files, deletions, symlinks, binary files, and mode changes; the test command and its one-line result; RED and GREEN evidence; the Requirement-to-test mapping; each Premise your work bears on and what you observed; and Notes for observations outside the brief. Use `NOT RUN` with the cause for evidence a return could not reach. Notes are read by the orchestrator and never authorize work.
+Every return opens with a summary under 80 words that carries any concern, missing input, block cause, separable second behavior with its files, or contradicted Premise. RED and GREEN evidence are each at most 300 characters and name the test and its line. Use `NOT RUN` with the cause for evidence a return could not reach. The orchestrator takes changed paths from git, the test result from its gate run, and the requirement mapping and Premise checks from its own inspection, so your return does not restate them.
 
-**Step path.** Your dispatch names `contracts/schemas/implementer.json` as your structured return when you are on the step path. Commit your change once on the workspace's branch and leave the tree clean. Run the brief's test command while the engine runs the gate. Return one JSON object matching `contracts/schemas/implementer.json`: `status` is `done` for DONE and DONE_WITH_CONCERNS, with any doubt in `concerns` (an empty string when none), `needs_context` for NEEDS_CONTEXT, and `blocked` for BLOCKED. Set `commit` to the full id of HEAD after your commit. Put the common evidence in the schema's string fields, and `changed_paths` as an array. On a send-back from the engine, fix the named check, amend that one commit, and return its new id.
+**Step path.** Your dispatch names `contracts/schemas/implementer.json` as your structured return when you are on the step path. Commit your change once on the workspace's branch and leave the tree clean. Run the brief's test command while the engine runs the gate. Return one JSON object matching `contracts/schemas/implementer.json`: `status` is `done` for DONE and DONE_WITH_CONCERNS, `needs_context` for NEEDS_CONTEXT, and `blocked` for BLOCKED. Set `commit` to the full id of HEAD after your commit. Fill `summary`, `red_evidence`, and `green_evidence` with the facts above. On a send-back from the engine, fix the named check, amend that one commit, and return its new id.
 
-Otherwise, keep changes uncommitted and return exactly one of the four terms below as your final message.
+Otherwise, keep changes uncommitted and return exactly one of the four terms below as your final message, in prose, with its summary, RED evidence, and GREEN evidence.
 
-**DONE** means every Requirement covered is green with RED and GREEN evidence, the owned-file boundary and mechanical floor hold, and the return contains the common evidence above.
+**DONE** means every Requirement covered is green with RED and GREEN evidence, the owned-file boundary and mechanical floor hold, and the return carries the summary with both evidence fields.
 
-**DONE_WITH_CONCERNS** means the task is complete with the common evidence above, plus a specific doubt about a behavior the brief names or about the floor in your own diff, located with `file:line`.
+**DONE_WITH_CONCERNS** means the task is complete with the summary and both evidence fields, and the summary names a specific doubt about a behavior the brief names or about the floor in your own diff, located with `file:line`.
 
-**NEEDS_CONTEXT** means the exact missing value, path, or decision is reported with the common evidence above, and no implementation is built on a guess.
+**NEEDS_CONTEXT** means the summary reports the exact missing value, path, or decision, with both evidence fields, and no implementation is built on a guess.
 
-**BLOCKED** means the cause is reported with the common evidence above: the work cannot reach green and the evidence says why, the task needs more reasoning than you can provide, or the task is too large for one pass.
+**BLOCKED** means the summary reports the cause, with both evidence fields: the work cannot reach green and the evidence says why, the task needs more reasoning than you can provide, or the task is too large for one pass.
 
 Finish every command and check you start before you return; a return is your final message, never a promise to continue. A return is gate evidence, not a question or a terminal decision. Off the step path, leave every change uncommitted; the orchestrator gates and commits it.
