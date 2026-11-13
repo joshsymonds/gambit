@@ -42,13 +42,13 @@ Level of care: [the worst row's rating], set by [Fn].
 [One paragraph: the chosen shape, interfaces, data flow, and reason, grounded in cited research.]
 | Alternative | Why not | Reconsider when |
 |---|---|---|
-| [Alternative] | [the reason it loses] | [the specific condition that changes that reason, or never] |
+| [Alternative] | [the reason it loses] | [the condition that changes that reason, or never] |
 
 ## What leaves this machine or can't be undone
 | Step | Target | Undo |
 |---|---|---|
 | 1 [Exact action], so [intended effect] | [exact repository, branch, service, or destination] | [how to reverse it, or none] |
-Then: [the observable facts that must all hold before reporting release].
+Then: [observable facts that must all hold before reporting release].
 
 ## Decisions I need from you
 | Question | Options | I recommend | Because |
@@ -59,14 +59,14 @@ Then: [the observable facts that must all hold before reporting release].
 Done: [exact task fast check with its setup and working directory]; [the integrated candidate's full gate, in order].
 Evidence: [the tests and observable results named under How we'll know].
 Steps: [read-only: schema check; implementer: schema check, then head, ancestry, clean and owned from the task base revision, then the gate, named in `.orrery/project.toml` or defined by this contract as an absolute argv, no shell, under the heavy-command wrapper's absolute path, through the project's development-environment entry if tools live only there, with its needs and limit in seconds.] A Decision Log line changes them for steps started after it.
-Quality Bar: Failing, low-quality, or bad code is unacceptable, but failure to meet a mythic platonic ideal of code or cover literally every imaginable edge case is NOT itself a defect. This bar is FIXED for every epic; write it verbatim — never elicit it, strengthen it, or make it a per-project preference. A defect is exactly one of: a Requirement's named evidence not met; a Must Not Ship entry present; a change outside the task's owned files; a change the contract did not ask for; a violation of the implementer contract's mechanical floor (a suppressed check, a weakened or tautological test, dead code, an unhandled error); or a security or data-loss failure with a reachable precondition that the change itself introduces. Everything else the orchestrator or a reviewer notices is an observation — it may be recorded in the Decision Log and the report; it never becomes work during the run. The craftsmanship asked of the implementer is one line: simple, foundational, secure; match the surrounding code.
+Quality Bar: Failing, low-quality, or bad code is unacceptable, but failure to meet a mythic platonic ideal of code or cover literally every imaginable edge case is NOT itself a defect. This bar is FIXED for every epic; write it verbatim — never elicit it, strengthen it, or make it a per-project preference. A defect is exactly one of: a Requirement's named evidence not met; a Must Not Ship entry present; a change outside the task's owned files; a change the contract did not ask for; a violation of the implementer contract's mechanical floor (a suppressed check, a weakened or tautological test, dead code, an unhandled error); an assertion its declared gate finds does not hold; or a security or data-loss failure with a reachable precondition that the change itself introduces. Everything else the orchestrator or a reviewer notices is an observation — it may be recorded in the Decision Log and the report; it never becomes work during the run. The craftsmanship asked of the implementer is one line: simple, foundational, secure; match the surrounding code.
 ```
 
-After acceptance, "Decisions I need from you" reads `None`, then the settled decisions by id. Acceptance freezes What you asked for, the assumptions with their If-wrong clauses, and the Requirements. Keep later assessments in the Decision Log, never rewriting frozen text. Each entry states the decision or assumption, its reason and evidence, and any affected finding or contract identifier.
+After acceptance, "Decisions I need from you" reads `None`, then the settled decisions by id. Acceptance freezes What you asked for, the assumptions with their If-wrong clauses, and the Requirements. Keep later assessments in the Decision Log, never rewriting frozen text. Each entry states the decision or assumption, its reason and evidence, and the ids it affects.
 
 ### Task brief
 
-Supply the task's workspace, base revision, and applicable contract clauses with this body. Keep Goal plus Acceptance plus Constraints under 250 words total. It carries no implementation steps, code, or diffs. Create only work grounded in the tree now.
+Supply the workspace, base revision, and applicable contract clauses with this body. Keep Goal plus Acceptance plus Constraints under 250 words total. It carries no implementation steps, code, or diffs. Create only work grounded in the tree now.
 
 ```markdown
 ## Goal
@@ -76,7 +76,7 @@ Supply the task's workspace, base revision, and applicable contract clauses with
 - [Exact repository-relative path, including each addition or deletion. No globs or directory allowlists.]
 
 ## Hidden shared surfaces
-[Lockfiles, generated indexes, registries, snapshots, and other implicit writes checked. State None when absent. They grant no ownership; list every edit in Files owned.]
+[Lockfiles, generated indexes, registries, snapshots, and other implicit writes. State None when absent. They grant no ownership; list every edit in Files owned.]
 
 ## Neighbors
 [Every concurrent task and its complete owned-file list, all off-limits. State None for a single task.]
@@ -88,10 +88,10 @@ Supply the task's workspace, base revision, and applicable contract clauses with
 [Name an existing test or reproduction with its expected result, or state behavioral criteria for the failing test written first.]
 
 ## Constraints
-[The level of care with the row that set it. Each applicable failure row quoted with its What we do, so no id arrives without its text. The applicable What we won't do entries, scope, and safety limits.]
+[The level of care with the row that set it. Each applicable failure row quoted with its What we do, so no id arrives without its text. Applicable What we won't do entries, scope, and safety limits.]
 
 ## Requirements covered
-- R1: [Requirement text and its named satisfying evidence.]
+- R1: [Requirement text and its named evidence.]
 
 ## Test command
 Test command: [exact task fast check from Checks the machines run].
@@ -113,7 +113,7 @@ The Director writes an effort's brief only once dependency-ready, from the accep
 [List interfaces published or consumed, in order.]
 
 ## Binding contract
-[The level of care with the row that set it, each applicable failure row with its What we do, applicable What we won't do entries, assumption If-wrong clauses, the Quality Bar, and Decision Log entries touching these files.]
+[The level of care with the row that set it, each applicable failure row with its What we do, applicable What we won't do entries, If-wrong clauses, the Quality Bar, and Decision Log entries touching these files.]
 
 ## Base
 [Accepted base; epic `<repository-id>/<epic-slug>`; `effort/<epic-slug>-<n>`; checks; head's `efforts_admitted`; gate names; absolute `gates.toml`.]
@@ -122,4 +122,4 @@ The Director writes an effort's brief only once dependency-ready, from the accep
 [Cap the report at 400 words.]
 ```
 
-Tasks are pending executable children of the epic, never blocked by it. Owned-file lists are disjoint within the effort. Execution authors tasks needing unfinished interfaces once they exist.
+Tasks are pending executable children of the epic, never blocked by it. Owned-file lists are disjoint within the effort. Author tasks needing unfinished interfaces once they exist.

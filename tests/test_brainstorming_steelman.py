@@ -204,6 +204,13 @@ class BrainstormingStructureTest(unittest.TestCase):
         self.assertEqual(len(lines), 1)
         self.assertEqual(lines[0][len("Quality Bar: "):], expected)
 
+    def test_quality_bar_names_a_gate_assertion_defect(self) -> None:
+        block = re.findall(r"```[^\n]*\n(.*?)\n```", self.templates, re.DOTALL)[0]
+        checks = block.split("## Checks the machines run\n", 1)[1]
+        lines = [line for line in checks.splitlines() if line.startswith("Quality Bar: ")]
+        self.assertEqual(len(lines), 1)
+        self.assertIn("an assertion its declared gate finds does not hold", lines[0])
+
     def test_readme_describes_the_document(self) -> None:
         for heading in CONTRACT_SECTIONS:
             with self.subTest(heading=heading):

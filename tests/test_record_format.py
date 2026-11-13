@@ -361,6 +361,12 @@ class FixtureRecordTest(unittest.TestCase):
         self.assertEqual(len(lines), 1)
         self.assertEqual(lines[0][len("Quality Bar: "):], expected)
 
+    def test_epic_quality_bar_names_a_gate_assertion_defect(self) -> None:
+        checks = self.epic.split("## Checks the machines run\n", 1)[1]
+        lines = [line for line in checks.splitlines() if line.startswith("Quality Bar: ")]
+        self.assertEqual(len(lines), 1)
+        self.assertIn("an assertion its declared gate finds does not hold", lines[0])
+
     def test_epic_content_fits_forty_lines_at_100_columns(self) -> None:
         body = self.epic.split("\n## ", 1)[1].split("\n## Checks the machines run", 1)[0]
         lines = [line.strip() for line in body.splitlines()]
