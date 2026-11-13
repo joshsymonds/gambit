@@ -29,8 +29,10 @@ FINDING_REQUIRED = {"id", "claim", "citation", "location", "evidence", "verify_b
 FINDING_OPTIONAL = {"precondition", "consequence"}
 OBSERVATION_FIELDS = {"location", "observation", "reason"}
 TEST_RUNNER_FIELDS = {"command", "revision"}
-RESULT_REQUIRED = {"id", "citation", "claim", "revision", "evidence", "result"}
+RESULT_REQUIRED = {"id", "evidence", "result"}
 RESULT_OPTIONAL = {"gap_reason"}
+FINDING_VERIFIER_ROOT = {"status", "results", "test_runner_requests"}
+FINDING_VERIFIER_INPUT_ECHOES = ("mode", "citation", "claim", "revision")
 
 
 def load_schema(role: str) -> dict:
@@ -116,13 +118,10 @@ class ReviewerSchemaFieldsTest(unittest.TestCase):
 
 
 class FindingVerifierSchemaFieldsTest(unittest.TestCase):
-    def test_root_fields_are_required(self) -> None:
+    def test_root_properties_are_exactly_the_non_echo_fields(self) -> None:
         schema = load_schema("finding-verifier")
-        self.assertEqual(set(schema["required"]), {"status", "mode", "results", "test_runner_requests"})
-
-    def test_mode_is_initial_or_closure(self) -> None:
-        mode = load_schema("finding-verifier")["properties"]["mode"]
-        self.assertEqual(mode, {"type": "string", "enum": ["initial", "closure"]})
+        self.assertEqual(set(schema["properties"]), FINDING_VERIFIER_ROOT)
+        self.assertEqual(set(schema["required"]), FINDING_VERIFIER_ROOT)
 
     def test_results_items_carry_named_fields_and_result_enum(self) -> None:
         results = load_schema("finding-verifier")["properties"]["results"]
@@ -146,6 +145,13 @@ class ReviewerContractReturnTest(unittest.TestCase):
                 self.assertIn("one JSON object", return_section)
                 self.assertIn("`status`", return_section)
                 self.assertTrue((ROOT / "contracts" / "schemas" / f"{role}.json").is_file())
+
+    def test_finding_verifier_return_names_no_input_echo(self) -> None:
+        text = (REVIEW / "finding-verifier.md").read_text(encoding="utf-8")
+        return_section = text.split("\n## Return\n", 1)[1]
+        for name in FINDING_VERIFIER_INPUT_ECHOES:
+            with self.subTest(field=name):
+                self.assertNotIn(f"`{name}`", return_section)
 
 
 if __name__ == "__main__":

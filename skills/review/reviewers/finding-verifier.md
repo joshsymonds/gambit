@@ -20,12 +20,11 @@ Do not emit additional findings or restart discovery. The Orchestrator routes un
 
 ## Return
 
-Return one JSON object matching `contracts/schemas/finding-verifier.json`, with `mode` set to the mode supplied. Set `status` to `done` when every supplied identifier has a result, or `blocked` when required input was missing or verification needed a forbidden action, and name the cause in the affected result's `gap_reason`.
+Return one JSON object matching `contracts/schemas/finding-verifier.json`. Set `status` to `done` when every supplied identifier has a result, or `blocked` when required input was missing or verification needed a forbidden action, and name the cause in the affected result's `gap_reason`.
 
 `results` has one entry per supplied identifier, giving evidence before each result:
 
-- `citation` and `claim`, from the contract.
-- `revision` checked, and `evidence` with `file:line` or the exact command and output.
+- `evidence` with `file:line` or the exact command and output.
 - Fresh evidence establishing the result, including any missing evidence and its cause.
 - `result`: initial confirmed or dropped; closure closed or open, with `gap_reason` for each open item.
 

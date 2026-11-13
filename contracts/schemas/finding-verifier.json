@@ -2,15 +2,11 @@
   "title": "Finding verifier return",
   "type": "object",
   "additionalProperties": false,
-  "required": ["status", "mode", "results", "test_runner_requests"],
+  "required": ["status", "results", "test_runner_requests"],
   "properties": {
     "status": {
       "type": "string",
       "enum": ["done", "blocked"]
-    },
-    "mode": {
-      "type": "string",
-      "enum": ["initial", "closure"]
     },
     "results": {
       "type": "array",
@@ -18,12 +14,9 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["id", "citation", "claim", "revision", "evidence", "result"],
+        "required": ["id", "evidence", "result"],
         "properties": {
           "id": {"type": "string"},
-          "citation": {"type": "string"},
-          "claim": {"type": "string"},
-          "revision": {"type": "string"},
           "evidence": {"type": "string"},
           "result": {
             "type": "string",
