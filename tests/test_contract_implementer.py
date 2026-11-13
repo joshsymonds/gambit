@@ -83,9 +83,52 @@ class ImplementerContractTest(unittest.TestCase):
     def test_mentions_separable_second_behavior(self) -> None:
         self.assertIn("separable", self.text.casefold())
 
-    def test_return_summary_has_two_hundred_word_cap(self) -> None:
+    def return_sentence(self, marker: str) -> str:
         section = self.text.split("## Your return\n", 1)[1]
-        self.assertIn("200 words", section.casefold())
+        sentences = re.split(r"(?<=\.)\s+", section)
+        return next((sentence for sentence in sentences if marker in sentence), "")
+
+    def test_return_summary_has_eighty_word_cap(self) -> None:
+        self.assertIn("80 words", self.return_sentence("80 words").casefold())
+        self.assertNotIn("200 words", self.text.casefold())
+
+    def test_return_summary_carries_the_facts_that_stay_on_the_return(self) -> None:
+        sentence = self.return_sentence("80 words").casefold()
+        for item in (
+            "concern",
+            "missing input",
+            "block cause",
+            "separable second behavior",
+            "contradicted premise",
+        ):
+            with self.subTest(item=item):
+                self.assertIn(item, sentence)
+
+    def test_red_and_green_evidence_capped_at_300_characters_naming_test_and_line(self) -> None:
+        sentence = self.return_sentence("300 characters")
+        for term in ("RED", "GREEN", "test", "line"):
+            with self.subTest(term=term):
+                self.assertIn(term, sentence)
+
+    def test_dispatch_path_returns_the_same_facts_in_prose(self) -> None:
+        otherwise = next(
+            line for line in self.text.splitlines() if line.startswith("Otherwise, ")
+        )
+        for fact in ("four terms", "summary", "RED", "GREEN"):
+            with self.subTest(fact=fact):
+                self.assertIn(fact, otherwise)
+
+    def test_omits_the_dropped_return_asks(self) -> None:
+        lowered = self.text.casefold()
+        for phrase in (
+            "changed-path",
+            "common evidence",
+            "report that mapping",
+            "bears on",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertNotIn(phrase, lowered)
+        self.assertNotRegex(lowered, r"\bnotes?\b")
 
     def test_omits_forbidden_content(self) -> None:
         lowered = self.text.casefold()
