@@ -38,7 +38,6 @@ Be exact because the report becomes a Premise of the contract, while the reprodu
 
 Return one JSON object matching `contracts/schemas/scout.json`, with each bullet below as its snake_case field and `evidence` as one string per claim. Set `status` to `blocked` when a required action was not performed, otherwise `done`.
 
-- **Question:** the exact question and subject.
 - **Answer:** the answer in one line, or `NOT FOUND`.
 - **Evidence:** one line per claim, citing `file:line` or `command` → `output`.
 - **Not inspected:** omitted, unavailable, or deliberately bounded areas.

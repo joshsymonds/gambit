@@ -3,14 +3,11 @@
   "description": "The scout's one return. Set status to blocked when a required action was not performed.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["status", "question", "answer", "evidence", "not_inspected"],
+  "required": ["status", "answer", "evidence", "not_inspected"],
   "properties": {
     "status": {
       "type": "string",
       "enum": ["done", "blocked"]
-    },
-    "question": {
-      "type": "string"
     },
     "answer": {
       "type": "string"

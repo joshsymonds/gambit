@@ -8,6 +8,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ROOT / "contracts" / "schemas"
+SCOUT_CONTRACT = ROOT / "contracts" / "scout.md"
 ALLOWED_KEYWORDS = {
     "type",
     "enum",
@@ -38,7 +39,6 @@ ROLE_CONTRACTS = {
 EXPECTED_PROPERTIES = {
     "scout": {
         "status": STATUS,
-        "question": STRING,
         "answer": STRING,
         "evidence": {"type": "array", "items": STRING},
         "not_inspected": STRING,
@@ -78,7 +78,7 @@ EXPECTED_PROPERTIES = {
     },
 }
 EXPECTED_REQUIRED = {
-    "scout": {"status", "question", "answer", "evidence", "not_inspected"},
+    "scout": {"status", "answer", "evidence", "not_inspected"},
     "steelman": {"status", "pass", "verdict", "evidence_and_coverage"},
     "test-runner": {"status", "output"},
 }
@@ -136,6 +136,18 @@ class RoleSchemaContractTest(unittest.TestCase):
         self.assertIn("output", named)
         self.assertIn("exit_code", named)
         self.assertEqual(named & TEST_RUNNER_ECHO_FIELDS, set())
+
+    def test_scout_return_names_exactly_the_schema_fields(self) -> None:
+        text = SCOUT_CONTRACT.read_text(encoding="utf-8")
+        match = re.search(r"(?ms)^## Report\n(.*?)(?=^## |\Z)", text)
+        if match is None:
+            self.fail("contracts/scout.md has no ## Report section")
+        bullets = re.findall(r"(?m)^- \*\*([^*]+):\*\*", match.group(1))
+        named = {name.strip().lower().replace(" ", "_") for name in bullets}
+        self.assertEqual(
+            named,
+            {"answer", "evidence", "not_inspected", "bug_reproduction", "root_cause"},
+        )
 
     def test_role_contract_names_its_schema_as_return(self) -> None:
         for role, contract in ROLE_CONTRACTS.items():
