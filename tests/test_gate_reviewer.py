@@ -12,6 +12,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMA = ROOT / "contracts" / "schemas" / "gate-reviewer.json"
 CONTRACT = ROOT / "skills" / "review" / "reviewers" / "gate-reviewer.md"
+STEP_ENDS = ROOT / "skills" / "executing-plans" / "references" / "step-ends.md"
 ALLOWED_KEYWORDS = {
     "type",
     "enum",
@@ -179,6 +180,33 @@ class GateReviewerContractTest(unittest.TestCase):
 
     def test_contract_stays_under_the_word_cap(self) -> None:
         self.assertLessEqual(len(self.text.split()), WORD_CAP)
+
+
+class StepEndsGateStepTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.intro, marker, _ = STEP_ENDS.read_text(encoding="utf-8").partition("\n## Step ends\n")
+        cls.marker = marker
+
+    def test_step_ends_section_follows_the_intro(self) -> None:
+        self.assertTrue(self.marker, "step-ends.md has no `## Step ends` section")
+
+    def test_intro_says_a_review_gate_step_is_not_one_of_the_roles(self) -> None:
+        self.assertTrue(has_rule_line(self.intro, "review gate step", "not one of"))
+
+    def test_intro_gives_every_end_of_a_gate_step_to_review(self) -> None:
+        self.assertTrue(
+            has_rule_line(self.intro, "review gate step", "`skills/review/SKILL.md`", "every end")
+        )
+
+    def test_intro_gives_a_gate_step_no_fresh_step_and_no_dispatch(self) -> None:
+        self.assertTrue(has_rule_line(self.intro, "review gate step", "no fresh step", "no dispatch"))
+
+    def test_intro_routes_a_gate_with_no_kept_return_to_review_as_a_gap(self) -> None:
+        self.assertTrue(has_rule_line(self.intro, "review gate step", "as a gap"))
+
+    def test_intro_gives_the_stopped_end_of_a_gate_to_review(self) -> None:
+        self.assertTrue(has_rule_line(self.intro, "review gate step", "`stopped`"))
 
 
 if __name__ == "__main__":

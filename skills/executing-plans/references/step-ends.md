@@ -4,6 +4,8 @@ A read-only step runs one of the read-only roles (`scout`, `steelman`, `task-rev
 
 No read-only end spends an implementer attempt. The steelman column gives the steelman's action where it differs from the read-only action. The two implementer columns give the implementer's action and attempt cost for the same end.
 
+A review gate step is not one of these roles. It runs the agent that its contract's `Review gate:` line names, under `skills/review/reviewers/gate-reviewer.md`, and it has no registry role. Review (`skills/review/SKILL.md`) handles every end of a review gate step, `stopped` included, and such a step gets no fresh step and no dispatch at any end. A gate step with no kept return therefore reaches review as a gap, never as a silent replacement.
+
 ## Step ends
 
 | End | Action for read-only roles | Cost | Steelman | Implementer action | Implementer attempt |
