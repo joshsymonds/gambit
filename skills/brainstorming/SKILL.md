@@ -30,7 +30,7 @@ Dispatch a read-only `scout` under `contracts/scout.md`, as a step where `skills
 For a bug, make this evidence chain explicit and complete:
 
 1. Give the scout the report and observed failure as clues to verify. Have it return the exact reproduction command as a command line and trace the root cause with causal `file:line` evidence, including what would falsify that cause. A suspected file or stack frame is not a verified diagnosis.
-2. If reproduction writes build artifacts, fixtures, a cache, or other state, dispatch `test-runner` with the exact command in an isolated workspace, as a step where `skills/executing-plans/references/steps.md` applies, since repository HEAD is committed. It writes scratch state only and returns the command and output. The scout does not execute writable reproduction.
+2. If reproduction writes build artifacts, fixtures, a cache, or other state, dispatch `test-runner` with the exact command in an isolated workspace, as a step where `skills/executing-plans/references/steps.md` applies, since repository HEAD is committed. It writes scratch state only and returns the output. The scout does not execute writable reproduction.
 3. Reconcile that output with the scout's causal evidence. Turn the verified root cause into a falsifiable Premise with its explicit Intent-survival clause.
 4. Name the verified reproduction and its expected corrected result as a Requirement's satisfying evidence, with the exact check, and carry the observed failure into the contract. Execution makes that reproduction the failing test of the task covering the Requirement, so its implementer begins from RED.
 

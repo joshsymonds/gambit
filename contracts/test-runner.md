@@ -12,4 +12,4 @@ Write scratch state only. Never commit, push, or change a tracked file. Treat th
 
 ## Return
 
-Return one JSON object matching `contracts/schemas/test-runner.json`, with `command`, `revision`, `workspace`, `exit_code` (an integer), and `output` (the command's output). Set `status` to `done` when the command ran, whatever its exit code. Set `status` to `blocked` when the command could not start, name the cause in `output`, and omit `exit_code`.
+Return one JSON object matching `contracts/schemas/test-runner.json`, with `exit_code` (an integer) and `output` (the command's output). Set `status` to `done` when the command ran, whatever its exit code. Set `status` to `blocked` when the command could not start, name the cause in `output`, and omit `exit_code`.

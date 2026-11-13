@@ -73,9 +73,6 @@ EXPECTED_PROPERTIES = {
     },
     "test-runner": {
         "status": STATUS,
-        "command": STRING,
-        "revision": STRING,
-        "workspace": STRING,
         "exit_code": {"type": "integer"},
         "output": STRING,
     },
@@ -83,8 +80,10 @@ EXPECTED_PROPERTIES = {
 EXPECTED_REQUIRED = {
     "scout": {"status", "question", "answer", "evidence", "not_inspected"},
     "steelman": {"status", "pass", "verdict", "evidence_and_coverage"},
-    "test-runner": {"status", "command", "revision", "workspace", "output"},
+    "test-runner": {"status", "output"},
 }
+TEST_RUNNER_CONTRACT = ROOT / "contracts" / "test-runner.md"
+TEST_RUNNER_ECHO_FIELDS = {"command", "revision", "workspace"}
 
 
 def load_schema(role: str) -> dict:
@@ -127,6 +126,16 @@ class RoleSchemaContractTest(unittest.TestCase):
                 schema = load_schema(role)
                 self.assertEqual(schema["properties"], expected)
                 self.assertEqual(set(schema["required"]), EXPECTED_REQUIRED[role])
+
+    def test_test_runner_return_names_no_dropped_input_echo(self) -> None:
+        text = TEST_RUNNER_CONTRACT.read_text(encoding="utf-8")
+        match = re.search(r"(?ms)^## Return\n(.*?)(?=^## |\Z)", text)
+        if match is None:
+            self.fail("contracts/test-runner.md has no ## Return section")
+        named = set(re.findall(r"`([^`]+)`", match.group(1)))
+        self.assertIn("output", named)
+        self.assertIn("exit_code", named)
+        self.assertEqual(named & TEST_RUNNER_ECHO_FIELDS, set())
 
     def test_role_contract_names_its_schema_as_return(self) -> None:
         for role, contract in ROLE_CONTRACTS.items():
