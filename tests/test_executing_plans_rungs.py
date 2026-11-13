@@ -315,6 +315,35 @@ class ExecutingPlansStructureTest(unittest.TestCase):
             with self.subTest(section="Report and end", phrase=phrase):
                 self.assertIn(phrase, report)
 
+    def test_gate_takes_changed_paths_from_git(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        build = sections["Build each task until good"]
+        for phrase in ("changed paths from git", "diff from the task base", "workspace `git status`"):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, build)
+
+    def test_gate_takes_test_command_from_the_brief(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        self.assertIn("the test command from the brief", sections["Build each task until good"])
+
+    def test_gate_takes_test_result_from_the_gate_run(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        build = sections["Build each task until good"]
+        for phrase in (
+            "the test result from the gate run",
+            "engine gate",
+            "the orchestrator's own run on the dispatch path",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, build)
+
+    def test_gate_takes_premises_and_requirement_mapping_from_inspection(self) -> None:
+        sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
+        self.assertIn(
+            "Premises touched and the Requirement-to-test mapping come from the orchestrator's inspection",
+            sections["Build each task until good"],
+        )
+
     def test_word_caps(self) -> None:
         self.assertLessEqual(len(self.text.split()), 3200)
         reference = SKILL_ROOT / "references" / "wave-dispatch.md"
