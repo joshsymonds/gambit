@@ -103,7 +103,7 @@ Every NOT DONE record names its cause. Its failure signature is the normalized f
 3. **Separable behaviors:** split them once per lineage, preserving the same unmet Requirements across complete descendants.
 4. **The orchestrator's own attempt:** make the attempt in the task's workspace under `contracts/implementer.md`, with the complete history of gate records. If it fails, the lineage is a gap on `gap/<task-slug>`, independent work continues, and the run ends with gaps naming the Requirement unsatisfied as written.
 
-When a gate finding names an exact edit smaller than the brief that would describe it, the orchestrator applies it directly, logs it with its gate, and counts no attempt. Routing adds no review dispatch beyond task review.
+When a gate finding names an exact edit smaller than the brief that would describe it, the orchestrator applies it, logs it with its gate, and counts no attempt. Routing adds no review dispatch beyond task review.
 
 ## Integrate and repeat
 
