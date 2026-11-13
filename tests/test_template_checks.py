@@ -18,6 +18,8 @@ class TemplateChecksTest(unittest.TestCase):
         cls.steps = [line for line in cls.checks.splitlines() if line.startswith("Steps: ")]
         cls.line = cls.steps[0] if cls.steps else ""
         cls.bracket = cls.line.split("[", 1)[1].split("]", 1)[0] if "[" in cls.line else ""
+        cls.review_gates = [line for line in cls.checks.splitlines() if line.startswith("Review gate: ")]
+        cls.review_gate = cls.review_gates[0] if cls.review_gates else ""
 
     def test_one_steps_line_sits_between_evidence_and_quality_bar(self) -> None:
         self.assertEqual(len(self.steps), 1)
@@ -70,6 +72,40 @@ class TemplateChecksTest(unittest.TestCase):
             self.line,
             r"A Decision Log line changes them for steps started after it\.",
         )
+
+    def test_one_review_gate_line_sits_directly_after_quality_bar(self) -> None:
+        self.assertEqual(len(self.review_gates), 1)
+        lines = self.checks.splitlines()
+        index = lines.index(self.review_gate)
+        self.assertTrue(lines[index - 1].startswith("Quality Bar: "))
+
+    def test_review_gate_line_carries_name_agent_limit_and_assertions_in_order(self) -> None:
+        self.assertRegex(
+            self.review_gate,
+            r"^Review gate: \[[^\]]+\] \| agent: \[[^\]]+\] \| limit: \[[^\]]+\] "
+            r"\| must: \[[^\]]+\] \| must not: \[[^\]]+\]$",
+        )
+
+
+class ReviewGateSkillTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = (ROOT / "skills/brainstorming/SKILL.md").read_text(encoding="utf-8")
+
+    def test_checks_item_names_the_review_gate_lines(self) -> None:
+        items = [line for line in self.text.splitlines() if line.startswith("10. **Checks the machines run:**")]
+        self.assertEqual(len(items), 1)
+        self.assertIn("`Review gate:`", items[0])
+        self.assertIn("read-only", items[0])
+
+    def test_gates_file_paragraph_excludes_the_review_gate_lines(self) -> None:
+        paragraphs = [
+            paragraph
+            for paragraph in self.text.split("\n\n")
+            if "At acceptance" in paragraph and "`gates.toml`" in paragraph
+        ]
+        self.assertEqual(len(paragraphs), 1)
+        self.assertRegex(paragraphs[0], r"`Review gate:` lines[^.]*never enter `gates\.toml`")
 
 
 if __name__ == "__main__":

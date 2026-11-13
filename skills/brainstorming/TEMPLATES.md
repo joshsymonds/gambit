@@ -1,6 +1,6 @@
 # Epic and task templates
 
-Use the record-task-state operation. Fill every field from the goal, decisions, and research before creating executable work. The epic body is one document: the decision line, then exactly the ten sections below in order. Its Decision Log is attached record context, outside that body. The Design Ledger stays in the design transcript. The epic body, Decision Log, and head are written to the epic's record directory per `skills/executing-plans/references/record.md`.
+Use the record-task-state operation. Fill every field from the goal, decisions, and research before creating executable work. The epic body is one document: the decision line, then exactly the ten sections below in order. Its Decision Log is attached record context, outside that body. Write the record per `skills/executing-plans/references/record.md`.
 
 Rows in "What will be true when done" are the Requirements (R ids). Rows in "What I'm assuming" are the Premises (P ids). Rows in "What could go wrong" are the failure cases (F ids). Entries under "What we won't do" are the Must Not Ship entries.
 
@@ -60,9 +60,12 @@ Done: [exact task fast check with its setup and working directory]; [the integra
 Evidence: [the tests and observable results named under How we'll know].
 Steps: [read-only: schema check; implementer: schema check, then head, ancestry, clean and owned from the task base revision, then the gate, named in `.orrery/project.toml` or defined by this contract as an absolute argv, no shell, under the heavy-command wrapper's absolute path, through the project's development-environment entry if tools live only there, with its needs and limit in seconds.] A Decision Log line changes them for steps started after it.
 Quality Bar: Failing, low-quality, or bad code is unacceptable, but failure to meet a mythic platonic ideal of code or cover literally every imaginable edge case is NOT itself a defect. This bar is FIXED for every epic; write it verbatim — never elicit it, strengthen it, or make it a per-project preference. A defect is exactly one of: a Requirement's named evidence not met; a Must Not Ship entry present; a change outside the task's owned files; a change the contract did not ask for; a violation of the implementer contract's mechanical floor (a suppressed check, a weakened or tautological test, dead code, an unhandled error); an assertion its declared gate finds does not hold; or a security or data-loss failure with a reachable precondition that the change itself introduces. Everything else the orchestrator or a reviewer notices is an observation — it may be recorded in the Decision Log and the report; it never becomes work during the run. The craftsmanship asked of the implementer is one line: simple, foundational, secure; match the surrounding code.
+Review gate: [NAME] | agent: [read-only agent file] | limit: [seconds] | must: [assertion] | must not: [assertion]
 ```
 
-After acceptance, "Decisions I need from you" reads `None`, then the settled decisions by id. Acceptance freezes What you asked for, the assumptions with their If-wrong clauses, and the Requirements. Keep later assessments in the Decision Log, never rewriting frozen text. Each entry states the decision or assumption, its reason and evidence, and the ids it affects.
+`Review gate:` lines are optional, one per declared gate.
+
+After acceptance, "Decisions I need from you" reads `None`, then the settled decisions by id. Acceptance freezes What you asked for, the assumptions with their If-wrong clauses, and the Requirements. Keep later assessments in the Decision Log, never rewriting frozen text.
 
 ### Task brief
 
