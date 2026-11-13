@@ -40,6 +40,13 @@ class ReviewRolePolicyTest(unittest.TestCase):
             self.assertIn(f"reviewers/{name}.md", text)
             self.assertTrue((ROOT / f"skills/review/reviewers/{name}.md").is_file())
 
+    def test_final_review_without_gate_lines_starts_exactly_the_two_reviewers(self):
+        final = self.text("skills/review/SKILL.md").split("## Final review\n")[1].split("\n## Finding verification")[0]
+        self.assertIn("`Review gate:`", final)
+        self.assertIn("exactly", final)
+        self.assertIn("conformance-reviewer", final)
+        self.assertIn("integration-reviewer", final)
+
     def test_stage_names_and_coordinators_are_explicit(self):
         text = self.text("README.md")
         for word in ("Planning", "Implementation", "Final review", "Release", "Director", "Orchestrator"):

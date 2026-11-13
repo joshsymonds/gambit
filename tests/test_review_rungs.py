@@ -26,6 +26,10 @@ def headings(text: str) -> list[str]:
     return re.findall(r"^## (.+)$", text, flags=re.MULTILINE)
 
 
+def section(text: str, heading: str) -> str:
+    return text.split(f"## {heading}\n", 1)[1].split("\n## ", 1)[0]
+
+
 class ReviewStructureTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls) -> None:
@@ -122,6 +126,70 @@ class ReviewStructureTests(unittest.TestCase):
             with self.subTest(reviewer=reviewer):
                 text = (REVIEW / f"reviewers/{reviewer}.md").read_text(encoding="utf-8")
                 self.assertLessEqual(len(text.split()), 500)
+
+
+class ReviewGateRungTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = (REVIEW / "SKILL.md").read_text(encoding="utf-8")
+        cls.final = section(cls.text, "Final review")
+
+    def test_gate_lines_are_read_from_checks_and_unparsable_lines_are_gaps(self) -> None:
+        for term in ("`Review gate:`", "Checks the machines run", "parse", "review gap"):
+            with self.subTest(term=term):
+                self.assertIn(term, self.final)
+
+    def test_gate_agent_is_checked_before_its_step_starts(self) -> None:
+        for term in ("agents directory", "`<agent>.md`", "review gap"):
+            with self.subTest(term=term):
+                self.assertIn(term, self.final)
+
+    def test_gate_step_starts_read_only_as_its_agent_on_the_frozen_candidate(self) -> None:
+        for term in (
+            "`agent`",
+            "`schema`",
+            "`prompt`",
+            "`revision`",
+            "`readOnly`",
+            "gate-reviewer.json",
+            "reviewers/gate-reviewer.md",
+            "frozen candidate",
+        ):
+            with self.subTest(term=term):
+                self.assertIn(term, self.final)
+
+    def test_refused_gate_start_is_a_gap_unless_capacity(self) -> None:
+        for term in ("refused", "capacity", "review gap"):
+            with self.subTest(term=term):
+                self.assertIn(term, self.final)
+
+    def test_gate_is_stopped_at_its_limit_and_unfinished_assertions_are_undetermined(self) -> None:
+        for term in ("`limit`", "`step_stop`", "undetermined", "kept return", "review gap"):
+            with self.subTest(term=term):
+                self.assertIn(term, self.final)
+
+    def test_only_a_gates_own_fails_finding_is_admissible(self) -> None:
+        for term in ("gate assertion", "`fails`", "observation"):
+            with self.subTest(term=term):
+                self.assertIn(term, self.final)
+
+    def test_correction_briefs_never_carry_gate_lines_or_assertions(self) -> None:
+        correction = section(self.text, "Correction")
+        for term in ("`Review gate:`", "assertion"):
+            with self.subTest(term=term):
+                self.assertIn(term, correction)
+
+    def test_each_gate_reruns_once_on_the_corrected_candidate(self) -> None:
+        closure = section(self.text, "Closure")
+        for term in ("rerun", "`fails`", "`undetermined`", "review gap"):
+            with self.subTest(term=term):
+                self.assertIn(term, closure)
+
+    def test_clean_needs_every_gate_holding_on_its_last_run(self) -> None:
+        returned = section(self.text, "Return")
+        for term in ("clean", "`holds`", "last run", "review gap"):
+            with self.subTest(term=term):
+                self.assertIn(term, returned)
 
 
 if __name__ == "__main__":
