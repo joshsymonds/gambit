@@ -4,7 +4,7 @@ import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-ROLES = {"implementer", "orchestrator", "scout", "steelman", "test-runner", "task-reviewer", "conformance-reviewer", "integration-reviewer", "finding-verifier"}
+ROLES = {"implementer", "orchestrator", "scout", "steelman", "test-runner", "task-reviewer", "conformance-reviewer", "integration-reviewer", "test-parsimony-reviewer", "finding-verifier"}
 
 
 class ReviewRolePolicyTest(unittest.TestCase):
@@ -29,23 +29,24 @@ class ReviewRolePolicyTest(unittest.TestCase):
         self.assertNotIn("`conformance-reviewer`", build)
         self.assertNotIn("`integration-reviewer`", build)
 
-    def test_final_review_has_two_explicit_roles_not_task_review(self):
+    def test_final_review_has_three_explicit_roles_not_task_review(self):
         text = self.text("skills/review/SKILL.md")
         final = text.split("## Final review\n")[1].split("\n## Finding verification")[0]
-        self.assertEqual(re.findall(r"`([a-z-]+reviewer)` role", final), ["conformance-reviewer", "integration-reviewer"])
+        self.assertEqual(re.findall(r"`([a-z-]+reviewer)` role", final), ["conformance-reviewer", "integration-reviewer", "test-parsimony-reviewer"])
         self.assertIn("concurrently", final)
         self.assertNotIn("`task-reviewer`", final)
         self.assertIn("`finding-verifier`", text)
-        for name in ("conformance-reviewer", "integration-reviewer", "finding-verifier"):
+        for name in ("conformance-reviewer", "integration-reviewer", "test-parsimony-reviewer", "finding-verifier"):
             self.assertIn(f"reviewers/{name}.md", text)
             self.assertTrue((ROOT / f"skills/review/reviewers/{name}.md").is_file())
 
-    def test_final_review_without_gate_lines_starts_exactly_the_two_reviewers(self):
+    def test_final_review_without_gate_lines_starts_exactly_the_three_reviewers(self):
         final = self.text("skills/review/SKILL.md").split("## Final review\n")[1].split("\n## Finding verification")[0]
         self.assertIn("`Review gate:`", final)
         self.assertIn("exactly", final)
         self.assertIn("conformance-reviewer", final)
         self.assertIn("integration-reviewer", final)
+        self.assertIn("test-parsimony-reviewer", final)
 
     def test_stage_names_and_coordinators_are_explicit(self):
         text = self.text("README.md")

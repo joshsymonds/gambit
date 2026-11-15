@@ -85,6 +85,7 @@ The stages are **Planning**, **Implementation**, **Final review**, and **Release
 | task-reviewer | reviews one task's complete change against its brief | no |
 | conformance-reviewer | checks the final candidate against the overall contract | no |
 | integration-reviewer | checks cross-task interactions and shared interfaces | no |
+| test-parsimony-reviewer | checks that added tests are useful, run only with their code, reuse shared fixtures, and use synthetic time | no |
 | finding-verifier | independently confirms or rejects one reported defect | no |
 | test-runner | executes a command that needs writable scratch state, in an isolated workspace | scratch only |
 

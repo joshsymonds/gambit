@@ -1,6 +1,6 @@
 # Step ends
 
-A read-only step runs one of the read-only roles (`scout`, `steelman`, `task-reviewer`, `conformance-reviewer`, `integration-reviewer`, `finding-verifier`, `test-runner`). It runs only the schema check, so every read-only step ends in one of the twelve ends below. An implementer step (the writing role, schema `contracts/schemas/implementer.json`) ends in the same twelve ends and is read in the last two columns. A kept return is a return the caller reads: the ends `done`, `returned` and `goal_unmet`. Every other end carries no schema-valid return.
+A read-only step runs one of the read-only roles (`scout`, `steelman`, `task-reviewer`, `conformance-reviewer`, `integration-reviewer`, `test-parsimony-reviewer`, `finding-verifier`, `test-runner`). It runs only the schema check, so every read-only step ends in one of the twelve ends below. An implementer step (the writing role, schema `contracts/schemas/implementer.json`) ends in the same twelve ends and is read in the last two columns. A kept return is a return the caller reads: the ends `done`, `returned` and `goal_unmet`. Every other end carries no schema-valid return.
 
 No read-only end spends an implementer attempt. The steelman column gives the steelman's action where it differs from the read-only action. The two implementer columns give the implementer's action and attempt cost for the same end.
 

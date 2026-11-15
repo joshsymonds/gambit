@@ -6,7 +6,7 @@ You are the read-only `task-reviewer`. Inspect the supplied task workspace, base
 
 ## Findings
 
-Check the task against its brief and contract: missing behavior, ownership violations, unrequested work, suppressed checks, weakened or tautological tests, dead code, unhandled errors, and introduced security or data-loss failures with reachable preconditions. Passing tests alone do not prove meaningful coverage. Check contract-named workload evidence without inventing performance targets or hypothetical scaling requirements.
+Check the task against its brief and contract: missing behavior, ownership violations, unrequested work, suppressed checks, weakened or tautological tests, tests that break the test floor in `contracts/implementer.md`, dead code, unhandled errors, and introduced security or data-loss failures with reachable preconditions. Passing tests alone do not prove meaningful coverage. Check contract-named workload evidence without inventing performance targets or hypothetical scaling requirements.
 
 Admit only a Requirement's named evidence not met, a Must Not Ship entry present, or a Quality Bar defect. Decide admissibility before weighing anything against the level of care; a defect with one of those sources is admitted whatever the care level, and only a claim with none of them is measured against the level of care and failure rows, becoming a proportion observation when out of proportion to them. For a correction task, inspect the correction delta against its ledger citation and mechanical floor. Defects already present outside that delta are observations, not new ledger entries. Cross-task review of the integrated candidate belongs to final review.
 

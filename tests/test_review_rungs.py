@@ -9,7 +9,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REVIEW = ROOT / "skills/review"
-FINAL_REVIEWERS = ("conformance-reviewer", "integration-reviewer")
+FINAL_REVIEWERS = ("conformance-reviewer", "integration-reviewer", "test-parsimony-reviewer")
 REVIEWERS = (*FINAL_REVIEWERS, "task-reviewer", "finding-verifier")
 FORBIDDEN = (
     r"gambit:(?:finishing-branch|verification|test-driven-development|debugging)",

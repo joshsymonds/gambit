@@ -26,6 +26,13 @@ The exception is the floor of your own change. Close any error, security, or dat
 
 Do not suppress a check with lint or type pragmas or disabled rules. Do not leave dead code, commented-out code, or replaced implementations. Handle errors at the call site. Do not weaken a test.
 
+Every test you add or change meets the test floor:
+
+- It asserts a behavior that a nameable production change would break and that no existing test already catches. A tautological test, an assertion that cannot fail, a test that only exercises a fake or a helper, a coverage-only test, and a duplicate of an existing assertion each break the floor.
+- It lives beside the existing tests of its kind, in the package or module whose code it exercises, so it runs only when that code or its dependents change.
+- It reuses the existing shared fixtures for databases, external programs, and external APIs rather than starting its own, unless the behavior under test is that setup.
+- It uses synthetic clocks and synthetic waits: an injected clock, the test dispatcher, or an explicit sync on the write or event its assertion depends on. A real sleep or a real wall-clock deadline never decides its result; a timeout exists only to stop a hang.
+
 Editor diagnostics left stale by generation or workspace changes are not evidence. A fresh check is evidence.
 
 ## Your return

@@ -10,8 +10,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SCHEMAS = ROOT / "contracts" / "schemas"
 REVIEW = ROOT / "skills" / "review" / "reviewers"
-ROLES = ("task-reviewer", "conformance-reviewer", "integration-reviewer", "finding-verifier")
-REVIEWER_ROLES = ("task-reviewer", "conformance-reviewer", "integration-reviewer")
+ROLES = ("task-reviewer", "conformance-reviewer", "integration-reviewer", "test-parsimony-reviewer", "finding-verifier")
+REVIEWER_ROLES = ("task-reviewer", "conformance-reviewer", "integration-reviewer", "test-parsimony-reviewer")
 ALLOWED_KEYWORDS = {
     "type",
     "enum",

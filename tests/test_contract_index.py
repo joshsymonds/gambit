@@ -29,6 +29,7 @@ class ContractIndexTest(unittest.TestCase):
             "task-reviewer",
             "conformance-reviewer",
             "integration-reviewer",
+            "test-parsimony-reviewer",
             "finding-verifier",
             "test-runner",
         ):

@@ -81,7 +81,7 @@ class SkillDispatchSitesResolveThroughModelsTest(unittest.TestCase):
     def test_review_resolves_final_review_and_finding_verification_roles(self) -> None:
         review = self.skill("review")
         self.assertIn("contracts/models.md", review)
-        for role in ("conformance-reviewer", "integration-reviewer", "finding-verifier"):
+        for role in ("conformance-reviewer", "integration-reviewer", "test-parsimony-reviewer", "finding-verifier"):
             with self.subTest(role=role):
                 self.assertRegex(review, rf"\b{role}\b")
 
