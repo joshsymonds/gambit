@@ -52,6 +52,8 @@ Present the design in digestible sections covering the relevant components, inte
 
 Decompose for isolation: each unit has a clear purpose, known interfaces, and independently testable behavior. Cut features, abstractions, and hardening the Requirements do not demand. Chosen mechanisms belong in Approach unless the request explicitly requires them. Never add a Requirement to justify a preferred task.
 
+Name only evidence the implementer contract's test floor allows: no wall-clock timing test, no deterministic check of model output, and golden evidence only under its four conditions, each logged in the Decision Log. A performance Requirement names a measurement run outside the test suite.
+
 Proportionality failure is a contract-drafting failure: overdesign, excess robustness, nitpicking, or added features without material benefit to the requested product. Ground the standard of care in the user's stated audience, stakes, scale, and constraints, carried into Intent. The level of care is the worst rating in the failure table, and a rating authorizes no work by itself: each row's What we do is the only work it adds. Apply this before drafting and when adopting steelman findings. Preserve explicit requirements and the fixed Quality Bar.
 
 ## Steelman

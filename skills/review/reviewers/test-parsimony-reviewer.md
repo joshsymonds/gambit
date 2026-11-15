@@ -12,6 +12,9 @@ Check each added or modified test against the test floor in `contracts/implement
 - **Selected only by its code.** The test sits beside existing tests of its kind, in the package or module whose code it exercises, so it runs only when that code or its dependents change. A test placed in a broad package that unrelated changes select, without crossing packages, breaks the floor.
 - **Reuses resources.** The test reuses the existing shared fixtures for databases, external programs, and external APIs. A test that starts its own database, server, process, or repository where a shared fixture serves its assertion breaks the floor.
 - **Synthetic time.** The test uses an injected clock, the test dispatcher, or an explicit sync on the write or event its assertion depends on. A real sleep, or a real wall-clock deadline that decides the result, breaks the floor.
+- **No timing.** An assertion on wall-clock time or duration breaks the floor.
+- **No unearned goldens.** A golden test the brief did not name, or failing the floor's four conditions, breaks the floor.
+- **No deterministic checks of model output.** A regex, substring, exact-match, or keyword check of model free text, in tests or production code, breaks the floor.
 
 A candidate on a test the change added or modified cites the mechanical floor as a Quality Bar defect. The same pattern in a test the change did not touch is an observation. Name the test, the clause it breaks, its location, and the concrete fix: delete it, merge it into the existing test, move it, use the named fixture, or replace the wait with the named sync.
 
