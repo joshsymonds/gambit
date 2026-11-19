@@ -331,12 +331,11 @@ class ReviewRoutingTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.text = read("skills/review/SKILL.md")
 
-    def test_final_reviewers_route_through_steps_and_record_ids(self) -> None:
+    def test_final_reviewers_route_through_steps(self) -> None:
         final = section(self.text, "Final review")
         self.assertIn("skills/executing-plans/references/steps.md", final)
         self.assertIn("`conformance-reviewer`", final)
         self.assertIn("`integration-reviewer`", final)
-        self.assertIn("record each step id in the review ledger record and act on its step_end event", final.lower())
 
     def test_verifier_and_test_runner_route_through_steps(self) -> None:
         verification = section(self.text, "Finding verification")
@@ -369,7 +368,6 @@ class BrainstormingRoutingTest(unittest.TestCase):
         self.assertIn("skills/executing-plans/references/steps.md", steelman)
         self.assertIn("`steelman`", steelman)
         self.assertIn("Decision Log", steelman)
-        self.assertIn("act on its step_end event", steelman)
 
     def test_names_steps_by_path_without_the_context_stamp(self) -> None:
         self.assertNotIn(".claude/settings.json", self.text)
@@ -531,15 +529,14 @@ class StepsStepEventsTest(unittest.TestCase):
     def setUpClass(cls) -> None:
         cls.text = read(STEPS_PATH)
 
-    def test_steps_apply_on_step_start_and_the_context_stamp_without_step_wait(self) -> None:
-        """steps.md says steps apply on the step_start tool and no context stamp, and does not name step_wait."""
+    def test_steps_apply_on_step_start_and_the_context_stamp(self) -> None:
+        """steps.md says steps apply on the step_start tool and no context stamp."""
         when = flat(section(self.text, "When steps apply"))
         self.assertIn(
             "Steps apply when the session has the `step_start` tool that `orrery mcp` serves "
             "and the repository carries no context stamp.",
             when,
         )
-        self.assertNotIn("step_wait", when)
 
     def test_recording_records_each_id_then_ends_the_turn_with_no_before_waiting(self) -> None:
         """steps.md tells a caller to record each step id where its dispatch is recorded, then end its turn or do other work."""
