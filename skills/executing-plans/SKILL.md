@@ -127,7 +127,7 @@ Route each contract defect through the build step's failure-signature routing. C
 
 Release is eligible only when every Requirement is DONE and the fresh Done checks pass. An unmet Requirement releases nothing; other review gaps are reported with the release.
 
-Before the first Release action, the release orchestrator judges whether release to the contract's destination is safe, weighing every open review gap, and stops only for a clear danger the contract did not anticipate.
+Before the first Release action, the release orchestrator judges whether release to the contract's destination is safe, weighing every open review gap, stopping only for a clear danger the contract did not anticipate.
 
 For an eligible candidate, execute the exact steps of "What leaves this machine or can't be undone" in order through the shell; the postconditions after `Then:` are the Release postconditions. Record each completed action and evidence immediately. On resume, inspect postconditions from that record instead of repeating completed actions.
 
