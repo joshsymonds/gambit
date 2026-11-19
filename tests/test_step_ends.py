@@ -12,6 +12,7 @@ ENDS = (
     "returned",
     "checks_failed",
     "goal_unmet",
+    "gate_failed",
     "failed",
     "stopped",
     "engine_restarted",
@@ -21,7 +22,7 @@ ENDS = (
     "looping",
     "wedged",
 )
-KEPT_ENDS = ("done", "returned", "goal_unmet")
+KEPT_ENDS = ("done", "returned", "goal_unmet", "gate_failed")
 NO_RETURN_ENDS = tuple(end for end in ENDS if end not in KEPT_ENDS and end != "stopped")
 TABLE_HEADER = (
     "End",
@@ -44,6 +45,10 @@ IMPLEMENTER_CELLS = {
     "goal_unmet": (
         ("judge's reason", "gate it as a done return"),
         ("the one that ran",),
+    ),
+    "gate_failed": (
+        ("NOT DONE", "execution failure", "signature", "gate reasons", "fresh step"),
+        ("is spent",),
     ),
     "checks_failed": (
         ("NOT DONE", "execution failure", "signature", "fresh step"),
@@ -178,14 +183,14 @@ class StepEndsTest(unittest.TestCase):
         self.assertIn("caller stopped it", action)
         self.assertIn("act on nothing", action)
 
-    def test_capacity_refusals_wait_and_retry(self) -> None:
+    def test_capacity_refusals_retry_at_next_step_end_or_turn(self) -> None:
         refusals = self.sections.get("Refusals", "")
         self.assertIn("`resource_exhausted`", refusals)
         self.assertIn("-32000", refusals)
         self.assertIn("Server already has 8 tool calls in flight", refusals)
-        self.assertIn("wait", refusals)
         self.assertIn("retry", refusals)
-        self.assertIn("one minute", refusals)
+        self.assertIn("`step_end`", refusals)
+        self.assertIn("next turn", refusals)
 
     def test_other_refusal_is_a_brief_defect_not_a_wait(self) -> None:
         refusals = self.sections.get("Refusals", "")
@@ -195,10 +200,6 @@ class StepEndsTest(unittest.TestCase):
         self.assertIn("Decision Log", other)
         self.assertIn("retry", other)
         self.assertNotIn("wait", other.lower())
-
-    def test_waits_name_only_running_ids(self) -> None:
-        refusals = self.sections.get("Refusals", "")
-        self.assertRegex(refusals, r"`step_wait`[^.\n]*\bonly ids still running\b")
 
     def test_no_file_under_skills_or_tests_names_the_engine_rpc(self) -> None:
         this_file = Path(__file__).resolve()
@@ -216,6 +217,45 @@ class StepEndsTest(unittest.TestCase):
     def test_refusals_apply_to_implementer_step_calls(self) -> None:
         refusals = self.sections.get("Refusals", "")
         self.assertRegex(refusals, r"apply to implementer step calls")
+
+
+class StepEndsStepEventsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = STEP_ENDS.read_text(encoding="utf-8")
+        cls.intro = cls.text.partition("\n## Step ends\n")[0]
+        cls.sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", cls.text))
+
+    def test_gate_failed_is_a_kept_end_with_its_routing(self) -> None:
+        self.assertRegex(
+            self.intro, r"kept return is a return the caller reads: the ends [^.]*`gate_failed`"
+        )
+        row = next(line for line in self.text.splitlines() if line.startswith("| `gate_failed` |"))
+        self.assertIn("Read the kept return and the end's reason", row)
+        self.assertIn("Routing step 1 continues it as a fresh step", row)
+
+    def test_end_reason_and_failed_checks_come_from_the_step_end_brief(self) -> None:
+        section = self.sections.get("Reading an end", "")
+        self.assertRegex(section, r"`step_end` event")
+        self.assertRegex(section, r"reason and its failed checks[^.\n]*\bbrief\b")
+
+    def test_anything_more_is_read_only_through_step_check_or_step_result(self) -> None:
+        section = self.sections.get("Reading an end", "")
+        read_calls = set(re.findall(r"`(step_[a-z_]+)`", section)) - {"step_end"}
+        self.assertEqual(read_calls, {"step_check", "step_result"})
+        self.assertIn("last line", section)
+
+    def test_capacity_refusal_is_retried_at_next_event_or_turn_never_by_waiting(self) -> None:
+        refusals = self.sections.get("Refusals", "")
+        line = next(line for line in refusals.splitlines() if line.startswith("For either one"))
+        self.assertRegex(line, r"retry the same call at the caller's next `step_end` event")
+        self.assertIn("or at its next turn when none of its steps is running", line)
+        self.assertIn("never waits", line)
+        self.assertIn("never polls", line)
+
+    def test_names_neither_step_wait_nor_an_orrery_version(self) -> None:
+        self.assertNotIn("step_wait", self.text)
+        self.assertNotRegex(self.text, r"v\d\.\d")
 
 
 if __name__ == "__main__":
