@@ -253,10 +253,6 @@ class StepEndsStepEventsTest(unittest.TestCase):
         self.assertIn("never waits", line)
         self.assertIn("never polls", line)
 
-    def test_names_neither_step_wait_nor_an_orrery_version(self) -> None:
-        self.assertNotIn("step_wait", self.text)
-        self.assertNotRegex(self.text, r"v\d\.\d")
-
 
 if __name__ == "__main__":
     unittest.main()

@@ -4,13 +4,13 @@ A role may run as an orrery step instead of through the dispatch operation. This
 
 ## When steps apply
 
-Steps apply when the session has the `step_start` and `step_wait` tools that `orrery mcp` serves and the repository carries no context stamp. A context stamp is a `.claude/settings.json` that git does not track (`git ls-files --error-unmatch .claude/settings.json` fails) and that sets `env.ANTHROPIC_BASE_URL`. Run the stamp test in the primary checkout, which is the parent directory of `git rev-parse --path-format=absolute --git-common-dir`, even when the session runs in a linked worktree: the untracked stamp exists only in the primary checkout. Pi has no step tools, so Pi keeps the dispatch operation.
+Steps apply when the session has the `step_start` tool that `orrery mcp` serves and the repository carries no context stamp. A context stamp is a `.claude/settings.json` that git does not track (`git ls-files --error-unmatch .claude/settings.json` fails) and that sets `env.ANTHROPIC_BASE_URL`. Run the stamp test in the primary checkout, which is the parent directory of `git rev-parse --path-format=absolute --git-common-dir`, even when the session runs in a linked worktree: the untracked stamp exists only in the primary checkout. Pi has no step tools, so Pi keeps the dispatch operation.
 
 Step roles are `scout`, `steelman`, `task-reviewer`, `conformance-reviewer`, `integration-reviewer`, `test-parsimony-reviewer`, `finding-verifier`, and `test-runner`. The implementer is the writing step role. A role whose entry profile is `{"model": ...}` names no agent and uses the dispatch operation.
 
 ## step_start arguments
 
-The keys follow `startSchema` in orrery v0.24.3's `internal/stepmcp/tools.go`, which refuses unknown keys. There is no model or effort field. The field rules are in orrery v0.24.3 docs/contract.md under "StartStep checks each field".
+The keys follow orrery's `startArgs` in `internal/stepmcp/tools.go`, which refuses unknown keys. There is no model or effort field. The field rules are in orrery's docs/contract.md under "`StartStep` checks each field".
 
 ### Read-only steps
 
@@ -60,8 +60,14 @@ A `done` end of an implementer step gives the gate its evidence. The engine runs
 
 An implementer's commit follows its route: a dispatched implementer leaves its changes uncommitted, and a step commits once in its own workspace before it returns `done`, naming that commit as `commit`; only the orchestrator commits to the effort branch.
 
-## Recording and waiting
+## Recording and step ends
 
-`step_start` returns `{"id": ...}`. Record each id where its dispatch is recorded before waiting: the gate record's Task review row in executing-plans, the review ledger record in review, the Decision Log in brainstorming. An implementer's id goes in the task's `dispatch.child` before waiting, per `skills/executing-plans/references/record.md`.
+`step_start` returns `{"id": ...}`. The caller records each id where its dispatch is recorded: the gate record's Task review row in executing-plans, the review ledger record in review, the Decision Log in brainstorming. An implementer's id goes in the task's `dispatch.child`, per `skills/executing-plans/references/record.md`. The caller then ends its turn or does other work; it never waits and never polls.
 
-`step_wait` takes `ids` and returns `{"ended": <step or null>, "steps": [...]}`. A null `ended` means the 1500-second clamp passed; wait again. Name only ids still running, and drop an id once its step ends. Every end and every refused start or call is handled by `skills/executing-plans/references/step-ends.md`, which this reference does not restate.
+Each end arrives in the caller's conversation as an `<orrery-event kind="step_end">` block. Its brief names the end, its status, its reason, its checks, and the return's short fields and counts.
+
+Every end and every refused start or call is handled by `skills/executing-plans/references/step-ends.md`, which this reference does not restate. The caller acts on the block by that file and reads anything more only through `step_result` or `step_check`, as the event's last line names.
+
+After its context is compacted, a session recovers the steps it started through `step_list`.
+
+A dispatched orchestrator's step ends reach the Director's conversation. With nothing else to do, the orchestrator returns a waiting message naming its running step ids, as `skills/executing-plans/SKILL.md` says.

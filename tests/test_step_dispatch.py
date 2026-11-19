@@ -78,8 +78,8 @@ class StepsReferenceTest(unittest.TestCase):
             "resolved in `gates.toml`, then in `.orrery/project.toml` at the top of the step's `workspace`",
             "An epic accepted before 2.11.0 has no `gates.toml`",
             "the Director logs one Decision Log line naming the gate and writes `gates.toml` from its `Steps:` line's argv and limit.",
-            "orrery v0.24.3 docs/contract.md",
-            "StartStep checks each field",
+            "orrery's docs/contract.md",
+            "`StartStep` checks each field",
         ):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.text)
@@ -167,13 +167,12 @@ class StepsReferenceTest(unittest.TestCase):
             with self.subTest(phrase=phrase):
                 self.assertIn(phrase, self.text)
 
-    def test_implementer_step_id_is_recorded_as_dispatch_child_before_waiting(self) -> None:
-        self.assertIn("An implementer's id goes in the task's `dispatch.child` before waiting", self.text)
+    def test_implementer_step_id_is_recorded_as_dispatch_child(self) -> None:
+        self.assertIn("An implementer's id goes in the task's `dispatch.child`", self.text)
 
     def test_presence_test_names_step_tools_and_context_stamp(self) -> None:
         for phrase in (
             "`step_start`",
-            "`step_wait`",
             "`orrery mcp`",
             "`.claude/settings.json`",
             "git ls-files --error-unmatch .claude/settings.json",
@@ -196,10 +195,8 @@ class StepsReferenceTest(unittest.TestCase):
                 self.assertIn(f"`{argument}`", self.text)
         self.assertIn("`schema`", self.text)
         self.assertIn("contracts/schemas/<role>.json", self.text)
-        self.assertIn("startSchema", self.text)
+        self.assertIn("startArgs", self.text)
         self.assertIn("internal/stepmcp/tools.go", self.text)
-        self.assertIn("v0.24.3", self.text)
-        self.assertNotIn("v0.14.0", self.text)
         self.assertIn("no model or effort field", self.text)
 
     def test_omits_the_four_optional_keys(self) -> None:
@@ -226,20 +223,11 @@ class StepsReferenceTest(unittest.TestCase):
         self.assertIn("task workspace", self.text)
         self.assertIn("absolute path", self.text)
 
-    def test_start_returns_an_id_recorded_before_waiting(self) -> None:
+    def test_start_returns_an_id_recorded_in_its_dispatch_record(self) -> None:
         self.assertIn('`{"id": ...}`', self.text)
-        self.assertIn("before waiting", self.text)
         self.assertIn("the gate record's Task review row", self.text)
         self.assertIn("the review ledger record", self.text)
         self.assertIn("the Decision Log in brainstorming", self.text)
-
-    def test_wait_names_only_running_ids_and_clamps(self) -> None:
-        self.assertIn("`step_wait` takes `ids`", self.text)
-        self.assertIn('`{"ended": <step or null>, "steps": [...]}`', self.text)
-        self.assertIn("1500-second clamp", self.text)
-        self.assertIn("wait again", self.text)
-        self.assertIn("Name only ids still running", self.text)
-        self.assertIn("drop an id once its step ends", self.text)
 
     def test_points_to_step_ends_without_restating_it(self) -> None:
         self.assertIn("skills/executing-plans/references/step-ends.md", self.text)
@@ -489,7 +477,6 @@ class ExecutingPlansStepEventsTest(unittest.TestCase):
         ):
             text = read(path)
             with self.subTest(path=path):
-                self.assertNotIn("step_wait", text)
                 self.assertNotIn("before waiting", text)
                 self.assertNotRegex(text, r"(?i)\bwait no longer\b|\bpoll")
 
@@ -518,6 +505,103 @@ class BrainstormingStepEventsTest(unittest.TestCase):
     def test_steelman_records_its_step_id_and_acts_on_its_step_end_event(self) -> None:
         steelman = flat(section(self.text, "Steelman"))
         self.assertIn("Record its step id in the Decision Log and act on its step_end event", steelman)
+
+
+ORRERY_VERSION = re.compile(r"\bv\d+\.\d+")
+
+
+def tree_texts() -> dict[str, str]:
+    """Map each text file under skills/, contracts/ and README.md to its text, keyed by path from the root."""
+    paths = [ROOT / "README.md"]
+    for directory in (ROOT / "skills", ROOT / "contracts"):
+        paths.extend(sorted(directory.rglob("*")))
+    texts: dict[str, str] = {}
+    for path in paths:
+        if not path.is_file() or "__pycache__" in path.parts:
+            continue
+        data = path.read_bytes()
+        if b"\0" in data:
+            continue
+        texts[path.relative_to(ROOT).as_posix()] = data.decode("utf-8")
+    return texts
+
+
+class StepsStepEventsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = read(STEPS_PATH)
+
+    def test_steps_apply_on_step_start_and_the_context_stamp_without_step_wait(self) -> None:
+        """steps.md says steps apply on the step_start tool and no context stamp, and does not name step_wait."""
+        when = flat(section(self.text, "When steps apply"))
+        self.assertIn(
+            "Steps apply when the session has the `step_start` tool that `orrery mcp` serves "
+            "and the repository carries no context stamp.",
+            when,
+        )
+        self.assertNotIn("step_wait", when)
+
+    def test_recording_records_each_id_then_ends_the_turn_with_no_before_waiting(self) -> None:
+        """steps.md tells a caller to record each step id where its dispatch is recorded, then end its turn or do other work."""
+        self.assertEqual(section(self.text, "Recording and waiting"), "")
+        recording = flat(section(self.text, "Recording and step ends"))
+        self.assertIn("The caller records each id where its dispatch is recorded:", recording)
+        self.assertIn("The caller then ends its turn or does other work", recording)
+        self.assertNotIn("before waiting", self.text)
+
+    def test_each_end_arrives_as_a_step_end_block_whose_brief_names_its_fields(self) -> None:
+        """steps.md says each end arrives as an orrery-event step_end block whose brief names the end, status, reason, checks and counts."""
+        recording = flat(section(self.text, "Recording and step ends"))
+        self.assertIn(
+            'Each end arrives in the caller\'s conversation as an `<orrery-event kind="step_end">` block.',
+            recording,
+        )
+        self.assertIn(
+            "Its brief names the end, its status, its reason, its checks, "
+            "and the return's short fields and counts.",
+            recording,
+        )
+
+    def test_caller_acts_by_step_ends_and_reads_more_only_as_the_last_line_names(self) -> None:
+        """steps.md says the caller acts by step-ends.md and reads more only through step_result or step_check, as the event's last line names."""
+        recording = flat(section(self.text, "Recording and step ends"))
+        self.assertIn("`skills/executing-plans/references/step-ends.md`", recording)
+        self.assertIn(
+            "reads anything more only through `step_result` or `step_check`, as the event's last line names.",
+            recording,
+        )
+
+    def test_step_list_recovers_the_steps_a_session_started_after_compaction(self) -> None:
+        """steps.md says a session whose context is compacted recovers the steps it started through step_list."""
+        recording = flat(section(self.text, "Recording and step ends"))
+        self.assertIn(
+            "After its context is compacted, a session recovers the steps it started through `step_list`.",
+            recording,
+        )
+
+
+class SkillTreeStepEventsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.texts = tree_texts()
+
+    def test_no_file_names_step_wait_or_tells_an_agent_to_wait_again_on_a_clamp(self) -> None:
+        """No file under skills/, contracts/ or README.md names step_wait, a clamp, or a wait-again instruction."""
+        self.assertIn(STEPS_PATH, self.texts)
+        for needle in ("step_wait", "clamp", "wait again"):
+            with self.subTest(needle=needle):
+                offenders = [path for path, text in self.texts.items() if needle in text]
+                self.assertEqual(offenders, [])
+
+    def test_no_file_under_skills_or_contracts_names_an_orrery_version(self) -> None:
+        """No file under skills/ or contracts/ names an orrery version such as v0.24.3."""
+        self.assertIn(STEPS_PATH, self.texts)
+        offenders = [
+            path
+            for path, text in self.texts.items()
+            if path.startswith(("skills/", "contracts/")) and ORRERY_VERSION.search(text)
+        ]
+        self.assertEqual(offenders, [])
 
 
 if __name__ == "__main__":
