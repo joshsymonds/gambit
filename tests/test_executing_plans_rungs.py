@@ -130,7 +130,7 @@ class ExecutingPlansStructureTest(unittest.TestCase):
 
     def test_roles_wait_for_their_own_work_and_the_director_resumes_stalls(self) -> None:
         sections = dict(re.findall(r"(?ms)^## ([^\n]+)\n(.*?)(?=^## |\Z)", self.text))
-        self.assertIn("waits in its own turn for each command, check, gate, and child it starts", sections["Start"])
+        self.assertIn("waits in its own turn for each command, check, and gate it starts", sections["Start"])
         director = sections["Director"]
         for phrase in (
             "Watch each running effort's branch head and record",
@@ -345,7 +345,7 @@ class ExecutingPlansStructureTest(unittest.TestCase):
         )
 
     def test_word_caps(self) -> None:
-        self.assertLessEqual(len(self.text.split()), 3200)
+        self.assertLessEqual(len(self.text.split()), 3300)
         reference = SKILL_ROOT / "references" / "wave-dispatch.md"
         if reference.exists():
             self.assertLessEqual(len(reference.read_text(encoding="utf-8").split()), 700)

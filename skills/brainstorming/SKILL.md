@@ -58,7 +58,7 @@ Proportionality failure is a contract-drafting failure: overdesign, excess robus
 
 ## Steelman
 
-Run exactly one discovery pass on the agreed design, before accepting the contract. Read `contracts/steelman.md`. Dispatch the `steelman` role fresh and read-only under that contract, resolved through `contracts/models.md`, as a step where `skills/executing-plans/references/steps.md` applies. Record its step id in the Decision Log before waiting.
+Run exactly one discovery pass on the agreed design, before accepting the contract. Read `contracts/steelman.md`. Dispatch the `steelman` role fresh and read-only under that contract, resolved through `contracts/models.md`, as a step where `skills/executing-plans/references/steps.md` applies. Record its step id in the Decision Log and act on its step_end event per `skills/executing-plans/references/steps.md`.
 
 Supply the draft document as the Design Packet, using the receiver contract's exact fields, in order: What you asked for; What could go wrong, and how much we care; Things you did not ask for; What will be true when done; What I'm assuming; What we won't do; How, and why not the other ways; What leaves this machine or can't be undone; Decisions I need from you; Checks the machines run. Include each field's required evidence, ratings, survival clauses, reasons, commands, actions, and postconditions. Write `None` for genuinely absent decisions. Discovery receives this packet without prior steelman output.
 

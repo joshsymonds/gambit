@@ -315,7 +315,7 @@ class ExecutingPlansRoutingTest(unittest.TestCase):
         self.assertIn("`finding-verifier` per admissible candidate", build)
         self.assertIn(STEPS_PATH, build)
         self.assertIn("task workspace", build)
-        self.assertIn("record each step id in the gate record's Task review row before waiting", build)
+        self.assertIn("record each step id in the gate record's Task review row and act on its step_end event", build)
 
     def test_implementers_route_through_steps_and_otherwise_dispatch(self) -> None:
         start = section(self.text, "Start")
@@ -348,7 +348,7 @@ class ReviewRoutingTest(unittest.TestCase):
         self.assertIn("skills/executing-plans/references/steps.md", final)
         self.assertIn("`conformance-reviewer`", final)
         self.assertIn("`integration-reviewer`", final)
-        self.assertIn("record each step id in the review ledger record before waiting", final.lower())
+        self.assertIn("record each step id in the review ledger record and act on its step_end event", final.lower())
 
     def test_verifier_and_test_runner_route_through_steps(self) -> None:
         verification = section(self.text, "Finding verification")
@@ -381,7 +381,7 @@ class BrainstormingRoutingTest(unittest.TestCase):
         self.assertIn("skills/executing-plans/references/steps.md", steelman)
         self.assertIn("`steelman`", steelman)
         self.assertIn("Decision Log", steelman)
-        self.assertIn("before waiting", steelman)
+        self.assertIn("act on its step_end event", steelman)
 
     def test_names_steps_by_path_without_the_context_stamp(self) -> None:
         self.assertNotIn(".claude/settings.json", self.text)
@@ -448,6 +448,76 @@ class ReadmeDispatchTest(unittest.TestCase):
         principle = re.search(r"(?m)^9\. \*\*One text.*$", self.text)
         self.assertIsNotNone(principle)
         self.assertIn("steps.md", principle.group(0))
+
+
+def flat(text: str) -> str:
+    return " ".join(text.split())
+
+
+class ExecutingPlansStepEventsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = read("skills/executing-plans/SKILL.md")
+
+    def test_role_no_longer_waits_in_its_turn_for_a_child(self) -> None:
+        start = flat(section(self.text, "Start"))
+        self.assertNotRegex(start, r"waits in its own turn[^.]*\bchild\b")
+
+    def test_orchestrator_records_step_ids_and_returns_a_waiting_message(self) -> None:
+        start = flat(section(self.text, "Start"))
+        self.assertIn("An orchestrator records each step id it starts in its dispatch record", start)
+        self.assertIn("with nothing else to do, it returns a waiting message naming its running step ids", start)
+
+    def test_director_resumes_an_orchestrator_with_the_block_of_its_step_end(self) -> None:
+        director = flat(section(self.text, "Director"))
+        for phrase in (
+            "Steps a dispatched orchestrator starts report to the Director's conversation",
+            'On a step_end event (an `<orrery-event kind="step_end">` block) for a recorded id, '
+            "the Director resumes that orchestrator with the block",
+            "found by the ids in its latest waiting message",
+            "A waiting message is no report",
+            "the Director stores none as `efforts/<n>/report.md`",
+        ):
+            with self.subTest(phrase=phrase):
+                self.assertIn(phrase, director)
+
+    def test_no_skill_tells_a_role_to_wait_for_or_poll_a_step(self) -> None:
+        for path in (
+            "skills/executing-plans/SKILL.md",
+            "skills/review/SKILL.md",
+            "skills/brainstorming/SKILL.md",
+        ):
+            text = read(path)
+            with self.subTest(path=path):
+                self.assertNotIn("step_wait", text)
+                self.assertNotIn("before waiting", text)
+                self.assertNotRegex(text, r"(?i)\bwait no longer\b|\bpoll")
+
+
+class ReviewStepEventsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = read("skills/review/SKILL.md")
+
+    def test_records_step_ids_and_acts_on_step_end_events(self) -> None:
+        final = flat(section(self.text, "Final review"))
+        verification = flat(section(self.text, "Finding verification"))
+        self.assertIn("Record each step id in the review ledger record and act on its step_end event", final)
+        self.assertIn("record its step id in the review ledger record and act on its step_end event", verification)
+
+    def test_capacity_refusal_retries_without_waiting(self) -> None:
+        self.assertIn("A capacity refusal retries as `skills/executing-plans/references/step-ends.md` specifies", self.text)
+        self.assertNotIn("A capacity refusal waits", self.text)
+
+
+class BrainstormingStepEventsTest(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.text = read("skills/brainstorming/SKILL.md")
+
+    def test_steelman_records_its_step_id_and_acts_on_its_step_end_event(self) -> None:
+        steelman = flat(section(self.text, "Steelman"))
+        self.assertIn("Record its step id in the Decision Log and act on its step_end event", steelman)
 
 
 if __name__ == "__main__":
