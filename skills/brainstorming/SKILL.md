@@ -75,7 +75,7 @@ Create the epic record through the record-task-state operation from the finalize
 1. **What you asked for:** the Intent: one to three plain sentences stating the desired end state and reason, in the person's terms, never a solution.
 2. **What could go wrong, and how much we care:** the failure table: each row an F id, a failure in the past tense, its rating, and its What we do; below it, the level of care and the row that set it.
 3. **Things you did not ask for:** every Requirement, mechanism, check, or release step that traces to no sentence of the person's, with why and its cost.
-4. **What will be true when done:** the Requirements, immutable, atomic, and testable. Every row names the specific evidence and check that satisfies it.
+4. **What will be true when done:** the Requirements, immutable, atomic, and testable. Every row names the specific evidence and check that satisfies it, then one sentence saying what it proves.
 5. **What I'm assuming:** the Premises, falsifiable facts with evidence. Every If-wrong cell states whether the Intent survives and the consequence; in a goal-file run, every row also cites its Decision Log entry by id.
 6. **What we won't do:** the Must Not Ship entries, forbidden outcomes and non-goals, each with its reason.
 7. **How, and why not the other ways:** the chosen shape and reason in one paragraph, then each alternative with why it loses and the condition for reconsidering it.

@@ -23,7 +23,7 @@ A model profile selects a model and reasoning effort. Its writing and read-only 
 
 Every dispatch uses the role's entry profile. An implementer gets at most two attempts against a complete brief; the second carries the failing evidence from its gate record. A re-brief correcting the orchestrator's brief spends no attempt, and each split descendant starts with its own two. Routing between attempts belongs to `skills/executing-plans/SKILL.md`. An agent never changes its own profile. Splitting preserves the lineage; it does not select a stronger model.
 
-After the implementer's attempts are spent, the Orchestrator makes one final attempt itself under `contracts/implementer.md`, gated like any return. If it fails, the lineage is a gap.
+After the implementer's attempts are spent, the Orchestrator makes one final attempt itself under `contracts/implementer.md`, gated like any return. If it fails, the Orchestrator recarves the Requirement once, logged in the Decision Log; only when the recarved tasks also exhaust is the lineage a gap.
 
 ## The registry
 

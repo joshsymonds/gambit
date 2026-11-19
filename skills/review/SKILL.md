@@ -73,6 +73,6 @@ Then run the full Done gate fresh on that exact candidate, even if entry checks 
 
 Return the frozen and corrected revisions, ledger with closure evidence, fresh Done results, gate results on their last run, decisions and observations, and any review gaps to the calling orchestrator.
 
-Return **clean** only when the required review completed, every ledger finding is closed, the fresh full Done gate is green, and every declared gate returned with every assertion `holds` on its last run. Otherwise return the review gaps and the reason nothing can be released. A finding still open after its lineage is exhausted is a **review gap**; the orchestrator records the report and ends the run with the terminal outcome **ended with gaps**.
+Return **clean** only when the required review completed, every ledger finding is closed, the fresh full Done gate is green, and every declared gate returned with every assertion `holds` on its last run. Otherwise return the review gaps, each citing a Requirement or not. A finding still open after its lineage is exhausted is a **review gap**. An unmet Requirement releases nothing: a review gap citing one ends the run with the terminal outcome **ended with gaps**; other review gaps are reported with the release.
 
 Review never releases, performs Release actions, opens a pull request, or hands off to any integration or finishing step. Returning evidence to its caller is its final action. No result becomes a question to a person.

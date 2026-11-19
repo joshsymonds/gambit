@@ -28,7 +28,7 @@ Level of care: [the worst row's rating], set by [Fn].
 ## What will be true when done
 | Must be true | How we'll know |
 |---|---|
-| R1 [Atomic, testable outcome] | [named test or observable result, and the exact command] |
+| R1 [Atomic, testable outcome] | [named test or observable result, the exact command, then one sentence saying what it proves] |
 
 ## What I'm assuming
 | Assumption | If wrong |
