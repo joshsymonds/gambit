@@ -159,15 +159,24 @@ class CompareContractTest(unittest.TestCase):
         )
 
     def test_text_must_match_case_and_backticks(self) -> None:
-        document = DOCUMENT.replace("`synthetic` command", "synthetic command")
-
-        result = self.compare(CONTRACT, document)
-
-        self.assertEqual(result.returncode, 1, result.stderr)
-        self.assertEqual(
-            result.stdout.splitlines(),
-            ["not in document: alternative 1: `synthetic` command from the shell"],
+        cases = (
+            (
+                "backticks",
+                DOCUMENT.replace("`synthetic` command", "synthetic command"),
+                "not in document: alternative 1: `synthetic` command from the shell",
+            ),
+            (
+                "case",
+                DOCUMENT.replace("# Synthetic contract title", "# synthetic contract title"),
+                "not in document: title: Synthetic contract title",
+            ),
         )
+        for name, document, line in cases:
+            with self.subTest(differs_by=name):
+                result = self.compare(CONTRACT, document)
+
+                self.assertEqual(result.returncode, 1, result.stderr)
+                self.assertEqual(result.stdout.splitlines(), [line])
 
     def test_missing_input_file_exits_two_naming_the_path(self) -> None:
         absent = self.root / "absent.json"
@@ -283,6 +292,7 @@ class ContractRouteReferenceTest(ContractRouteTestCase):
 
         self.assertTrue(has_paragraph(section, "Decisions I need from you", "`decisions`"))
         self.assertTrue(has_paragraph(section, "Things you did not ask for", "keep or strike"))
+        self.assertTrue(has_paragraph(section, "`answer`", "settled"))
         for field in ("`id`", "`question`", "`options`", "`recommendation`", "`reason`", "`row`", "`answer`"):
             with self.subTest(field=field):
                 self.assertIn(field, section)
