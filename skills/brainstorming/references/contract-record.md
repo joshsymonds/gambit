@@ -14,9 +14,9 @@ Call `contract_propose` when the contract is first presented for acceptance, aft
 
 Compose `epic.md` and `contract.json` in the epic's record directory, `~/.gambit/<repository-id>/<epic-slug>/`, as `skills/executing-plans/references/record.md` specifies. The model composes both from the finalized design. Neither file is parsed into the other.
 
-`contract.json` holds one JSON object. The object is the contract in Orrery's `EpicContract` protobuf JSON field names, the shape `epic_create` reads, plus an optional `decisions` array. Its `id` is `<repository-id>/<epic-slug>`, and the call uses the same `id`.
+`contract.json` holds one JSON object. The object is the contract in Orrery's `EpicContract` protobuf JSON field names, the shape `contract_propose` reads, plus an optional `decisions` array. Its `id` is `<repository-id>/<epic-slug>`, and the call uses the same `id`.
 
-Run `skills/brainstorming/scripts/compare_contract.py` on `epic.md` and `contract.json`. On exit 0, call `contract_propose` with the `id`, the absolute path of `contract.json`, and `words`.
+Run `python3 skills/brainstorming/scripts/compare_contract.py <record>/contract.json <record>/epic.md`, where `<record>` is the record directory. On exit 0, call `contract_propose` with the `id`, the absolute path of `contract.json`, and `words`.
 
 `contract_propose` stores version 1 in state `proposed`.
 

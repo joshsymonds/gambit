@@ -273,6 +273,28 @@ class ContractRouteReferenceTest(ContractRouteTestCase):
         self.assertTrue(has_paragraph(section, "compare_contract.py", "epic.md", "contract.json"))
         self.assertTrue(has_paragraph(section, "contract_propose", "`id`", "absolute", "contract.json", "words"))
 
+    def test_compare_command_names_the_files_in_the_scripts_order(self) -> None:
+        usage = subprocess.run(
+            [sys.executable, str(COMPARE_SCRIPT), "--help"],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout.splitlines()[0]
+        positionals = [word for word in usage.split()[2:] if not word.startswith("[")]
+        record_file = {"contract_json": "contract.json", "document": "epic.md"}
+        self.assertEqual(sorted(positionals), sorted(record_file), usage)
+        command = re.search(
+            r"`python3 skills/brainstorming/scripts/compare_contract\.py ([^`]+)`",
+            self.route_section("Proposing"),
+        )
+
+        self.assertIsNotNone(command, "Proposing gives no compare_contract.py command")
+        arguments = command.group(1).split()
+        self.assertEqual(len(arguments), len(positionals), command.group(0))
+        for argument, positional in zip(arguments, positionals):
+            with self.subTest(positional=positional):
+                self.assertTrue(argument.endswith("/" + record_file[positional]), command.group(0))
+
     def test_later_changes_are_revised_before_presentation(self) -> None:
         section = self.route_section("Revising")
 
