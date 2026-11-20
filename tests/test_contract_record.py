@@ -349,5 +349,38 @@ class ContractRouteSkillTest(ContractRouteTestCase):
                 self.assertNotIn(tool, self.text)
 
 
+class ContractRouteReadmeTest(ContractRouteTestCase):
+    README = ROOT / "README.md"
+    STEP_ROUTE = "skills/executing-plans/references/steps.md"
+
+    def setUp(self) -> None:
+        self.text = self.README.read_text(encoding="utf-8")
+
+    def principle_nine(self) -> str:
+        lines = [line for line in self.section(self.text, "Principles").splitlines() if line.startswith("9. ")]
+        self.assertEqual(len(lines), 1, "no single principle 9 line")
+        return lines[0]
+
+    def test_principle_nine_admits_the_contract_route_beside_the_step_route(self) -> None:
+        principle = self.principle_nine()
+
+        self.assertIn("two exceptions", principle)
+        self.assertTrue(has_paragraph(principle, self.STEP_ROUTE, "step tools"))
+        self.assertTrue(has_paragraph(principle, REFERENCE_PATH, "contract tools"))
+
+    def test_principle_nine_keeps_the_closing_sentence(self) -> None:
+        self.assertIn("A harness that lacks an operation is fixed outside gambit.", self.principle_nine())
+
+    def test_install_says_the_route_applies_with_contract_propose(self) -> None:
+        install = self.section(self.text, "Install")
+
+        self.assertTrue(has_paragraph(install, REFERENCE_PATH, "contract_propose", "orrery mcp"))
+
+    def test_install_says_without_the_contract_tools_brainstorming_runs_as_before(self) -> None:
+        install = self.section(self.text, "Install")
+
+        self.assertTrue(has_paragraph(install, "Pi, which has no contract tools", "as before"))
+
+
 if __name__ == "__main__":
     unittest.main()
