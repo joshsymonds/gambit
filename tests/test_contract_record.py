@@ -7,6 +7,7 @@ temporary directory. No test runs a model, a daemon, or waits on the clock.
 from __future__ import annotations
 
 import json
+import re
 import subprocess
 import sys
 import tempfile
@@ -199,6 +200,153 @@ class CompareContractTest(unittest.TestCase):
                 self.assertEqual(result.returncode, 2)
                 self.assertIn(key, result.stderr)
                 self.assertNotIn("Traceback", result.stderr)
+
+
+ROUTE = ROOT / "skills/brainstorming/references/contract-record.md"
+SKILL = ROOT / "skills/brainstorming/SKILL.md"
+REFERENCE_PATH = "skills/brainstorming/references/contract-record.md"
+CONTRACT_TOOLS = (
+    "contract_propose",
+    "contract_revise",
+    "contract_accept",
+    "contract_set_aside",
+    "contract_reopen",
+    "epic_create",
+)
+
+
+def sections_of(text: str) -> dict[str, str]:
+    parts = re.split(r"(?m)^## (.+)$", text)
+    return dict(zip(parts[1::2], parts[2::2]))
+
+
+def has_paragraph(body: str, *terms: str) -> bool:
+    return any(all(term in paragraph for term in terms) for paragraph in body.split("\n\n"))
+
+
+class ContractRouteTestCase(unittest.TestCase):
+    def section(self, text: str, heading: str) -> str:
+        sections = sections_of(text)
+        self.assertIn(heading, sections, f"no '## {heading}' section")
+        return sections[heading]
+
+    def route_section(self, heading: str) -> str:
+        self.assertTrue(ROUTE.is_file(), f"missing {ROUTE}")
+        return self.section(ROUTE.read_text(encoding="utf-8"), heading)
+
+
+class ContractRouteReferenceTest(ContractRouteTestCase):
+    def test_reference_exists_beside_the_brainstorming_skill(self) -> None:
+        self.assertTrue(ROUTE.is_file(), f"missing {ROUTE}")
+
+    def test_route_applies_with_the_contract_propose_tool(self) -> None:
+        section = self.route_section("When the route applies")
+
+        for term in ("contract_propose", "orrery mcp"):
+            with self.subTest(term=term):
+                self.assertIn(term, section)
+
+    def test_without_the_contract_tools_brainstorming_runs_as_before(self) -> None:
+        section = self.route_section("When the route applies")
+
+        self.assertTrue(has_paragraph(section, "contract tools", "as before"))
+
+    def test_first_presentation_is_proposed_after_the_steelman(self) -> None:
+        section = self.route_section("Proposing")
+
+        self.assertTrue(has_paragraph(section, "contract_propose", "steelman", "dispositions"))
+        self.assertTrue(has_paragraph(section, "contract_propose", "first presented"))
+
+    def test_proposal_writes_the_record_then_compares_then_sends_the_path(self) -> None:
+        section = self.route_section("Proposing")
+
+        self.assertTrue(has_paragraph(section, "record directory", "epic.md", "contract.json"))
+        self.assertTrue(has_paragraph(section, "compare_contract.py", "epic.md", "contract.json"))
+        self.assertTrue(has_paragraph(section, "contract_propose", "`id`", "absolute", "contract.json", "words"))
+
+    def test_later_changes_are_revised_before_presentation(self) -> None:
+        section = self.route_section("Revising")
+
+        self.assertTrue(has_paragraph(section, "contract.json", "epic.md", "compare_contract.py"))
+        self.assertTrue(has_paragraph(section, "contract_revise", "words"))
+        self.assertTrue(has_paragraph(section, "contract_revise", "presented"))
+
+    def test_comparison_runs_before_every_send_and_blocks_on_difference(self) -> None:
+        section = self.route_section("Comparing")
+
+        self.assertTrue(has_paragraph(section, "compare_contract.py", "contract_propose", "contract_revise"))
+        self.assertTrue(has_paragraph(section, "compare_contract.py", "exit 0"))
+        self.assertTrue(has_paragraph(section, "non-zero", "nothing is sent"))
+
+    def test_choices_and_added_rows_are_decisions_of_the_version(self) -> None:
+        section = self.route_section("Decisions")
+
+        self.assertTrue(has_paragraph(section, "Decisions I need from you", "`decisions`"))
+        self.assertTrue(has_paragraph(section, "Things you did not ask for", "keep or strike"))
+        for field in ("`id`", "`question`", "`options`", "`recommendation`", "`reason`", "`row`", "`answer`"):
+            with self.subTest(field=field):
+                self.assertIn(field, section)
+
+    def test_spoken_acceptance_is_recorded_with_contract_accept(self) -> None:
+        section = self.route_section("Acceptance")
+
+        self.assertTrue(has_paragraph(section, "contract_accept", "words"))
+
+    def test_acceptance_made_elsewhere_arrives_as_an_event(self) -> None:
+        section = self.route_section("Acceptance")
+
+        self.assertTrue(has_paragraph(section, "orrery-event", "accepted it"))
+
+    def test_set_aside_stops_the_stage_spoken_or_as_an_event(self) -> None:
+        section = self.route_section("Acceptance")
+
+        self.assertTrue(has_paragraph(section, "contract_set_aside", "words", "stops"))
+        self.assertTrue(has_paragraph(section, "orrery-event", "set it aside", "stops"))
+
+    def test_reopen_resumes_the_stage_spoken_or_as_an_event(self) -> None:
+        section = self.route_section("Acceptance")
+
+        self.assertTrue(has_paragraph(section, "contract_reopen", "words", "resumes"))
+        self.assertTrue(has_paragraph(section, "orrery-event", "reopened it", "resumes"))
+
+    def test_goal_file_run_accepts_on_the_files_behalf(self) -> None:
+        section = self.route_section("Acceptance")
+
+        self.assertTrue(has_paragraph(section, "goal file", "contract_accept"))
+
+    def test_epic_is_created_by_id_from_the_accepted_contract(self) -> None:
+        section = self.route_section("The epic")
+
+        self.assertTrue(has_paragraph(section, "epic_create", "`id`", "accepted"))
+        self.assertTrue(has_paragraph(section, "epic_create", "`base`", "HEAD"))
+        self.assertTrue(has_paragraph(section, "epic_create", "`decisions`", "Decision Log"))
+
+    def test_epic_stage_does_not_load_executing_plans(self) -> None:
+        section = self.route_section("The epic")
+
+        self.assertTrue(has_paragraph(section, "executing-plans", "not loaded", "Orrery runs the epic"))
+
+
+class ContractRouteSkillTest(ContractRouteTestCase):
+    def setUp(self) -> None:
+        self.text = SKILL.read_text(encoding="utf-8")
+
+    def test_contract_section_names_the_reference_and_the_no_tools_path(self) -> None:
+        section = self.section(self.text, "The contract")
+
+        self.assertIn(REFERENCE_PATH, section)
+        self.assertTrue(has_paragraph(section, REFERENCE_PATH, "contract tools", "as before"))
+
+    def test_handoff_names_the_reference_and_orrery_runs_the_epic(self) -> None:
+        section = self.section(self.text, "Handoff")
+
+        self.assertIn("skills/executing-plans/SKILL.md", section)
+        self.assertTrue(has_paragraph(section, REFERENCE_PATH, "executing-plans", "not loaded", "Orrery runs the epic"))
+
+    def test_skill_names_no_contract_tool(self) -> None:
+        for tool in CONTRACT_TOOLS:
+            with self.subTest(tool=tool):
+                self.assertNotIn(tool, self.text)
 
 
 if __name__ == "__main__":

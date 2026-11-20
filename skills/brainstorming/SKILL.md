@@ -83,6 +83,8 @@ Create the epic record through the record-task-state operation from the finalize
 9. **Decisions I need from you:** every open choice with options and a recommendation, or `None`.
 10. **Checks the machines run:** the exact commands for each task's fast check and the integrated candidate's full gate, the evidence named above, and the complete Quality Bar paragraph from README verbatim on one line starting `Quality Bar:`. Output the paragraph itself, not a summary, reference, or promise to copy it. Never customize it. Directly after that line, write one `Review gate:` line in the form `TEMPLATES.md` defines for each gate the person declares, and none when they declare none. Each gate's agent is read-only, and each `must:` or `must not:` field repeats once per assertion, with at least one assertion per line.
 
+When the session has Orrery's contract tools, follow `skills/brainstorming/references/contract-record.md` for the contract. Without the contract tools, this stage runs as before.
+
 In live execution, bind evidence links, file paths, commands, and release targets from inspected evidence before acceptance. Do not present guesses as verified facts: an assumption can settle an open design choice, but cannot establish that an invented file exists. In a worked scenario, use its research findings. In both cases, show finished records, not section names or promises to populate them.
 
 In conversation, present the complete document for acceptance and settle requested changes here. With a goal file, first check that every assumption the research produced, including each fact resolved after a `NOT FOUND` and each question you answered yourself, has its Decision Log entry, and log any missing one; then accept the contract yourself on that file's behalf. Record acceptance and freeze Intent, Premises with their survival clauses, and Requirements. Later changes of assessment belong in the Decision Log, leaving those clauses intact. The contract alone authorizes the work that follows.
@@ -104,5 +106,7 @@ The content above "Checks the machines run" fits forty lines when wrapped at 100
 ## Handoff
 
 Create no tasks or effort briefs here, and leave the head's task list empty; execution creates each task at the moment it will be dispatched. After acceptance, load `skills/executing-plans/SKILL.md` by reading it and following it. Carry the accepted epic and Decision Log. Execution follows the same contract regardless of its source.
+
+Where the contract route applies, as `skills/brainstorming/references/contract-record.md` states, `executing-plans` is not loaded. Orrery runs the epic.
 
 The person in conversation may choose to stop at the contract instead; settle that here. A goal-file run always hands off automatically, with no closing question or wait. When describing the stage without implementing, show this as the next load-a-stage operation.
