@@ -8,6 +8,12 @@ The route applies when the session has the `contract_propose` tool, which `orrer
 
 Without the contract tools, brainstorming runs as before, and nothing in this reference applies.
 
+## Release steps
+
+A repository whose `.orrery/project.toml` holds a `[release]` table has defined its release already. Unless the person asks for a different release, the contract names no release steps and no postconditions of its own, and `epic_create` copies that table's steps and its `then` into the epic verbatim. The "What leaves this machine or can't be undone" section then reads "Released by the project's release, `.orrery/project.toml` `[release]`."
+
+Before the first release step, Orrery's release flow merges a moved main into the candidate and runs the done gates on it. A release step does not repeat either one: it neither merges main nor reruns a gate or check.
+
 ## Proposing
 
 Call `contract_propose` when the contract is first presented for acceptance, after the steelman's dispositions are in it.

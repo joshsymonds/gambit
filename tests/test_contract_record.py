@@ -260,6 +260,16 @@ class ContractRouteReferenceTest(ContractRouteTestCase):
 
         self.assertTrue(has_paragraph(section, "contract tools", "as before"))
 
+    def test_release_steps_are_the_project_release_verbatim(self) -> None:
+        section = self.route_section("Release steps")
+
+        self.assertTrue(has_paragraph(section, ".orrery/project.toml", "[release]", "names no release steps", "verbatim"))
+
+    def test_release_steps_do_not_repeat_the_release_flow(self) -> None:
+        section = self.route_section("Release steps")
+
+        self.assertTrue(has_paragraph(section, "merges a moved main", "done gates", "does not repeat"))
+
     def test_first_presentation_is_proposed_after_the_steelman(self) -> None:
         section = self.route_section("Proposing")
 
