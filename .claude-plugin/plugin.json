@@ -1,7 +1,7 @@
 {
   "name": "gambit",
   "description": "Structured development workflows for Claude Code using native Tasks",
-  "version": "2.20.0",
+  "version": "2.20.1",
   "author": {
     "name": "Josh Symonds",
     "email": "josh@joshsymonds.com"
